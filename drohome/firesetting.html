@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fire OS 6.1 Settings Simulation</title>
+    <!-- Google Material Icons & Symbols CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <!-- Google Font: Roboto -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Roboto', sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            background-color: #121212;
+            overflow: hidden;
+            color: #e0e0e0;
+        }
+
+        #app-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #121212;
+        }
+
+        /* Activity slide animations */
+        .activity {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #121212;
+            transition: transform 0.22s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.22s ease;
+            z-index: 1;
+            transform: translateX(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .activity.active {
+            transform: translateX(0);
+            opacity: 1;
+            z-index: 5;
+            pointer-events: auto;
+        }
+
+        .activity.hidden-left {
+            transform: translateX(-15%);
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Fire OS Dark Header Bar */
+        .action-bar {
+            height: 56px;
+            background-color: #222222;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            border-bottom: 1px solid #2d2d2d;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .action-bar .left-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .action-bar .title {
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #ffffff;
+        }
+
+        .action-bar .icon-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            margin: -8px;
+            border-radius: 50%;
+            outline: none;
+        }
+
+        .action-bar .icon-btn:active {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .action-bar .right-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Fire OS Sub-Bar Switch Container */
+        .switch-bar {
+            height: 48px;
+            background-color: #2a2a2a;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            flex-shrink: 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .switch-bar .switch-label {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Content Scroll Area */
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 24px;
+        }
+
+        /* Fire OS Card Sections */
+        .card-group {
+            background-color: #212121;
+            margin: 12px 12px 16px 12px;
+            border-radius: 4px;
+            border: 1px solid #2e2e2e;
+            overflow: hidden;
+        }
+
+        .card-category-title {
+            padding: 14px 16px 6px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ff9900; /* Fire OS Amazon Orange */
+            text-transform: capitalize;
+        }
+
+        /* Fire OS Setting Item */
+        .setting-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            background-color: #212121;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            min-height: 56px;
+            justify-content: space-between;
+            border-bottom: 1px solid #2c2c2c;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-item:active {
+            background-color: #333333;
+        }
+
+        .setting-item-left {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .setting-icon {
+            width: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            color: #b0b0b0;
+            flex-shrink: 0;
+        }
+
+        .setting-icon .material-icons,
+        .setting-icon .material-symbols-outlined {
+            font-size: 24px;
+        }
+
+        .setting-text {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .setting-title {
+            font-size: 15px;
+            color: #ffffff;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .setting-subtitle {
+            font-size: 13px;
+            color: #aaaaaa;
+            margin-top: 3px;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Fire OS Orange Accent Switch Component */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* Switch Track (OFF State) */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #555555;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        /* Switch Thumb / Knob (OFF State) */
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #dddddd;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Switch Track (ON State - Fire OS Orange Accent) */
+        input:checked + .slider {
+            background-color: #f7a944;
+        }
+
+        /* Switch Thumb / Knob (ON State - Fire OS Orange Accent) */
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #ff9900;
+        }
+
+        /* Storage Buttons for Fire OS Storage Activity */
+        .fire-btn-group {
+            display: flex;
+            gap: 12px;
+            padding: 12px 16px;
+        }
+
+        .fire-btn-primary {
+            background-color: #ff9900;
+            color: #121212;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 2px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .fire-btn-primary:active {
+            background-color: #e68a00;
+        }
+
+        .fire-btn-secondary {
+            background-color: #383838;
+            color: #ffffff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 2px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .fire-btn-secondary:active {
+            background-color: #484848;
+        }
+
+        .app-buttons {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .app-btn {
+            flex: 1;
+            padding: 10px 0;
+            background-color: #333333;
+            border: none;
+            border-radius: 2px;
+            color: #dddddd;
+            font-weight: 500;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+
+        .app-btn:active {
+            background-color: #444444;
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            padding: 20px 16px 12px 16px;
+            gap: 16px;
+        }
+
+        .app-header-text .app-name {
+            font-size: 18px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .app-header-text .app-version {
+            font-size: 13px;
+            color: #aaaaaa;
+            margin-top: 2px;
+        }
+
+        .range-slider {
+            width: 100%;
+            accent-color: #ff9900;
+            margin-top: 8px;
+        }
+
+        .empty-state {
+            padding: 40px 16px;
+            text-align: center;
+            color: #888888;
+            font-size: 14px;
+        }
+
+        .highlight-box {
+            border: 2px solid #ff9900;
+            border-radius: 4px;
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+
+    <div id="main-activity" class="activity active">
+        <div class="action-bar">
+            <div class="left-group">
+                <span class="title">Settings</span>
+            </div>
+            <div class="right-group">
+                <button class="icon-btn" aria-label="検索">
+                    <i class="material-icons">search</i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-scroll">
+            <!-- Device Section -->
+            <div class="card-group">
+                <div class="card-category-title">Device</div>
+                
+                <div class="setting-item" onclick="openActivity('wifi-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">wifi</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Wireless</span>
+                            <span class="setting-subtitle" id="main-wifi-sub">"LJAY_WIFI"</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('storage-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">folder_open</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Storage</span>
+                            <span class="setting-subtitle">空き容量 24.08 GB / 26.52 GB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('battery-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">battery_std</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Power</span>
+                            <span class="setting-subtitle">100% - 充電完了</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('apps-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">apps</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Apps & Games</span>
+                            <span class="setting-subtitle">9 個のアプリがインストールされています</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('display-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">brightness_medium</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Display</span>
+                            <span class="setting-subtitle">明るさの自動調節は OFF です</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('device-options-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">tablet_android</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Device Options</span>
+                            <span class="setting-subtitle">Echo show 5 gen3</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Section -->
+            <div class="card-group">
+                <div class="card-category-title">Personal</div>
+
+                <div class="setting-item" onclick="openActivity('account-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">person</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">My Account</span>
+                            <span class="setting-subtitle">Amazon User</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('profiles-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">face</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Profiles & Family Library</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('parental-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">verified_user</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Parental Controls</span>
+                            <span class="setting-subtitle">OFF</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('security-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">lock</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Security</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('location-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">location_on</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Location Services</span>
+                            <span class="setting-subtitle">ON</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Section -->
+            <div class="card-group">
+                <div class="card-category-title">System</div>
+
+                <div class="setting-item" onclick="openActivity('sound-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">volume_up</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Sound & Notifications</span>
+                            <span class="setting-subtitle">音量: 71%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('bluetooth-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">bluetooth</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Bluetooth</span>
+                            <span class="setting-subtitle" id="main-bt-sub">無効</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('accessibility-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">accessibility</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">Accessibility</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('more-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">more_horiz</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">More Settings</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="wifi-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Wireless</span>
+            </div>
+            <div class="right-group">
+                <button class="icon-btn"><i class="material-icons">settings</i></button>
+                <button class="icon-btn"><i class="material-icons">more_vert</i></button>
+            </div>
+        </div>
+
+        <div class="switch-bar">
+            <span class="switch-label" id="wifi-status-text">ON</span>
+            <label class="switch">
+                <input type="checkbox" id="wifi-toggle" checked onchange="toggleWifi(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="content-scroll" id="wifi-list-container">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons" style="color:#ff9900;">wifi</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">LJAY_WIFI</span>
+                            <span class="setting-subtitle">接続済み</span>
+                        </div>
+                    </div>
+                    <i class="material-icons" style="color: #888;">lock</i>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">add</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">ネットワークを追加</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="storage-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">ストレージ</span>
+            </div>
+        </div>
+
+        <div class="content-scroll">
+            <div style="padding: 16px 16px 8px 16px; font-size: 13px; color: #aaaaaa; line-height: 1.4;">
+                最近使用していないアイテムをクラウドに移動してストレージの空き容量を増やすことができます。これらのアイテムはクラウドで保存されます。
+            </div>
+
+            <div class="fire-btn-group">
+                <button class="fire-btn-primary">クラウドへ移動</button>
+                <button class="fire-btn-secondary">コンテンツを表示</button>
+            </div>
+
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">smartphone</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">内部ストレージ</span>
+                            <span class="setting-subtitle">空き容量24.08 GB / 26.52 GB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-group">
+                <div class="card-category-title">SDカード</div>
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">sd_card</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">SDカードのストレージ</span>
+                            <span class="setting-subtitle">空き容量32.22 GB / 32.22 GB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">映画とTV番組をSDカードにダウンロード</span>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">楽曲をSDカードにダウンロード</span>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">写真とパーソナルビデオをSDカードに保存</span>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">本をSDカードにダウンロード</span>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">SDカードへのダウンロード設定の詳細はこちら</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">内部ストレージとしてフォーマット</span>
+                            <span class="setting-subtitle">アプリ、写真・音楽などあらゆるファイルを保存できます。</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">SDカードを消去</span>
+                            <span class="setting-subtitle">SDカードのデータをすべて削除する</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <div class="setting-item">
+                        <div class="setting-item-left">
+                            <div class="setting-text">
+                                <span class="setting-title">SDカードを取り外す</span>
+                                <span class="setting-subtitle">SDカードを安全に取り外すためにすべてのタスクを停止する</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="device-options-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">端末オプション</span>
+            </div>
+        </div>
+
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">端末名</span>
+                            <span class="setting-subtitle">Echo show 5 gen3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">シリアル番号</span>
+                            <span class="setting-subtitle">G0914R0584732101</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">システムバージョン</span>
+                            <span class="setting-subtitle">Fire OS 6.1.2.8 (NS6128/2901)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">システムアップデート</span>
+                            <span class="setting-subtitle">最新の状態です</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('datetime-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">日付と時刻</span>
+                            <span class="setting-subtitle">GMT+09:00 日本標準時</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item" onclick="openActivity('developer-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">開発者向けオプション</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="bluetooth-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Bluetooth</span>
+            </div>
+            <div class="right-group">
+                <button class="icon-btn"><i class="material-icons">more_vert</i></button>
+            </div>
+        </div>
+
+        <div class="switch-bar">
+            <span class="switch-label" id="bt-status-text">OFF</span>
+            <label class="switch">
+                <input type="checkbox" id="bt-toggle" onchange="toggleBluetooth(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="content-scroll" id="bt-list-container">
+            <div class="empty-state">
+                Bluetooth が OFF のときは、付近のデバイスを表示できません。
+            </div>
+        </div>
+    </div>
+
+    <div id="apps-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Apps & Games</span>
+            </div>
+        </div>
+
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="card-category-title">インストール済み</div>
+                <div class="setting-item" onclick="openActivity('app-info-activity')">
+                    <div class="setting-item-left">
+                        <div class="setting-icon">
+                            <i class="material-icons" style="color: #1da1f2; font-size: 30px;">flutter_dash</i>
+                        </div>
+                        <div class="setting-text">
+                            <span class="setting-title">Twitter</span>
+                            <span class="setting-subtitle">474 MB</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-icon">
+                            <i class="material-icons" style="color: #ff9900; font-size: 30px;">shopping_cart</i>
+                        </div>
+                        <div class="setting-text">
+                            <span class="setting-title">Amazon ショッピング</span>
+                            <span class="setting-subtitle">152 MB</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-icon">
+                            <i class="material-icons" style="color: #ff0000; font-size: 30px;">play_arrow</i>
+                        </div>
+                        <div class="setting-text">
+                            <span class="setting-title">Prime Video</span>
+                            <span class="setting-subtitle">98 MB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Info Activity -->
+    <div id="app-info-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">App info</span>
+            </div>
+        </div>
+
+        <div class="content-scroll">
+            <div class="app-header">
+                <div style="width:48px; height:48px; background-color:#1da1f2; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff;">
+                    <i class="material-icons" style="font-size:32px;">flutter_dash</i>
+                </div>
+                <div class="app-header-text">
+                    <div class="app-name">Twitter</div>
+                    <div class="app-version">version 7.23.0</div>
+                </div>
+            </div>
+
+            <div class="app-buttons">
+                <button class="app-btn">UNINSTALL</button>
+                <button class="app-btn">FORCE STOP</button>
+            </div>
+
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">Storage</span>
+                            <span class="setting-subtitle">Computing...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">Data usage</span>
+                            <span class="setting-subtitle">474 MB used since Sep 28</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">Permissions</span>
+                            <span class="setting-subtitle">Camera, Location, and Storage</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">Notifications</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">Open by default</span>
+                            <span class="setting-subtitle">Some defaults set</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">Battery</span>
+                            <span class="setting-subtitle">0% use since last full charge</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Display Activity -->
+    <div id="display-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Display</span>
+            </div>
+        </div>
+
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">明るさのレベル</span>
+                            <span class="setting-subtitle">50%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">明るさの自動調節</span>
+                            <span class="setting-subtitle">画面の明るさを周囲の光に合わせて調整します</span>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">スリープ</span>
+                            <span class="setting-subtitle">無操作状態が 5 分経過後</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Power / Battery Activity -->
+    <div id="battery-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Power</span>
+            </div>
+        </div>
+
+        <div class="content-scroll">
+            <div style="padding: 24px 16px; display:flex; align-items: baseline; gap: 8px;">
+                <span style="font-size: 48px; font-weight: 300; color: #ff9900;">100%</span>
+                <span class="setting-subtitle">充電完了</span>
+            </div>
+            <div class="card-group">
+                <div class="card-category-title">バッテリー使用状況</div>
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-icon"><i class="material-icons">desktop_windows</i></div>
+                        <div class="setting-text">
+                            <span class="setting-title">画面</span>
+                            <span class="setting-subtitle">2%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound & Notifications Activity -->
+    <div id="sound-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Sound & Notifications</span>
+            </div>
+        </div>
+
+        <div class="content-scroll">
+            <div class="card-group">
+                <div style="padding: 16px;">
+                    <span class="setting-title">メディアの音量</span>
+                    <input type="range" class="range-slider" value="80">
+                </div>
+                <div style="padding: 16px;">
+                    <span class="setting-title">アラームの音量</span>
+                    <input type="range" class="range-slider" value="100">
+                </div>
+                <div style="padding: 16px;">
+                    <span class="setting-title">通知の音量</span>
+                    <input type="range" class="range-slider" value="71">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Account Activity -->
+    <div id="account-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">My Account</span>
+            </div>
+        </div>
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">Amazonアカウント</span>
+                            <span class="setting-subtitle">登録済み (Amazon User)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profiles Activity -->
+    <div id="profiles-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Profiles & Family Library</span>
+            </div>
+        </div>
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">大人プロフィール</span>
+                            <span class="setting-subtitle">Primary Profile</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parental Controls Activity -->
+    <div id="parental-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Parental Controls</span>
+            </div>
+        </div>
+        <div class="switch-bar">
+            <span class="switch-label">機能制限</span>
+            <label class="switch">
+                <input type="checkbox">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Security Activity -->
+    <div id="security-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Security</span>
+            </div>
+        </div>
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">画面のロック</span>
+                            <span class="setting-subtitle">なし</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location Activity -->
+    <div id="location-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Location Services</span>
+            </div>
+        </div>
+        <div class="switch-bar">
+            <span class="switch-label">位置情報サービス</span>
+            <label class="switch">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Date Time Activity -->
+    <div id="datetime-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">日付と時刻</span>
+            </div>
+        </div>
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">自動タイムゾーン</span>
+                            <span class="setting-subtitle">ネットワークから提供されたタイムゾーンを使用する</span>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">タイムゾーンを選択</span>
+                            <span class="setting-subtitle">GMT+09:00 日本標準時</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accessibility Activity -->
+    <div id="accessibility-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">Accessibility</span>
+            </div>
+        </div>
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">VoiceView</span>
+                            <span class="setting-subtitle">OFF</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Developer Activity -->
+    <div id="developer-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">開発者向けオプション</span>
+            </div>
+        </div>
+        <div class="switch-bar">
+            <span class="switch-label">ON</span>
+            <label class="switch">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">ADBを有効にする</span>
+                            <span class="setting-subtitle">USB/ネットワーク経由のデバッグを許可する</span>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- More Settings Activity -->
+    <div id="more-activity" class="activity">
+        <div class="action-bar">
+            <div class="left-group">
+                <button class="icon-btn" onclick="closeTopActivity()"><i class="material-icons">arrow_back</i></button>
+                <span class="title">More Settings</span>
+            </div>
+        </div>
+        <div class="content-scroll">
+            <div class="card-group">
+                <div class="setting-item">
+                    <div class="setting-item-left">
+                        <div class="setting-text">
+                            <span class="setting-title">機内モード</span>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Activity Stack Manager for sub-activities
+    const activityStack = ['main-activity'];
+
+    function openActivity(activityId) {
+        const currentId = activityStack[activityStack.length - 1];
+        const currentEl = document.getElementById(currentId);
+        const nextEl = document.getElementById(activityId);
+
+        if (!nextEl) return;
+
+        currentEl.classList.remove('active');
+        currentEl.classList.add('hidden-left');
+
+        nextEl.classList.remove('hidden-left');
+        nextEl.classList.add('active');
+
+        activityStack.push(activityId);
+    }
+
+    function closeTopActivity() {
+        if (activityStack.length <= 1) return;
+
+        const currentId = activityStack.pop();
+        const prevId = activityStack[activityStack.length - 1];
+
+        const currentEl = document.getElementById(currentId);
+        const prevEl = document.getElementById(prevId);
+
+        currentEl.classList.remove('active');
+
+        prevEl.classList.remove('hidden-left');
+        prevEl.classList.add('active');
+    }
+
+    // Toggle Handlers
+    function toggleWifi(isOn) {
+        const statusText = document.getElementById('wifi-status-text');
+        const listContainer = document.getElementById('wifi-list-container');
+        const mainSubText = document.getElementById('main-wifi-sub');
+
+        if (isOn) {
+            statusText.textContent = 'ON';
+            if (mainSubText) mainSubText.textContent = '"LJAY_WIFI"';
+            listContainer.innerHTML = `
+                <div class="card-group">
+                    <div class="setting-item">
+                        <div class="setting-item-left">
+                            <div class="setting-icon"><i class="material-icons" style="color:#ff9900;">wifi</i></div>
+                            <div class="setting-text">
+                                <span class="setting-title">LJAY_WIFI</span>
+                                <span class="setting-subtitle">接続済み</span>
+                            </div>
+                        </div>
+                        <i class="material-icons" style="color: #888;">lock</i>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-item-left">
+                            <div class="setting-icon"><i class="material-icons">add</i></div>
+                            <div class="setting-text">
+                                <span class="setting-title">ネットワークを追加</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            statusText.textContent = 'OFF';
+            if (mainSubText) mainSubText.textContent = 'OFF';
+            listContainer.innerHTML = `
+                <div class="empty-state">
+                    Wi-Fi を ON にするには、上のスイッチをタップしてください。
+                </div>
+            `;
+        }
+    }
+
+    function toggleBluetooth(isOn) {
+        const statusText = document.getElementById('bt-status-text');
+        const listContainer = document.getElementById('bt-list-container');
+        const mainSubText = document.getElementById('main-bt-sub');
+
+        if (isOn) {
+            statusText.textContent = 'ON';
+            if (mainSubText) mainSubText.textContent = 'ON';
+            listContainer.innerHTML = `
+                <div class="card-group">
+                    <div class="card-category-title">ペア設定されているデバイス</div>
+                    <div class="setting-item">
+                        <div class="setting-item-left">
+                            <div class="setting-icon"><i class="material-icons">headset</i></div>
+                            <div class="setting-text">
+                                <span class="setting-title">Wireless Headphones</span>
+                            </div>
+                        </div>
+                        <i class="material-icons" style="color: #888;">settings</i>
+                    </div>
+                </div>
+            `;
+        } else {
+            statusText.textContent = 'OFF';
+            if (mainSubText) mainSubText.textContent = '無効';
+            listContainer.innerHTML = `
+                <div class="empty-state">
+                    Bluetooth が OFF のときは、付近のデバイスを表示できません。
+                </div>
+            `;
+        }
+    }
+</script>
+
+</body>
+</html>
