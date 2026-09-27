@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Android 7.1 Camera</title>
+    <!-- Google Material Symbols CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000000;
+        }
+
+        /* Container for screen viewports */
+        .app-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .camera-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #000000;
+            z-index: 1;
+        }
+
+        /* Camera viewfinder preview area */
+        .viewfinder {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            background-color: #2b2b2b;
+            overflow: hidden;
+        }
+
+        .viewfinder video, .viewfinder canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .shutter-bar {
+            height: 110px;
+            background-color: #181818;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Main Shutter Button */
+        .shutter-btn {
+            width: 64px;
+            height: 64px;
+            background: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            transition: transform 0.1s ease, opacity 0.2s ease;
+        }
+
+        .shutter-btn:active {
+            transform: scale(0.92);
+        }
+
+        .shutter-btn .material-symbols-outlined {
+            font-size: 52px;
+            color: #ffffff;
+        }
+
+        /* More Options (...) Button on preview bottom right */
+        .more-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background-color: rgba(60, 60, 60, 0.7);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            z-index: 5;
+        }
+
+        .more-btn .material-symbols-outlined {
+            font-size: 30px;
+            color: #ffffff;
+        }
+
+        .drawer-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.35);
+            z-index: 10;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .drawer-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Left Side Mode Selector List */
+        .mode-list {
+            position: absolute;
+            top: 42%;
+            left: 32px;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .mode-item {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .mode-icon-bg {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .mode-icon-bg.camera-blue {
+            background-color: #2196f3;
+        }
+
+        .mode-icon-bg.video-dark {
+            background-color: #383838;
+        }
+
+        .mode-icon-bg .material-symbols-outlined {
+            font-size: 28px;
+            color: #ffffff;
+        }
+
+        .mode-label {
+            color: #ffffff;
+            font-size: 19px;
+            margin-left: 20px;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        /* Settings Gear Icon Button */
+        .settings-btn-container {
+            position: absolute;
+            bottom: 130px;
+            right: 20px;
+            z-index: 12;
+        }
+
+        .settings-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background-color: #383838;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        }
+
+        .settings-btn .material-symbols-outlined {
+            font-size: 28px;
+            color: #ffffff;
+        }
+
+        /* Blue Tooltip Box */
+        .tooltip-box {
+            position: absolute;
+            bottom: 196px;
+            right: 18px;
+            background-color: #1e88e5;
+            color: #ffffff;
+            padding: 16px 20px;
+            border-radius: 2px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+            max-width: 280px;
+            z-index: 15;
+            font-size: 15px;
+            line-height: 1.5;
+            font-weight: 400;
+            letter-spacing: 0.2px;
+        }
+
+        /* Tooltip pointer triangle pointing down right */
+        .tooltip-box::after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            right: 16px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid #1e88e5;
+        }
+
+        /* Dimmed Shutter icon in overlay mode */
+        .shutter-bar-dimmed {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 110px;
+            background-color: #101010;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 11;
+        }
+
+        .shutter-icon-dimmed {
+            font-size: 52px;
+            color: #333333;
+        }
+
+        .settings-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f9f9f9;
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+        }
+
+        .settings-screen.active {
+            display: flex;
+        }
+
+        /* Settings Header Bar (Android Cyan / Teal) */
+        .settings-header {
+            height: 56px;
+            background-color: #00aac1;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.26);
+            z-index: 21;
+        }
+
+        .header-back-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            margin-right: 16px;
+            border-radius: 50%;
+        }
+
+        .header-back-btn:active {
+            background-color: rgba(255,255,255,0.15);
+        }
+
+        .header-back-btn .material-symbols-outlined {
+            font-size: 24px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+
+        /* Settings List */
+        .settings-list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .settings-item {
+            min-height: 64px;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #e5e5e5;
+            cursor: pointer;
+        }
+
+        .settings-item:active {
+            background-color: #eeeeee;
+        }
+
+        .settings-item-label {
+            font-size: 16px;
+            color: #212121;
+            font-weight: 400;
+        }
+
+        /* Android 7.1 (Nougat) Switch Component */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        /* Hide HTML default checkbox */
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* Switch Track (OFF State) */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        /* Switch Thumb / Knob (OFF State) */
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Switch Track (ON State) */
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        /* Switch Thumb / Knob (ON State) */
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        .shutter-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 30;
+            transition: opacity 0.15s ease-out;
+        }
+
+        .shutter-flash.flash-active {
+            opacity: 0.85;
+        }
+
+        /* Custom Dialog Overlay for Sub-settings */
+        .dialog-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .dialog-backdrop.active {
+            display: flex;
+        }
+
+        .dialog-box {
+            background-color: #ffffff;
+            border-radius: 3px;
+            width: 85%;
+            max-width: 320px;
+            padding: 24px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .dialog-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #212121;
+            margin-bottom: 16px;
+        }
+
+        .dialog-content {
+            font-size: 15px;
+            color: #616161;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .dialog-btn {
+            background: none;
+            border: none;
+            color: #00aac1;
+            font-weight: 500;
+            font-size: 14px;
+            padding: 8px 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Flash Effect Layer -->
+        <div id="shutterFlash" class="shutter-flash"></div>
+
+        <!-- MAIN CAMERA SCREEN -->
+        <div class="camera-screen" id="cameraScreen">
+            <div class="viewfinder" id="viewfinder">
+                <video id="cameraVideo" autoplay playsinline muted></video>
+                <canvas id="simulatedCanvas"></canvas>
+                
+                <!-- More options button (...) -->
+                <button class="more-btn" id="moreBtn" title="メニュー">
+                    <span class="material-symbols-outlined">more_horiz</span>
+                </button>
+            </div>
+
+            <div class="shutter-bar">
+                <button class="shutter-btn" id="shutterBtn" title="撮影">
+                    <span class="material-symbols-outlined">photo_camera</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- DRAWER / MENU OVERLAY -->
+        <div class="drawer-overlay" id="drawerOverlay">
+            <!-- Left Side Mode List -->
+            <div class="mode-list">
+                <div class="mode-item" id="modeCamera">
+                    <div class="mode-icon-bg camera-blue">
+                        <span class="material-symbols-outlined">photo_camera</span>
+                    </div>
+                    <span class="mode-label">カメラ</span>
+                </div>
+                <div class="mode-item" id="modeVideo">
+                    <div class="mode-icon-bg video-dark">
+                        <span class="material-symbols-outlined">videocam</span>
+                    </div>
+                    <span class="mode-label">動画</span>
+                </div>
+            </div>
+
+            <!-- Blue Tooltip Popover -->
+            <div class="tooltip-box" id="tooltipBox">
+                [設定]では解像度と画質を変更できます。<br>また高度な機能もお試しください。
+            </div>
+
+            <!-- Settings Gear Button -->
+            <div class="settings-btn-container">
+                <button class="settings-btn" id="settingsBtn" title="設定">
+                    <span class="material-symbols-outlined">settings</span>
+                </button>
+            </div>
+
+            <!-- Dimmed Bottom Shutter Placeholder -->
+            <div class="shutter-bar-dimmed">
+                <span class="material-symbols-outlined shutter-icon-dimmed">photo_camera</span>
+            </div>
+        </div>
+
+        <!-- SETTINGS SUB-ACTIVITY SCREEN -->
+        <div class="settings-screen" id="settingsScreen">
+            <!-- Header Bar -->
+            <div class="settings-header">
+                <button class="header-back-btn" id="settingsBackBtn" title="戻る">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div class="header-title">設定</div>
+            </div>
+
+            <!-- Settings List -->
+            <div class="settings-list">
+                <!-- Row 1: Resolution -->
+                <div class="settings-item" id="itemResolution">
+                    <span class="settings-item-label">解像度と画質</span>
+                </div>
+
+                <!-- Row 2: Location Toggle -->
+                <div class="settings-item" id="itemLocation">
+                    <span class="settings-item-label">位置情報を保存</span>
+                    <label class="switch">
+                        <input type="checkbox" id="locationToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Row 3: Advanced Settings -->
+                <div class="settings-item" id="itemAdvanced">
+                    <span class="settings-item-label">詳細設定</span>
+                </div>
+
+                <!-- Row 4: Help and Feedback -->
+                <div class="settings-item" id="itemHelp">
+                    <span class="settings-item-label">ヘルプとフィードバック</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Dialog Overlay -->
+        <div class="dialog-backdrop" id="dialogBackdrop">
+            <div class="dialog-box">
+                <div class="dialog-title" id="dialogTitle">設定</div>
+                <div class="dialog-content" id="dialogContent">内容</div>
+                <div class="dialog-actions">
+                    <button class="dialog-btn" id="dialogCloseBtn">OK</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        window.onload = function() {
+            // DOM Elements
+            const moreBtn = document.getElementById('moreBtn');
+            const drawerOverlay = document.getElementById('drawerOverlay');
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsScreen = document.getElementById('settingsScreen');
+            const settingsBackBtn = document.getElementById('settingsBackBtn');
+            const shutterBtn = document.getElementById('shutterBtn');
+            const shutterFlash = document.getElementById('shutterFlash');
+            const cameraVideo = document.getElementById('cameraVideo');
+            const simulatedCanvas = document.getElementById('simulatedCanvas');
+            const locationToggle = document.getElementById('locationToggle');
+            
+            // Mode buttons
+            const modeCamera = document.getElementById('modeCamera');
+            const modeVideo = document.getElementById('modeVideo');
+
+            // Dialog elements
+            const dialogBackdrop = document.getElementById('dialogBackdrop');
+            const dialogTitle = document.getElementById('dialogTitle');
+            const dialogContent = document.getElementById('dialogContent');
+            const dialogCloseBtn = document.getElementById('dialogCloseBtn');
+
+            // Attempt to start camera feed; fallback to animated canvas camera preview
+            let isRealCameraRunning = false;
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                    .then(function(stream) {
+                        cameraVideo.srcObject = stream;
+                        cameraVideo.style.display = 'block';
+                        simulatedCanvas.style.display = 'none';
+                        isRealCameraRunning = true;
+                    })
+                    .catch(function(err) {
+                        console.log("Real camera not accessible, using realistic view simulator:", err);
+                        setupSimulatedCamera();
+                    });
+            } else {
+                setupSimulatedCamera();
+            }
+
+            // Fallback Simulated Camera View
+            function setupSimulatedCamera() {
+                cameraVideo.style.display = 'none';
+                simulatedCanvas.style.display = 'block';
+                const ctx = simulatedCanvas.getContext('2d');
+                let animationFrameId;
+
+                function resizeCanvas() {
+                    const rect = simulatedCanvas.getBoundingClientRect();
+                    simulatedCanvas.width = rect.width || window.innerWidth;
+                    simulatedCanvas.height = rect.height || (window.innerHeight - 110);
+                }
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+
+                let time = 0;
+                function drawSimulatedView() {
+                    time += 0.02;
+                    const w = simulatedCanvas.width;
+                    const h = simulatedCanvas.height;
+
+                    // Smooth subtle ambient gradient background
+                    const grad = ctx.createLinearGradient(0, 0, w, h);
+                    const shift1 = Math.sin(time * 0.5) * 15;
+                    const shift2 = Math.cos(time * 0.3) * 15;
+
+                    grad.addColorStop(0, `rgb(${110 + shift1}, ${115 + shift2}, ${118 + shift1})`);
+                    grad.addColorStop(0.5, `rgb(${85 + shift2}, ${90 + shift1}, ${95 + shift2})`);
+                    grad.addColorStop(1, `rgb(${60 + shift1}, ${65 + shift2}, ${70 + shift1})`);
+
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, w, h);
+
+                    // Soft ambient room light shape simulation
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+                    ctx.beginPath();
+                    ctx.arc(w * 0.5 + Math.sin(time) * 10, h * 0.4 + Math.cos(time) * 10, Math.min(w, h) * 0.35, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Subtle camera sensor noise grain
+                    ctx.fillStyle = 'rgba(0,0,0,0.02)';
+                    for (let i = 0; i < 400; i++) {
+                        const rx = Math.random() * w;
+                        const ry = Math.random() * h;
+                        ctx.fillRect(rx, ry, 2, 2);
+                    }
+
+                    animationFrameId = requestAnimationFrame(drawSimulatedView);
+                }
+                drawSimulatedView();
+            }
+
+            // Web Audio API Shutter Sound Synthesizer
+            function playShutterSound() {
+                try {
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.08);
+                } catch(e) {
+                    // Audio context fallback
+                }
+            }
+
+            // Shutter Button Event
+            shutterBtn.addEventListener('click', function() {
+                playShutterSound();
+                shutterFlash.classList.add('flash-active');
+                setTimeout(function() {
+                    shutterFlash.classList.remove('flash-active');
+                }, 150);
+            });
+
+            // Open Drawer Overlay (Clicking ...)
+            moreBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                drawerOverlay.classList.add('active');
+            });
+
+            // Close Drawer when clicking transparent background area
+            drawerOverlay.addEventListener('click', function(e) {
+                if (e.target === drawerOverlay) {
+                    drawerOverlay.classList.remove('active');
+                }
+            });
+
+            // Settings Button Click (Opens Sub-Activity Screen)
+            settingsBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                drawerOverlay.classList.remove('active');
+                settingsScreen.classList.add('active');
+            });
+
+            // Settings Back Button Click (Returns to Camera Screen)
+            settingsBackBtn.addEventListener('click', function() {
+                settingsScreen.classList.remove('active');
+            });
+
+            // Mode Selectors
+            modeCamera.addEventListener('click', function() {
+                drawerOverlay.classList.remove('active');
+            });
+
+            modeVideo.addEventListener('click', function() {
+                showDialog('モード切り替え', '動画モードに切り替えます');
+                drawerOverlay.classList.remove('active');
+            });
+
+            // Dialog Helper
+            function showDialog(title, content) {
+                dialogTitle.textContent = title;
+                dialogContent.textContent = content;
+                dialogBackdrop.classList.add('active');
+            }
+
+            dialogCloseBtn.addEventListener('click', function() {
+                dialogBackdrop.classList.remove('active');
+            });
+
+            // Settings Item Click Handlers
+            document.getElementById('itemResolution').addEventListener('click', function() {
+                showDialog('解像度と画質', '背面カメラの写真: (4:3) 12.2 メガピクセル');
+            });
+
+            document.getElementById('itemAdvanced').addEventListener('click', function() {
+                showDialog('詳細設定', '手ぶれ補正: オン\nグリッド表示: オフ');
+            });
+
+            document.getElementById('itemHelp').addEventListener('click', function() {
+                showDialog('ヘルプとフィードバック', 'Android 7.1 (Nougat) カメラアプリ バージョン 4.2.0');
+            });
+
+            // Toggle switch event handler
+            locationToggle.addEventListener('change', function() {
+                console.log("位置情報を保存:", this.checked);
+            });
+        };
+    </script>
+</body>
+</html>
