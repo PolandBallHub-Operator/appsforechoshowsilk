@@ -2,3 +2,4 @@
 - https://polandballhub-operator.github.io/appsforechoshowsilk/bookmark/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/memo/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsuifixed/
+- https://polandballhub-operator.github.io/appsforechoshowsilk/mediaplayer/
