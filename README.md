@@ -7,3 +7,4 @@
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/setting.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/contact.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/devtool.html
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gallery.html
