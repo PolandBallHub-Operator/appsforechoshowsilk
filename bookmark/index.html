@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#333a40">
+  <title>Urler - Echo Show Bookmarks</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #333a40;
+      --line: rgba(235, 241, 245, .20);
+      --text: #f5f7f8;
+      --subtext: #d3d9dd;
+      --accent: #00e5ec;
+      --app-dpi: 1;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    button:active { opacity: .72; }
+    .hidden { display: none !important; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* 全画面ベースレイアウト */
+    .screen {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: calc(100vw / var(--app-dpi));
+      height: calc(100dvh / var(--app-dpi));
+      zoom: var(--app-dpi);
+      overflow: auto;
+      padding: clamp(18px, 5vh, 42px) clamp(20px, 6vw, 64px);
+      background: var(--bg);
+    }
+
+    .home-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 48px;
+      flex: 0 0 48px;
+      border-bottom: 1px solid var(--line);
+      color: #e0e7f0;
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .header-icon-btn {
+      background: transparent;
+      border: 0;
+      color: var(--text);
+      font-size: 20px;
+      padding: 6px 12px;
+      border-radius: 999px;
+    }
+    .header-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* サブ画面用ヘッダー */
+    .sub-screen { padding-top: clamp(18px, 4vh, 34px); }
+    .sub-header {
+      display: flex;
+      min-height: 46px;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .sub-header h1 {
+      margin: 0;
+      font-size: 19px;
+      font-weight: 500;
+    }
+    .back-button {
+      flex: 0 0 auto;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      width: 32px;
+      color: var(--text);
+      font-size: 32px;
+      font-weight: 300;
+      line-height: 1;
+      text-align: left;
+    }
+
+    .page-content { flex: 1; overflow: auto; padding-top: 8px; }
+
+    /* ブックマークリスト・カード構造 */
+    .bookmark-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .bookmark-card {
+      display: flex;
+      min-height: 72px;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 4px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      text-align: left;
+      width: 100%;
+    }
+    .bookmark-card:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .bookmark-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--accent);
+      font-size: 20px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .card-copy {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .card-copy strong {
+      overflow: hidden;
+      font-size: clamp(16px, 2.2vw, 19px);
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card-copy small {
+      overflow: hidden;
+      color: var(--subtext);
+      font-size: clamp(12px, 1.6vw, 14px);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .card-action {
+      padding: 8px 12px;
+      border: 0;
+      background: transparent;
+      color: var(--subtext);
+      font-size: 20px;
+    }
+    .delete-action {
+      color: #ff8a8a;
+    }
+
+    .empty-state {
+      padding: 48px 8px;
+      color: var(--subtext);
+      font-size: 15px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* 左下の白長円追加ボタン (FAB) */
+    .floating-add-btn {
+      position: fixed;
+      left: clamp(20px, 6vw, 64px);
+      bottom: clamp(18px, 5vh, 42px);
+      z-index: 100;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 52px;
+      padding: 0 28px;
+      border: 0;
+      border-radius: 999px;
+      background: #ffffff;
+      color: #18252d;
+      font-size: 17px;
+      font-weight: 700;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    .floating-add-btn:active {
+      transform: scale(0.95);
+      opacity: 0.9;
+    }
+    .floating-add-btn .add-icon {
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 400;
+    }
+
+    /* 設定画面コンポーネント */
+    .settings-content { padding-top: 4px; }
+    .setting-row {
+      display: flex;
+      min-height: 72px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 13px 2px;
+      border-bottom: 1px solid var(--line);
+    }
+    .setting-row > div:first-child {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .setting-row strong {
+      font-size: clamp(15px, 2.2vw, 18px);
+      font-weight: 500;
+    }
+    .setting-row small {
+      color: var(--subtext);
+      font-size: 12px;
+    }
+
+    .setting-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px 2px;
+      border-bottom: 1px solid var(--line);
+      width: 100%;
+    }
+    .setting-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-block-header strong {
+      font-size: clamp(15px, 2.2vw, 18px);
+      font-weight: 500;
+    }
+    .setting-block-header .val-badge {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    /* 端から端までの長さを持つ白いスライダー */
+    .slider-container {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .white-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      outline: none;
+      margin: 0;
+      background: linear-gradient(
+        to right,
+        #ffffff 0%,
+        #ffffff var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) 100%
+      );
+      cursor: pointer;
+    }
+    .white-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .white-slider::-webkit-slider-thumb:active {
+      transform: scale(1.18);
+    }
+    .white-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+    }
+
+    /* スイッチコンポーネント */
+    .switch {
+      position: relative;
+      flex: 0 0 50px;
+      width: 50px;
+      height: 27px;
+    }
+    .switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .switch span {
+      position: absolute;
+      inset: 0;
+      border: 1px solid #d9e0e4;
+      border-radius: 16px;
+      background: #d9e0e4;
+    }
+    .switch span::before {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      background: #15202a;
+      content: "";
+      transition: transform .16s;
+    }
+    .switch input:checked + span {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+    .switch input:checked + span::before {
+      transform: translateX(23px);
+      background: #08212b;
+    }
+
+    /* 全画面ダイアログ / アクション */
+    .dialog-form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding-top: 16px;
+    }
+    .dialog-form label {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: var(--text);
+      font-size: clamp(15px, 2vw, 18px);
+      font-weight: 500;
+    }
+    .dialog-form input, .dialog-form textarea {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      outline: 0;
+      background: #292f34;
+      color: var(--text);
+      font-size: clamp(16px, 2.2vw, 20px);
+    }
+    .dialog-form input:focus, .dialog-form textarea:focus {
+      border-color: var(--accent);
+    }
+
+    /* プリセット選択用のタグボタン */
+    .preset-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .preset-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--subtext);
+      font-size: 13px;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .pill-button {
+      min-height: 48px;
+      padding: 10px 28px;
+      border: 0;
+      border-radius: 999px;
+      background: #f7f9fa;
+      color: #24313a;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .pill-button.muted {
+      background: #d8dfe2;
+      color: #253139;
+    }
+
+    /* プレビュー / 詳細画面 */
+    .viewer-frame-container {
+      width: 100%;
+      height: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    .viewer-iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 200;
+      bottom: 24px;
+      left: 50%;
+      max-width: calc(100vw - 30px);
+      overflow: hidden;
+      padding: 10px 20px;
+      transform: translateX(-50%);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #343b41;
+      color: var(--text);
+      font-size: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .toast.visible { opacity: 1; }
+
+    @media (max-width: 600px) {
+      .screen { padding-right: 18px; padding-left: 18px; }
+      .setting-row { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- メイン画面 (Home) -->
+  <main id="home" class="screen">
+    <header class="home-header">
+      <span>Urler ブックマーク</span>
+      <button class="header-icon-btn" id="open-settings" aria-label="設定を開く">⚙ 設定</button>
+    </header>
+
+    <div class="page-content">
+      <div id="bookmark-list" class="bookmark-list"></div>
+      <div class="empty-state hidden" id="bookmark-empty">
+        <strong>ブックマークがありません</strong><br>
+        左下の「追加」ボタンからURLを登録してください。
+      </div>
+    </div>
+
+    <!-- 左下に配置された白長円の追加ボタン -->
+    <button class="floating-add-btn" id="btn-add-bookmark" aria-label="ブックマークを追加">
+      <span class="add-icon">＋</span>
+      <span>追加</span>
+    </button>
+  </main>
+
+  <!-- 追加・編集サブアクティビティ (全画面) -->
+  <section id="add-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" data-home aria-label="戻る">‹</button>
+      <h1 id="add-screen-title">ブックマーク追加</h1>
+    </header>
+    <div class="page-content">
+      <form id="bookmark-form" class="dialog-form" onsubmit="return false;">
+        <label>
+          タイトル
+          <input type="text" id="bm-title" placeholder="例: Google 検索" required maxlength="60">
+        </label>
+
+        <label>
+          URL
+          <input type="url" id="bm-url" placeholder="https://example.com" required>
+        </label>
+
+        <div>
+          <span style="font-size:14px; color:var(--subtext);">ショートカット入力:</span>
+          <div class="preset-tags">
+            <button type="button" class="preset-btn" data-url="https://www.google.com" data-title="Google">Google</button>
+            <button type="button" class="preset-btn" data-url="https://www.youtube.com" data-title="YouTube">YouTube</button>
+            <button type="button" class="preset-btn" data-url="https://news.yahoo.co.jp" data-title="Yahoo! ニュース">Yahoo! News</button>
+            <button type="button" class="preset-btn" data-url="https://www.amazon.co.jp" data-title="Amazon">Amazon</button>
+          </div>
+        </div>
+
+        <label>
+          メモ (任意)
+          <textarea id="bm-memo" rows="2" placeholder="メモや説明を入力" maxlength="120"></textarea>
+        </label>
+
+        <div class="dialog-actions">
+          <button type="button" class="pill-button muted" data-home>キャンセル</button>
+          <button type="submit" class="pill-button" id="btn-save-bookmark">保存</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- 閲覧・詳細サブアクティビティ (全画面) -->
+  <section id="viewer-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" data-home aria-label="戻る">‹</button>
+      <h1 id="viewer-title">ブックマーク詳細</h1>
+      <button class="header-icon-btn" id="viewer-open-external" style="margin-left:auto;">開く ↗</button>
+    </header>
+    <div class="page-content" style="display:flex; flex-direction:column; height:100%;">
+      <div style="padding: 4px 0 10px; border-bottom: 1px solid var(--line);">
+        <small id="viewer-url-text" style="color:var(--subtext); word-break:break-all; font-size:13px;"></small>
+        <p id="viewer-memo-text" style="margin:6px 0 0; font-size:14px;"></p>
+      </div>
+      <div class="viewer-frame-container">
+        <iframe id="viewer-iframe" class="viewer-iframe" title="ブックマークプレビュー"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- 設定サブアクティビティ (全画面) -->
+  <section id="settings-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" data-home aria-label="戻る">‹</button>
+      <h1>Settings</h1>
+    </header>
+    <div class="page-content settings-content">
+      <!-- 端から端まで長い白いスライダー (App DPI設定) -->
+      <article class="setting-block">
+        <div class="setting-block-header">
+          <div>
+            <strong>App DPI スケール</strong>
+            <small style="display:block; color:var(--subtext); font-size:12px; margin-top:2px;">
+              このアプリの表示倍率（IndexedDBに保存）
+            </small>
+          </div>
+          <span id="dpi-value-label" class="val-badge">100%</span>
+        </div>
+        <div class="slider-container">
+          <input type="range" id="app-dpi-slider" class="white-slider" min="75" max="150" step="5" value="100" aria-label="App DPI スケール">
+        </div>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>Echo Showに合わせる</strong>
+          <small>画面フィット・自動適用</small>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="fit-screen" checked>
+          <span></span>
+        </label>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>画面スリープを防止</strong>
+          <small>操作がない間も画面の点灯を維持</small>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="keep-awake">
+          <span></span>
+        </label>
+      </article>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+      const $ = (s) => document.querySelector(s);
+      const screens = ['#home', '#add-screen', '#viewer-screen', '#settings-screen'];
+
+      const DB_NAME = 'UrlerDB';
+      const DB_VERSION = 1;
+      let toastTimer = 0;
+      let activeBookmarkId = null;
+      let wakeLock = null;
+
+      /* IndexedDB 接続 */
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings');
+            }
+            if (!db.objectStoreNames.contains('bookmarks')) {
+              db.createObjectStore('bookmarks', { keyPath: 'id' });
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      /* 設定ストアヘルパー */
+      async function getSetting(key, fallback) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve) => {
+            const tx = db.transaction('settings', 'readonly');
+            const store = tx.objectStore('settings');
+            const req = store.get(key);
+            req.onsuccess = () => resolve(req.result !== undefined ? req.result : fallback);
+            req.onerror = () => resolve(fallback);
+          });
+        } catch {
+          return fallback;
+        }
+      }
+
+      async function setSetting(key, value) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction('settings', 'readwrite');
+            const store = tx.objectStore('settings');
+            const req = store.put(value, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        } catch (e) {
+          console.error('Failed to write IndexedDB setting', e);
+        }
+      }
+
+      /* ブックマークストアヘルパー */
+      async function getAllBookmarks() {
+        try {
+          const db = await openDB();
+          return new Promise((resolve) => {
+            const tx = db.transaction('bookmarks', 'readonly');
+            const store = tx.objectStore('bookmarks');
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result.sort((a,b) => b.createdAt - a.createdAt));
+            req.onerror = () => resolve([]);
+          });
+        } catch {
+          return [];
+        }
+      }
+
+      async function saveBookmark(bookmark) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('bookmarks', 'readwrite');
+          const store = tx.objectStore('bookmarks');
+          const req = store.put(bookmark);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function deleteBookmark(id) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('bookmarks', 'readwrite');
+          const store = tx.objectStore('bookmarks');
+          const req = store.delete(id);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      function toast(message) {
+        const el = $('#toast');
+        el.textContent = message;
+        el.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('visible'), 2800);
+      }
+
+      function hideScreens() {
+        screens.forEach(s => $(s).classList.add('hidden'));
+      }
+
+      function showScreen(selector) {
+        hideScreens();
+        $(selector).classList.remove('hidden');
+        if (selector === '#home') {
+          renderBookmarks();
+        }
+      }
+
+      function safeText(val) {
+        return String(val || '').replace(/[&<>"']/g, ch => ({
+          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[ch]));
+      }
+
+      async function renderBookmarks() {
+        const list = $('#bookmark-list');
+        list.replaceChildren();
+        const items = await getAllBookmarks();
+
+        $('#bookmark-empty').classList.toggle('hidden', items.length > 0);
+
+        for (const item of items) {
+          const row = document.createElement('div');
+          row.className = 'bookmark-card';
+          
+          let domain = '';
+          try {
+            domain = new URL(item.url).hostname;
+          } catch {
+            domain = item.url;
+          }
+
+          const initial = (item.title || 'U').charAt(0).toUpperCase();
+
+          row.innerHTML = `
+            <div class="bookmark-badge">${safeText(initial)}</div>
+            <div class="card-copy">
+              <strong>${safeText(item.title)}</strong>
+              <small>${safeText(domain)} ${item.memo ? '• ' + safeText(item.memo) : ''}</small>
+            </div>
+            <button class="card-action delete-action" title="削除" aria-label="削除">×</button>
+          `;
+
+          row.querySelector('.card-copy').addEventListener('click', () => openViewer(item));
+          row.querySelector('.bookmark-badge').addEventListener('click', () => openViewer(item));
+
+          row.querySelector('.delete-action').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await deleteBookmark(item.id);
+            toast('ブックマークを削除しました');
+            renderBookmarks();
+          });
+
+          list.append(row);
+        }
+      }
+
+      function openViewer(item) {
+        $('#viewer-title').textContent = item.title;
+        $('#viewer-url-text').textContent = item.url;
+        $('#viewer-memo-text').textContent = item.memo || '';
+        $('#viewer-iframe').src = item.url;
+        activeBookmarkId = item.id;
+
+        $('#viewer-open-external').onclick = () => {
+          window.open(item.url, '_blank');
+        };
+
+        showScreen('#viewer-screen');
+      }
+
+      function updateSliderTrack(slider) {
+        const min = Number(slider.min) || 75;
+        const max = Number(slider.max) || 150;
+        const val = Number(slider.value) || 100;
+        const progress = ((val - min) / (max - min)) * 100;
+        slider.style.setProperty('--slider-progress', `${progress}%`);
+      }
+
+      function applyAppDpi(dpiVal) {
+        document.documentElement.style.setProperty('--app-dpi', String(dpiVal / 100));
+        $('#dpi-value-label').textContent = `${dpiVal}%`;
+      }
+
+      async function initDpiSetting() {
+        const slider = $('#app-dpi-slider');
+        const savedDpi = await getSetting('appDpi', 100);
+
+        slider.value = savedDpi;
+        updateSliderTrack(slider);
+        applyAppDpi(savedDpi);
+
+        slider.addEventListener('input', (e) => {
+          const val = Number(e.target.value);
+          updateSliderTrack(e.target);
+          applyAppDpi(val);
+        });
+
+        slider.addEventListener('change', async (e) => {
+          const val = Number(e.target.value);
+          await setSetting('appDpi', val);
+          toast(`DPIを ${val}% に保存しました`);
+        });
+      }
+
+      /* イベントバインド */
+      function bindEvents() {
+        document.querySelectorAll('[data-home]').forEach(btn => {
+          btn.addEventListener('click', () => showScreen('#home'));
+        });
+
+        $('#open-settings').addEventListener('click', () => showScreen('#settings-screen'));
+
+        $('#btn-add-bookmark').addEventListener('click', () => {
+          $('#bookmark-form').reset();
+          showScreen('#add-screen');
+        });
+
+        /* プリセットボタン */
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            $('#bm-url').value = btn.dataset.url;
+            if (!$('#bm-title').value) {
+              $('#bm-title').value = btn.dataset.title;
+            }
+          });
+        });
+
+        /* フォーム送信 */
+        $('#bookmark-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const title = $('#bm-title').value.trim();
+          let url = $('#bm-url').value.trim();
+          const memo = $('#bm-memo').value.trim();
+
+          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'https://' + url;
+          }
+
+          const bookmark = {
+            id: 'bm-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+            title: title || url,
+            url,
+            memo,
+            createdAt: Date.now()
+          };
+
+          await saveBookmark(bookmark);
+          toast('ブックマークを保存しました');
+          showScreen('#home');
+        });
+
+        /* Keep Awake 機能 */
+        $('#keep-awake').addEventListener('change', async (e) => {
+          await setSetting('keepAwake', e.target.checked);
+          if (e.target.checked && 'wakeLock' in navigator) {
+            try {
+              wakeLock = await navigator.wakeLock.request('screen');
+            } catch {}
+          } else if (wakeLock) {
+            wakeLock.release().catch(() => {});
+            wakeLock = null;
+          }
+        });
+      }
+
+      /* 初期化 */
+      window.addEventListener('DOMContentLoaded', async () => {
+        await initDpiSetting();
+        bindEvents();
+        renderBookmarks();
+
+        // 初期サンプルデータ挿入 (未登録時)
+        const items = await getAllBookmarks();
+        if (items.length === 0) {
+          await saveBookmark({
+            id: 'sample-1',
+            title: 'Google',
+            url: 'https://www.google.com',
+            memo: '検索エンジン',
+            createdAt: Date.now()
+          });
+          renderBookmarks();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
