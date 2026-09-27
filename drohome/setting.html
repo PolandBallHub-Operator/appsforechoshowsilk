@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Android 7.1 Settings - Echo Show 3</title>
+
+  <!-- Google Material Symbols Outlined CDN -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
+
+  <style>
+    :root {
+      --app-bar-bg: #27323a;
+      --app-bar-text: #ffffff;
+      --body-bg: #eceff1;
+      --card-bg: #ffffff;
+      --section-header-color: #00897b;
+      --text-primary: #212121;
+      --text-secondary: #727272;
+      --divider-color: #e0e0e0;
+      --ripple-hover-bg: rgba(0, 0, 0, 0.04);
+      --font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: var(--body-bg);
+      font-family: var(--font-family);
+      color: var(--text-primary);
+      overflow-x: hidden;
+    }
+
+    .app-bar {
+      height: 56px;
+      background-color: var(--app-bar-bg);
+      color: var(--app-bar-text);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    .app-bar-button {
+      background: none;
+      border: none;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      margin-right: 12px;
+      outline: none;
+    }
+
+    .app-bar-button:active {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .app-bar-title {
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: 0.25px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .viewport-container {
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 10px 12px 24px 12px;
+    }
+
+    .screen-view {
+      display: block;
+    }
+
+    .screen-view.hidden {
+      display: none;
+    }
+
+    .settings-card {
+      background-color: var(--card-bg);
+      border-radius: 2px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+      margin-bottom: 12px;
+      padding: 16px 16px 4px 16px;
+    }
+
+    .section-title {
+      color: var(--section-header-color);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.1px;
+      margin-bottom: 12px;
+      padding-left: 4px;
+    }
+
+    .grid-row {
+      display: flex;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--divider-color);
+    }
+
+    .grid-row:last-child {
+      border-bottom: none;
+    }
+
+    .grid-item {
+      flex: 1 1 50%;
+      min-width: 280px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .grid-item:hover, .grid-item:active {
+      background-color: var(--ripple-hover-bg);
+    }
+
+    .grid-item-icon {
+      color: var(--section-header-color);
+      font-size: 24px;
+      margin-right: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+    }
+
+    .grid-item-text {
+      font-size: 15px;
+      color: var(--text-primary);
+      font-weight: 400;
+    }
+
+    .sub-activity-card {
+      background-color: var(--card-bg);
+      border-radius: 2px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+      padding: 8px 0;
+    }
+
+    .list-item {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+    }
+
+    .list-item:last-child {
+      border-bottom: none;
+    }
+
+    .list-item:hover, .list-item:active {
+      background-color: var(--ripple-hover-bg);
+    }
+
+    .list-item-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .list-item-title {
+      font-size: 16px;
+      color: var(--text-primary);
+    }
+
+    .list-item-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .storage-bar-container {
+      padding: 24px 24px 16px 24px;
+      background: #fafafa;
+      border-bottom: 1px solid var(--divider-color);
+    }
+
+    .storage-title {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .storage-number {
+      font-size: 28px;
+      color: var(--text-primary);
+      font-weight: 300;
+      margin-bottom: 12px;
+    }
+
+    .storage-progress-bg {
+      height: 8px;
+      background-color: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .storage-progress-fill {
+      height: 100%;
+      background-color: var(--section-header-color);
+      width: 38%;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #b0bec5;
+      transition: .3s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #80cbd3;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+      background-color: var(--section-header-color);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="app-bar">
+    <button id="backBtn" class="app-bar-button" style="display: none;" onclick="navigateHome()" aria-label="Back">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <div id="headerTitle" class="app-bar-title">Settings</div>
+  </header>
+
+  <main class="viewport-container">
+
+    <div id="mainSettingsScreen" class="screen-view">
+
+      <!-- Device Section Card -->
+      <section class="settings-card">
+        <h2 class="section-title">Device</h2>
+        <div class="grid-row">
+          <div class="grid-item" onclick="openSubActivity('storage')">
+            <span class="material-symbols-outlined grid-item-icon">dns</span>
+            <span class="grid-item-text">Storage</span>
+          </div>
+          <div class="grid-item" onclick="openSubActivity('apps')">
+            <span class="material-symbols-outlined grid-item-icon">android</span>
+            <span class="grid-item-text">Apps</span>
+          </div>
+        </div>
+        <div class="grid-row">
+          <div class="grid-item" onclick="openSubActivity('defaults')">
+            <span class="material-symbols-outlined grid-item-icon">android</span>
+            <span class="grid-item-text">Defaults</span>
+          </div>
+          <div class="grid-item" style="cursor: default;" onclick="openSubActivity('about')">
+            <!-- Secondary slot leading to device info -->
+            <span class="material-symbols-outlined grid-item-icon">info</span>
+            <span class="grid-item-text">About device (Echo show 3)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Personal Section Card -->
+      <section class="settings-card">
+        <h2 class="section-title">Personal</h2>
+        <div class="grid-row">
+          <div class="grid-item" onclick="openSubActivity('location')">
+            <span class="material-symbols-outlined grid-item-icon">location_on</span>
+            <span class="grid-item-text">Location</span>
+          </div>
+          <div class="grid-item" onclick="openSubActivity('language')">
+            <span class="material-symbols-outlined grid-item-icon">language</span>
+            <span class="grid-item-text">Language &amp; input</span>
+          </div>
+        </div>
+        <div class="grid-row">
+          <div class="grid-item" onclick="openSubActivity('accounts')">
+            <span class="material-symbols-outlined grid-item-icon">account_box</span>
+            <span class="grid-item-text">Accounts</span>
+          </div>
+          <div class="grid-item" onclick="openSubActivity('google')">
+            <span class="material-symbols-outlined grid-item-icon">g_mobiledata</span>
+            <span class="grid-item-text">Google</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- BlueStacks Settings Section Card -->
+      <section class="settings-card">
+        <h2 class="section-title">BlueStacks Settings</h2>
+        <div class="grid-row">
+          <div class="grid-item" onclick="openSubActivity('ime')">
+            <span class="material-symbols-outlined grid-item-icon">keyboard</span>
+            <span class="grid-item-text">Select IME</span>
+          </div>
+          <div class="grid-item" onclick="openSubActivity('contacts')">
+            <span class="material-symbols-outlined grid-item-icon">import_contacts</span>
+            <span class="grid-item-text">Manage contacts</span>
+          </div>
+        </div>
+        <div class="grid-row">
+          <div class="grid-item" onclick="openSubActivity('import_files')">
+            <span class="material-symbols-outlined grid-item-icon">folder</span>
+            <span class="grid-item-text">Import windows files</span>
+          </div>
+          <div class="grid-item" style="cursor: default;"></div>
+        </div>
+      </section>
+
+    </div>
+
+
+    <!-- Storage Sub Activity -->
+    <div id="sub-storage" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="storage-bar-container">
+          <div class="storage-title">Device storage</div>
+          <div class="storage-number">12.16 GB used of 32.00 GB</div>
+          <div class="storage-progress-bg">
+            <div class="storage-progress-fill"></div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Apps</div>
+            <div class="list-item-subtitle">4.20 GB</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Pictures &amp; videos</div>
+            <div class="list-item-subtitle">1.05 GB</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Audio</div>
+            <div class="list-item-subtitle">320 MB</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Cached data</div>
+            <div class="list-item-subtitle">145 MB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Apps Sub Activity -->
+    <div id="sub-apps" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item">
+          <span class="material-symbols-outlined grid-item-icon" style="color:#2196f3;">settings</span>
+          <div class="list-item-content">
+            <div class="list-item-title">Settings</div>
+            <div class="list-item-subtitle">18.42 MB</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <span class="material-symbols-outlined grid-item-icon" style="color:#ea4335;">g_mobiledata</span>
+          <div class="list-item-content">
+            <div class="list-item-title">Google Play services</div>
+            <div class="list-item-subtitle">142 MB</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <span class="material-symbols-outlined grid-item-icon" style="color:#00bcd4;">smart_toy</span>
+          <div class="list-item-content">
+            <div class="list-item-title">Echo Show Core Services</div>
+            <div class="list-item-subtitle">86.10 MB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Defaults Sub Activity -->
+    <div id="sub-defaults" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Assist &amp; voice input</div>
+            <div class="list-item-subtitle">Alexa / Google Assistant</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Browser app</div>
+            <div class="list-item-subtitle">Chrome</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Home app</div>
+            <div class="list-item-subtitle">Echo Show Launcher</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location Sub Activity -->
+    <div id="sub-location" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item" style="justify-content: space-between;">
+          <div class="list-item-content">
+            <div class="list-item-title">Location status</div>
+            <div class="list-item-subtitle">On / High accuracy</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Mode</div>
+            <div class="list-item-subtitle">High accuracy (GPS, Wi-Fi, and cellular networks)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Language & Input Sub Activity -->
+    <div id="sub-language" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Languages</div>
+            <div class="list-item-subtitle">English (United States), 日本語</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Current Keyboard</div>
+            <div class="list-item-subtitle">Gboard - English (US)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accounts Sub Activity -->
+    <div id="sub-accounts" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item">
+          <span class="material-symbols-outlined grid-item-icon">account_circle</span>
+          <div class="list-item-content">
+            <div class="list-item-title">Google</div>
+            <div class="list-item-subtitle">user@gmail.com</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <span class="material-symbols-outlined grid-item-icon">add</span>
+          <div class="list-item-content">
+            <div class="list-item-title">Add account</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Sub Activity -->
+    <div id="sub-google" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Account services</div>
+            <div class="list-item-subtitle">Connected apps, Google Fit, Google Pay</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Device connections</div>
+            <div class="list-item-subtitle">Cast options, Nearby share</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IME / BlueStacks settings -->
+    <div id="sub-ime" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Input Method Selector</div>
+            <div class="list-item-subtitle">Android Soft Keyboard (IME) Enabled</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sub-contacts" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Contacts Sync</div>
+            <div class="list-item-subtitle">All contacts synchronized with Echo Show account</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sub-import_files" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Shared Directory</div>
+            <div class="list-item-subtitle">/sdcard/Pictures/Imported</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- About Device Sub Activity (Echo Show 3 Specs) -->
+    <div id="sub-about" class="screen-view hidden">
+      <div class="sub-activity-card">
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Device name</div>
+            <div class="list-item-subtitle">Echo show 3</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Model</div>
+            <div class="list-item-subtitle">Echo Show 3 (3rd Generation)</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Android version</div>
+            <div class="list-item-subtitle">7.1.2 (Nougat)</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Android security patch level</div>
+            <div class="list-item-subtitle">October 5, 2021</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Kernel version</div>
+            <div class="list-item-subtitle">3.10.0-g8f9a2bc</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">Build number</div>
+            <div class="list-item-subtitle">N2G47H.260927.001</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Title mapping for sub-activities
+    const titles = {
+      'storage': 'Storage',
+      'apps': 'Apps',
+      'defaults': 'Defaults',
+      'location': 'Location',
+      'language': 'Language & input',
+      'accounts': 'Accounts',
+      'google': 'Google',
+      'ime': 'Select IME',
+      'contacts': 'Manage contacts',
+      'import_files': 'Import windows files',
+      'about': 'About device'
+    };
+
+    /**
+     * Opens a specific Android 7.1 setting sub activity
+     * @param {string} subId
+     */
+    function openSubActivity(subId) {
+      // Hide main screen
+      document.getElementById('mainSettingsScreen').classList.add('hidden');
+
+      // Hide all sub views
+      const subScreens = document.querySelectorAll('.screen-view:not(#mainSettingsScreen)');
+      subScreens.forEach(scr => scr.classList.add('hidden'));
+
+      // Show requested sub view
+      const targetSub = document.getElementById(`sub-${subId}`);
+      if (targetSub) {
+        targetSub.classList.remove('hidden');
+      }
+
+      // Update Header Bar
+      document.getElementById('backBtn').style.display = 'flex';
+      document.getElementById('headerTitle').textContent = titles[subId] || 'Settings';
+
+      // Scroll to top
+      window.scrollTo(0, 0);
+    }
+
+    /**
+     * Navigates back to the main Settings screen
+     */
+    function navigateHome() {
+      // Hide all sub views
+      const subScreens = document.querySelectorAll('.screen-view:not(#mainSettingsScreen)');
+      subScreens.forEach(scr => scr.classList.add('hidden'));
+
+      // Show main settings screen
+      document.getElementById('mainSettingsScreen').classList.remove('hidden');
+
+      // Reset Header Bar
+      document.getElementById('backBtn').style.display = 'none';
+      document.getElementById('headerTitle').textContent = 'Settings';
+
+      window.scrollTo(0, 0);
+    }
+  </script>
+</body>
+</html>
