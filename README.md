@@ -4,3 +4,4 @@
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsuifixed/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/mediaplayer/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/setting.html
