@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja" style="--dpi-scale: 1.0;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android Home Screen</title>
+
+    <!-- Google Material Symbols CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    
+    <!-- Google Fonts: Roboto (Thin, Light, Regular, Medium) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Base Variables & Reset */
+        :root {
+            --dpi-scale: 1.0; /* Dynamic DPI multiplier */
+            --base-font-size: 16px;
+            --status-bar-height: calc(28px * var(--dpi-scale));
+            --nav-bar-height: calc(48px * var(--dpi-scale));
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Roboto', sans-serif;
+            background-color: #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Android Screen Container */
+        .android-screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Android_Nougat_default_wallpaper_%28sw720dp%29.png/1280px-Android_Nougat_default_wallpaper_%28sw720dp%29.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+
+        .status-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--status-bar-height);
+            padding: 0 calc(16px * var(--dpi-scale));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ffffff;
+            z-index: 10;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+        }
+
+        .status-bar-left {
+            display: flex;
+            align-items: center;
+            gap: calc(8px * var(--dpi-scale));
+        }
+
+        .time-text {
+            font-size: calc(14px * var(--dpi-scale));
+            font-weight: 500;
+            margin-right: calc(2px * var(--dpi-scale));
+            letter-spacing: 0.2px;
+        }
+
+        .status-bar-right {
+            display: flex;
+            align-items: center;
+            gap: calc(8px * var(--dpi-scale));
+        }
+
+        .status-icon {
+            font-size: calc(16px * var(--dpi-scale)) !important;
+            color: #ffffff;
+        }
+
+        .clock-widget {
+            position: absolute;
+            top: 22%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            z-index: 5;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .clock-time {
+            font-size: calc(92px * var(--dpi-scale));
+            font-weight: 100;
+            line-height: 0.95;
+            letter-spacing: calc(-1px * var(--dpi-scale));
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+        }
+
+        .clock-date {
+            font-size: calc(13px * var(--dpi-scale));
+            font-weight: 500;
+            letter-spacing: calc(2px * var(--dpi-scale));
+            text-transform: uppercase;
+            margin-top: calc(10px * var(--dpi-scale));
+            opacity: 0.95;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+        }
+
+        /* Lower Left Indicator */
+        .lower-left-indicator {
+            position: absolute;
+            bottom: calc(var(--nav-bar-height) + (12px * var(--dpi-scale)));
+            left: calc(18px * var(--dpi-scale));
+            color: rgba(255, 255, 255, 0.9);
+            z-index: 5;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .lower-left-indicator .material-symbols-outlined {
+            font-size: calc(22px * var(--dpi-scale)) !important;
+            font-weight: 300;
+        }
+
+        .nav-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--nav-bar-height);
+            background: transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10vw;
+            z-index: 20;
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: calc(64px * var(--dpi-scale));
+            height: 100%;
+            cursor: pointer;
+            color: #ffffff;
+            transition: background-color 0.15s ease, opacity 0.1s ease;
+            border-radius: 50%;
+        }
+
+        /* SVG Navigation Icons Style */
+        .nav-svg {
+            width: calc(24px * var(--dpi-scale));
+            height: calc(24px * var(--dpi-scale));
+            display: block;
+            filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+        }
+
+        /* Real-time DPI Info HUD Display */
+        .dpi-hud {
+            position: absolute;
+            bottom: calc(var(--nav-bar-height) + (12px * var(--dpi-scale)));
+            right: calc(16px * var(--dpi-scale));
+            background: rgba(0, 0, 0, 0.45);
+            color: rgba(255, 255, 255, 0.85);
+            padding: calc(4px * var(--dpi-scale)) calc(10px * var(--dpi-scale));
+            border-radius: calc(12px * var(--dpi-scale));
+            font-size: calc(11px * var(--dpi-scale));
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+            z-index: 15;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="android-screen" id="screen">
+        
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-bar-left">
+                <span class="time-text">8:40</span>
+                <span class="material-symbols-outlined status-icon">adjust</span>
+                <span class="material-symbols-outlined status-icon">sync</span>
+            </div>
+            <div class="status-bar-right">
+                <span class="material-symbols-outlined status-icon">wifi</span>
+                <span class="material-symbols-outlined status-icon">battery_full</span>
+            </div>
+        </div>
+
+        <!-- Center Clock Widget -->
+        <div class="clock-widget">
+            <div class="clock-time">8:40</div>
+            <div class="clock-date">WED, MAR 25</div>
+        </div>
+
+        <!-- Lower Left Caret Indicator -->
+        <div class="lower-left-indicator">
+            <span class="material-symbols-outlined">expand_less</span>
+        </div>
+
+        <!-- Realtime DPI Display -->
+        <div class="dpi-hud" id="dpi-hud-text">DPI Density: 100% (360 dp)</div>
+
+        <!-- Bottom Navigation Bar (SVG Icons:  / ● / ■) -->
+        <div class="nav-bar">
+            <!-- Back Button ( SVG): Reset Scale (100% / Normal DPI) -->
+            <div class="nav-btn" id="btn-back" title="Reset DPI Scale ()">
+                <svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14 6L8 12L14 18V6Z" fill="#FFFFFF"/>
+                </svg>
+            </div>
+
+            <!-- Home Button (● SVG): Decrease UI size / Increase Density (高DPI) -->
+            <div class="nav-btn" id="btn-home" title="Make Smaller / Increase Density (●)">
+                <svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="5" fill="#FFFFFF"/>
+                </svg>
+            </div>
+
+            <!-- Recents Button (■ SVG): Increase UI size / Decrease Density (低DPI) -->
+            <div class="nav-btn" id="btn-recents" title="Make Larger / Decrease Density (■)">
+                <svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="7" y="7" width="10" height="10" rx="1" fill="#FFFFFF"/>
+                </svg>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        (function() {
+            // Default DPI Scale factor (1.0 = 100% density / ~360dp)
+            let currentDpiScale = 1.0;
+            const minScale = 0.5; // High Density (UI smaller)
+            const maxScale = 1.8; // Low Density (UI larger)
+            const scaleStep = 0.1;
+
+            const root = document.documentElement;
+            const dpiHudText = document.getElementById('dpi-hud-text');
+            const btnHome = document.getElementById('btn-home');       // ● (UIを小さく / 高DPI化)
+            const btnRecents = document.getElementById('btn-recents'); // ■ (UIを大きく / 低DPI化)
+            const btnBack = document.getElementById('btn-back');       //  (リセット)
+
+            function applyDpiChange() {
+                // Keep scale within boundaries and round to 1 decimal place
+                currentDpiScale = Math.round(Math.max(minScale, Math.min(maxScale, currentDpiScale)) * 10) / 10;
+                
+                // Update root CSS variable to recalculate dimensions, fonts, and spacing across the interface
+                root.style.setProperty('--dpi-scale', currentDpiScale);
+                
+                // Calculate virtual smallest width dp
+                const percentage = Math.round(currentDpiScale * 100);
+                const equivalentDp = Math.round(360 / currentDpiScale);
+                
+                dpiHudText.textContent = `DPI Density: ${percentage}% (${equivalentDp} dp)`;
+            }
+
+            // ● (Circle): Make screen elements smaller (Higher DPI / More Density)
+            btnHome.addEventListener('click', function(e) {
+                e.preventDefault();
+                currentDpiScale -= scaleStep;
+                applyDpiChange();
+            });
+
+            // ■ (Square): Make screen elements larger (Lower DPI / Less Density)
+            btnRecents.addEventListener('click', function(e) {
+                e.preventDefault();
+                currentDpiScale += scaleStep;
+                applyDpiChange();
+            });
+
+            //  (Triangle): Reset DPI scale back to 100%
+            btnBack.addEventListener('click', function(e) {
+                e.preventDefault();
+                currentDpiScale = 1.0;
+                applyDpiChange();
+            });
+
+            // Initial alignment
+            applyDpiChange();
+        })();
+    </script>
+</body>
+</html>
