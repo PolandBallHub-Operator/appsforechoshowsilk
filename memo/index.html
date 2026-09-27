@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#333a40">
+  <title>Meho - Echo Show メモ</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #333a40;
+      --line: rgba(235, 241, 245, .20);
+      --text: #f5f7f8;
+      --subtext: #d3d9dd;
+      --accent: #00e5ec;
+      --app-dpi: 1;
+      --memo-font-size: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    button:active { opacity: .72; }
+    .hidden { display: none !important; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* SCREEN & LAYOUT COMPONENTS */
+    .screen {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: calc(100vw / var(--app-dpi));
+      height: calc(100dvh / var(--app-dpi));
+      zoom: var(--app-dpi);
+      overflow: auto;
+      padding: clamp(18px, 5vh, 42px) clamp(20px, 6vw, 64px);
+      background: var(--bg);
+    }
+    .home-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 44px;
+      flex: 0 0 44px;
+      border-bottom: 1px solid var(--line);
+      color: #e0e7f0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .home-header .header-btn {
+      padding: 6px 12px;
+      border: 0;
+      background: transparent;
+      color: var(--subtext);
+      font-size: 14px;
+    }
+
+    .sub-screen { padding-top: clamp(18px, 4vh, 34px); }
+    .sub-header {
+      display: flex;
+      min-height: 46px;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .sub-header h1 {
+      margin: 0;
+      font-size: 19px;
+      font-weight: 500;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .back-button, .header-action {
+      flex: 0 0 auto;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+    .back-button {
+      width: 32px;
+      height: 32px;
+      color: var(--text);
+      font-size: 32px;
+      font-weight: 300;
+      line-height: 1;
+      text-align: left;
+      display: flex;
+      align-items: center;
+    }
+    .header-action {
+      min-width: 48px;
+      height: 36px;
+      margin-left: auto;
+      border-radius: 999px;
+      background: #f7f9fa;
+      color: #18252d;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 0 16px;
+    }
+    .header-action.danger {
+      background: rgba(220, 53, 69, 0.2);
+      color: #ff6b6b;
+      border: 1px solid rgba(255, 107, 107, 0.3);
+    }
+
+    .page-content { flex: 1; overflow: auto; padding-top: 8px; }
+
+    .memo-list {
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 80px; /* Space for FAB */
+    }
+    .memo-card {
+      display: flex;
+      min-height: 76px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 4px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      text-align: left;
+      width: 100%;
+    }
+    .memo-card:active {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .card-copy {
+      display: flex;
+      min-width: 0;
+      flex: 1;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-copy strong {
+      font-size: clamp(17px, 2.4vw, 21px);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+    }
+    .card-copy small {
+      color: var(--subtext);
+      font-size: clamp(12px, 1.6vw, 14px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .empty-state {
+      padding: 48px 8px;
+      color: var(--subtext);
+      font-size: 15px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* 画面左下に配置された白長円の新規作成ボタン */
+    .fab-pill-button {
+      position: fixed;
+      z-index: 10;
+      left: clamp(20px, 5vw, 40px);
+      bottom: clamp(20px, 5vh, 40px);
+      min-height: 54px;
+      padding: 0 28px;
+      border: 0;
+      border-radius: 999px;
+      background: #f7f9fa;
+      color: #18252d;
+      font-size: 18px;
+      font-weight: 600;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: transform 0.12s ease, background-color 0.12s ease;
+    }
+    .fab-pill-button:active {
+      transform: scale(0.95);
+      background: #e2e8ec;
+    }
+    .fab-pill-button .fab-icon {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .editor-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 100%;
+      padding-top: 14px;
+    }
+    .memo-title-input {
+      width: 100%;
+      padding: 10px 0;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      font-size: clamp(20px, 2.8vw, 26px);
+      font-weight: 600;
+    }
+    .memo-title-input::placeholder {
+      color: rgba(211, 217, 221, 0.4);
+    }
+    .memo-body-input {
+      flex: 1;
+      width: 100%;
+      min-height: 220px;
+      padding: 12px 0;
+      border: 0;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      font-size: var(--memo-font-size);
+      line-height: 1.6;
+      resize: none;
+    }
+    .memo-body-input::placeholder {
+      color: rgba(211, 217, 221, 0.35);
+    }
+
+    .settings-content { padding-top: 2px; }
+    .setting-row {
+      display: flex;
+      min-height: 72px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 13px 2px;
+      border-bottom: 1px solid var(--line);
+    }
+    .setting-row > div:first-child {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .setting-row strong {
+      font-size: clamp(15px, 2.2vw, 18px);
+      font-weight: 500;
+    }
+    .setting-row small {
+      color: var(--subtext);
+      font-size: 12px;
+    }
+
+    .setting-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px 2px;
+      border-bottom: 1px solid var(--line);
+      width: 100%;
+    }
+    .setting-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-block-header strong {
+      font-size: clamp(15px, 2.2vw, 18px);
+      font-weight: 500;
+    }
+    .setting-block-header .val-badge {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .slider-container {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .white-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      outline: none;
+      margin: 0;
+      background: linear-gradient(
+        to right,
+        #ffffff 0%,
+        #ffffff var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) 100%
+      );
+      cursor: pointer;
+    }
+    .white-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .white-slider::-webkit-slider-thumb:active {
+      transform: scale(1.18);
+    }
+    .white-slider::-moz-range-thumb {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 100;
+      bottom: 24px;
+      left: 50%;
+      max-width: calc(100vw - 30px);
+      overflow: hidden;
+      padding: 10px 18px;
+      transform: translateX(-50%);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #343b41;
+      color: var(--text);
+      font-size: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .toast.visible { opacity: 1; }
+
+    @media (max-width: 600px) {
+      .screen { padding-right: 20px; padding-left: 20px; }
+      .setting-row { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- メイン画面（メモ一覧） -->
+  <main id="home" class="screen">
+    <header class="home-header">
+      <span>Meho メモ</span>
+      <button class="header-btn" id="open-settings">設定 ⚙</button>
+    </header>
+    <div class="page-content">
+      <div id="memo-list" class="memo-list"></div>
+      <div id="memo-empty" class="empty-state hidden">
+        <strong>保存されたメモはありません</strong>
+        <small>画面左下の「＋ 新規作成」をタップしてメモを追加してください</small>
+      </div>
+    </div>
+    <!-- 画面左下に配置された白長円の新規作成ボタン -->
+    <button id="create-memo-fab" class="fab-pill-button" aria-label="新規メモを作成">
+      <span class="fab-icon">＋</span>
+      <span>新規作成</span>
+    </button>
+  </main>
+
+  <!-- 全画面サブアクティビティ: メモ編集画面 -->
+  <section id="editor-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" id="editor-back" aria-label="戻る">‹</button>
+      <h1 id="editor-header-title">メモの編集</h1>
+      <button class="header-action danger" id="delete-memo-btn">削除</button>
+      <button class="header-action" id="save-memo-btn">完了</button>
+    </header>
+    <div class="page-content editor-content">
+      <input type="text" id="memo-title-input" class="memo-title-input" placeholder="タイトル" maxlength="80">
+      <textarea id="memo-body-input" class="memo-body-input" placeholder="ここをタップしてメモを入力..."></textarea>
+    </div>
+  </section>
+
+  <!-- 全画面サブアクティビティ: 設定画面 -->
+  <section id="settings-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" data-home aria-label="戻る">‹</button>
+      <h1>Settings</h1>
+    </header>
+    <div class="page-content settings-content">
+      <!-- 白いスライダー (App DPI設定 - IndexedDBに保存) -->
+      <article class="setting-block">
+        <div class="setting-block-header">
+          <div>
+            <strong>App DPI スケール</strong>
+            <small style="display:block; color:var(--subtext); font-size:12px; margin-top:2px;">
+              画面表示倍率 (IndexedDBに自動保存)
+            </small>
+          </div>
+          <span id="dpi-value-label" class="val-badge">100%</span>
+        </div>
+        <div class="slider-container">
+          <input type="range" id="app-dpi-slider" class="white-slider" min="75" max="150" step="5" value="100" aria-label="App DPI スケール">
+        </div>
+      </article>
+
+      <!-- メモ文字サイズ設定 -->
+      <article class="setting-row">
+        <div>
+          <strong>メモの文字サイズ</strong>
+          <small>編集・閲覧時の本文フォントサイズ</small>
+        </div>
+        <select id="font-size-select" style="background:transparent; color:var(--text); border:0; text-align:right; font-size:15px; outline:none;" aria-label="文字サイズ">
+          <option value="16px" style="background:#343b41;">小 (16px)</option>
+          <option value="18px" style="background:#343b41;" selected>中 (18px)</option>
+          <option value="22px" style="background:#343b41;">大 (22px)</option>
+          <option value="26px" style="background:#343b41;">特大 (26px)</option>
+        </select>
+      </article>
+
+      <!-- データ全消去 -->
+      <article class="setting-row">
+        <div>
+          <strong>全メモデータを消去</strong>
+          <small>IndexedDB内のメモをすべて削除します</small>
+        </div>
+        <button id="clear-all-btn" class="header-action danger" style="margin-left:0;">消去</button>
+      </article>
+    </div>
+  </section>
+
+  <!-- トースト通知 -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+      const $ = (s) => document.querySelector(s);
+      const screens = ['#home', '#editor-screen', '#settings-screen'];
+
+      const DB_NAME = 'MehoAppDB';
+      const DB_VERSION = 1;
+      let toastTimer = 0;
+      let currentMemoId = null;
+
+      /* IndexedDB 操作ユーティリティ */
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings');
+            }
+            if (!db.objectStoreNames.contains('memos')) {
+              db.createObjectStore('memos', { keyPath: 'id' });
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function getSetting(key, fallback) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve) => {
+            const tx = db.transaction('settings', 'readonly');
+            const store = tx.objectStore('settings');
+            const req = store.get(key);
+            req.onsuccess = () => resolve(req.result !== undefined ? req.result : fallback);
+            req.onerror = () => resolve(fallback);
+          });
+        } catch {
+          return fallback;
+        }
+      }
+
+      async function setSetting(key, value) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction('settings', 'readwrite');
+            const store = tx.objectStore('settings');
+            const req = store.put(value, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        } catch (e) {
+          console.error('IndexedDB error:', e);
+        }
+      }
+
+      async function getAllMemos() {
+        try {
+          const db = await openDB();
+          return new Promise((resolve) => {
+            const tx = db.transaction('memos', 'readonly');
+            const store = tx.objectStore('memos');
+            const req = store.getAll();
+            req.onsuccess = () => {
+              const items = req.result || [];
+              items.sort((a, b) => b.updatedAt - a.updatedAt);
+              resolve(items);
+            };
+            req.onerror = () => resolve([]);
+          });
+        } catch {
+          return [];
+        }
+      }
+
+      async function saveMemo(memo) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction('memos', 'readwrite');
+            const store = tx.objectStore('memos');
+            const req = store.put(memo);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        } catch (e) {
+          console.error('Failed to save memo', e);
+        }
+      }
+
+      async function deleteMemo(id) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction('memos', 'readwrite');
+            const store = tx.objectStore('memos');
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        } catch (e) {
+          console.error('Failed to delete memo', e);
+        }
+      }
+
+      async function clearAllMemos() {
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction('memos', 'readwrite');
+            const store = tx.objectStore('memos');
+            const req = store.clear();
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        } catch (e) {
+          console.error('Failed to clear memos', e);
+        }
+      }
+
+      function toast(message) {
+        const el = $('#toast');
+        el.textContent = message;
+        el.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('visible'), 2600);
+      }
+
+      function hideScreens() {
+        screens.forEach(s => $(s).classList.add('hidden'));
+      }
+
+      function showScreen(selector) {
+        hideScreens();
+        $(selector).classList.remove('hidden');
+        if (selector === '#home') {
+          renderMemoList();
+        }
+      }
+
+      function safeText(str) {
+        return String(str || '').replace(/[&<>"']/g, ch => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[ch]));
+      }
+
+      function formatDate(time) {
+        if (!time) return '';
+        const d = new Date(time);
+        return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      }
+
+      async function renderMemoList() {
+        const container = $('#memo-list');
+        container.replaceChildren();
+        const memos = await getAllMemos();
+
+        $('#memo-empty').classList.toggle('hidden', memos.length > 0);
+
+        memos.forEach(m => {
+          const card = document.createElement('div');
+          card.className = 'memo-card';
+          const titleText = m.title.trim() || '（無題のメモ）';
+          const bodyText = m.body.trim() || '内容なし';
+
+          card.innerHTML = `
+            <div class="card-copy">
+              <strong>${safeText(titleText)}</strong>
+              <small>${safeText(bodyText)}</small>
+            </div>
+            <span style="color:var(--subtext); font-size:12px; white-space:nowrap;">${formatDate(m.updatedAt)}</span>
+          `;
+
+          card.addEventListener('click', () => openEditor(m));
+          container.appendChild(card);
+        });
+      }
+
+      function openEditor(memo = null) {
+        if (memo) {
+          currentMemoId = memo.id;
+          $('#memo-title-input').value = memo.title || '';
+          $('#memo-body-input').value = memo.body || '';
+          $('#editor-header-title').textContent = 'メモの編集';
+          $('#delete-memo-btn').classList.remove('hidden');
+        } else {
+          currentMemoId = null;
+          $('#memo-title-input').value = '';
+          $('#memo-body-input').value = '';
+          $('#editor-header-title').textContent = '新規メモ';
+          $('#delete-memo-btn').classList.add('hidden');
+        }
+        showScreen('#editor-screen');
+      }
+
+      async function saveCurrentMemo() {
+        const title = $('#memo-title-input').value.trim();
+        const body = $('#memo-body-input').value.trim();
+
+        if (!title && !body) {
+          showScreen('#home');
+          return;
+        }
+
+        const now = Date.now();
+        const memo = {
+          id: currentMemoId || `memo_${now}_${Math.random().toString(36).substr(2, 6)}`,
+          title: title,
+          body: body,
+          updatedAt: now
+        };
+
+        await saveMemo(memo);
+        toast('メモを保存しました');
+        showScreen('#home');
+      }
+
+      function updateSliderTrack(slider) {
+        const min = Number(slider.min) || 75;
+        const max = Number(slider.max) || 150;
+        const val = Number(slider.value) || 100;
+        const progress = ((val - min) / (max - min)) * 100;
+        slider.style.setProperty('--slider-progress', `${progress}%`);
+      }
+
+      function applyAppDpi(dpiVal) {
+        document.documentElement.style.setProperty('--app-dpi', String(dpiVal / 100));
+        $('#dpi-value-label').textContent = `${dpiVal}%`;
+      }
+
+      async function initDpiSetting() {
+        const slider = $('#app-dpi-slider');
+        // iDBからDPI設定を取得して読み込み
+        const savedDpi = await getSetting('appDpi', 100);
+        
+        slider.value = savedDpi;
+        updateSliderTrack(slider);
+        applyAppDpi(savedDpi);
+
+        // リアルタイム更新（ドラッグ中）
+        slider.addEventListener('input', (e) => {
+          const val = Number(e.target.value);
+          updateSliderTrack(e.target);
+          applyAppDpi(val);
+        });
+
+        // 確定時（IndexedDBに永続保存）
+        slider.addEventListener('change', async (e) => {
+          const val = Number(e.target.value);
+          await setSetting('appDpi', val);
+          toast(`DPIを ${val}% に保存しました`);
+        });
+      }
+
+      async function initFontSizeSetting() {
+        const select = $('#font-size-select');
+        const savedSize = await getSetting('fontSize', '18px');
+        select.value = savedSize;
+        document.documentElement.style.setProperty('--memo-font-size', savedSize);
+
+        select.addEventListener('change', async (e) => {
+          const val = e.target.value;
+          document.documentElement.style.setProperty('--memo-font-size', val);
+          await setSetting('fontSize', val);
+          toast('文字サイズを変更しました');
+        });
+      }
+
+      // 画面左下の白長円「＋ 新規作成」ボタン
+      $('#create-memo-fab').addEventListener('click', () => openEditor());
+
+      // 編集画面のアクション
+      $('#save-memo-btn').addEventListener('click', saveCurrentMemo);
+      $('#editor-back').addEventListener('click', saveCurrentMemo);
+
+      $('#delete-memo-btn').addEventListener('click', async () => {
+        if (currentMemoId) {
+          await deleteMemo(currentMemoId);
+          toast('メモを削除しました');
+        }
+        showScreen('#home');
+      });
+
+      // 設定画面への遷移・全消去
+      $('#open-settings').addEventListener('click', () => showScreen('#settings-screen'));
+      document.querySelectorAll('[data-home]').forEach(btn => {
+        btn.addEventListener('click', () => showScreen('#home'));
+      });
+
+      $('#clear-all-btn').addEventListener('click', async () => {
+        await clearAllMemos();
+        toast('すべてのメモを消去しました');
+        renderMemoList();
+      });
+
+      // アプリ起動時の初期化
+      window.addEventListener('DOMContentLoaded', async () => {
+        await initDpiSetting();
+        await initFontSizeSetting();
+        await renderMemoList();
+      });
+    })();
+  </script>
+</body>
+</html>
