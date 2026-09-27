@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Contacts - Android 7.1 AOSP</title>
+    
+    <!-- Google Material Symbols & Roboto Font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+    <style>
+        :root {
+            --primary-color: #0083c8;
+            --primary-dark: #006097;
+            --accent-color: #0083c8;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --divider-color: #e0e0e0;
+            --touch-ripple: rgba(0, 0, 0, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            overflow: hidden;
+            color: var(--text-primary);
+        }
+
+        /* Root App Container */
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background-color: var(--bg-color);
+        }
+
+        /* Header / Action Bar */
+        .header {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .action-bar {
+            height: 56px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .action-bar-title {
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: 0.15px;
+        }
+
+        /* Tabs Container */
+        .tabs {
+            display: flex;
+            height: 48px;
+            background-color: var(--primary-color);
+        }
+
+        .tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s ease;
+        }
+
+        .tab.active {
+            color: #ffffff;
+        }
+
+        .tab-indicator {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 50%;
+            height: 2px;
+            background-color: #ffffff;
+            transition: transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        /* Main Content Views */
+        .content-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .view-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .view-panel.active {
+            display: flex;
+        }
+
+        /* Empty State Screen (Matches Screenshot Perfectly) */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding-bottom: 60px;
+        }
+
+        .empty-avatar-icon {
+            width: 96px;
+            height: 96px;
+            background-color: #9e9e9e;
+            border-radius: 50%;
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        /* Recreating the AOSP default silhouette */
+        .empty-avatar-icon::before {
+            content: '';
+            position: absolute;
+            top: 22px;
+            left: 32px;
+            width: 32px;
+            height: 32px;
+            background-color: var(--bg-color);
+            border-radius: 50%;
+        }
+
+        .empty-avatar-icon::after {
+            content: '';
+            position: absolute;
+            bottom: 12px;
+            left: 18px;
+            width: 60px;
+            height: 28px;
+            background-color: var(--bg-color);
+            border-radius: 14px 14px 0 0;
+        }
+
+        .empty-text {
+            color: #616161;
+            font-size: 18px;
+            margin-bottom: 32px;
+            font-weight: 400;
+        }
+
+        /* Raised Action Buttons */
+        .btn-raised {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border: none;
+            outline: none;
+            padding: 0 16px;
+            height: 36px;
+            min-width: 160px;
+            border-radius: 2px;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+            cursor: pointer;
+            margin-bottom: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: box-shadow 0.2s, background-color 0.2s;
+        }
+
+        .btn-raised:active {
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.35);
+            background-color: var(--primary-dark);
+        }
+
+        /* Floating Action Button (FAB) */
+        .fab {
+            position: absolute;
+            right: 16px;
+            bottom: 16px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            z-index: 20;
+            border: none;
+            outline: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .fab:active {
+            transform: scale(0.96);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+        }
+
+        .fab .material-symbols-outlined {
+            font-size: 24px;
+        }
+
+        /* Contacts List View */
+        .contacts-list {
+            width: 100%;
+            background-color: #ffffff;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--divider-color);
+            cursor: pointer;
+        }
+
+        .contact-item:active {
+            background-color: var(--touch-ripple);
+        }
+
+        .contact-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #78909c;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 500;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+
+        .contact-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .contact-name {
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+
+        .contact-phone {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .favorite-star {
+            color: #ccc;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .favorite-star.active {
+            color: #fbc02d;
+        }
+
+        /* Android 7.1 Sub Activity (Full Screen Form) */
+        .sub-activity {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.25s cubic-bezier(0.0, 0.0, 0.2, 1);
+        }
+
+        .sub-activity.open {
+            transform: translateY(0);
+        }
+
+        .sub-activity-header {
+            height: 56px;
+            background-color: var(--primary-color);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .icon-btn:active {
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .sub-activity-title {
+            font-size: 20px;
+            font-weight: 500;
+            flex: 1;
+            margin-left: 8px;
+        }
+
+        .save-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            padding: 0 16px;
+            height: 48px;
+            cursor: pointer;
+        }
+
+        .form-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 16px;
+        }
+
+        .photo-picker {
+            width: 100px;
+            height: 100px;
+            background-color: #e0e0e0;
+            border-radius: 50%;
+            margin: 0 auto 24px auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #757575;
+            cursor: pointer;
+        }
+
+        .photo-picker .material-symbols-outlined {
+            font-size: 36px;
+        }
+
+        .photo-picker-text {
+            font-size: 11px;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .input-row .material-symbols-outlined {
+            color: #757575;
+            margin-right: 16px;
+            margin-top: 12px;
+        }
+
+        .input-field {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-field input {
+            border: none;
+            border-bottom: 1px solid var(--divider-color);
+            padding: 8px 0;
+            font-size: 16px;
+            outline: none;
+            background: transparent;
+            transition: border-color 0.2s;
+        }
+
+        .input-field input:focus {
+            border-bottom-color: var(--primary-color);
+        }
+
+        .input-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Dialog Overlay */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .dialog-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .dialog {
+            background-color: #ffffff;
+            width: 85%;
+            max-width: 320px;
+            border-radius: 2px;
+            box-shadow: 0 9px 46px 8px rgba(0,0,0,0.14);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dialog-title {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .dialog-option {
+            padding: 12px 0;
+            font-size: 16px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .dialog-option .material-symbols-outlined {
+            margin-right: 16px;
+            color: #757575;
+        }
+
+        .dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .dialog-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-weight: 500;
+            font-size: 14px;
+            text-transform: uppercase;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- Header & Action Bar -->
+        <header class="header">
+            <div class="action-bar">
+                <span class="action-bar-title">Contacts</span>
+            </div>
+            <!-- Tabs -->
+            <div class="tabs">
+                <div class="tab" id="tab-favorites" onclick="switchTab('favorites')">Favorites</div>
+                <div class="tab active" id="tab-all" onclick="switchTab('all')">All</div>
+                <div class="tab-indicator" id="tab-indicator"></div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="content-area">
+            
+            <!-- ALL TAB PANEL -->
+            <section class="view-panel active" id="panel-all">
+                <!-- Empty State (Matches Reference Screenshot Pixel-for-Pixel) -->
+                <div class="empty-state" id="empty-state-all">
+                    <div class="empty-avatar-icon"></div>
+                    <div class="empty-text">No contacts</div>
+                    <button class="btn-raised" onclick="openAddAccountDialog()">ADD ACCOUNT</button>
+                    <button class="btn-raised" onclick="openImportDialog()">IMPORT CONTACTS</button>
+                </div>
+
+                <!-- Contacts Container -->
+                <div class="contacts-list" id="contacts-list-all" style="display: none;"></div>
+            </section>
+
+            <!-- FAVORITES TAB PANEL -->
+            <section class="view-panel" id="panel-favorites">
+                <div class="empty-state" id="empty-state-fav">
+                    <div class="empty-avatar-icon"></div>
+                    <div class="empty-text">No favorites</div>
+                </div>
+                <div class="contacts-list" id="contacts-list-fav" style="display: none;"></div>
+            </section>
+
+        </main>
+
+        <!-- Floating Action Button -->
+        <button class="fab" id="fab-add" onclick="openCreateContactActivity()" aria-label="Add contact">
+            <span class="material-symbols-outlined">person_add</span>
+        </button>
+    </div>
+
+    <!-- Android 7.1 Sub Activity: Create / Edit Contact -->
+    <div class="sub-activity" id="create-contact-activity">
+        <div class="sub-activity-header">
+            <button class="icon-btn" onclick="closeCreateContactActivity()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <span class="sub-activity-title">Create contact</span>
+            <button class="save-btn" onclick="saveNewContact()">SAVE</button>
+        </div>
+
+        <div class="form-content">
+            <div class="photo-picker">
+                <span class="material-symbols-outlined">add_a_photo</span>
+                <span class="photo-picker-text">Change</span>
+            </div>
+
+            <div class="input-row">
+                <span class="material-symbols-outlined">person</span>
+                <div class="input-field">
+                    <input type="text" id="input-name" placeholder="Name" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="input-row">
+                <span class="material-symbols-outlined">call</span>
+                <div class="input-field">
+                    <input type="tel" id="input-phone" placeholder="Phone" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="input-row">
+                <span class="material-symbols-outlined">mail</span>
+                <div class="input-field">
+                    <input type="email" id="input-email" placeholder="Email" autocomplete="off">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Account Dialog -->
+    <div class="dialog-overlay" id="dialog-account">
+        <div class="dialog">
+            <div class="dialog-title">Add account</div>
+            <div class="dialog-option" onclick="simulateAccountAdd('Google')">
+                <span class="material-symbols-outlined">account_circle</span> Google
+            </div>
+            <div class="dialog-option" onclick="simulateAccountAdd('Exchange')">
+                <span class="material-symbols-outlined">domain</span> Exchange
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-btn" onclick="closeDialog('dialog-account')">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Contacts Dialog -->
+    <div class="dialog-overlay" id="dialog-import">
+        <div class="dialog">
+            <div class="dialog-title">Import contacts from</div>
+            <div class="dialog-option" onclick="simulateImport('.vcf file')">
+                <span class="material-symbols-outlined">badge</span> .vcf file
+            </div>
+            <div class="dialog-option" onclick="simulateImport('SIM card')">
+                <span class="material-symbols-outlined">sim_card</span> SIM card
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-btn" onclick="closeDialog('dialog-import')">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Contacts state storage
+        let contacts = [];
+        let currentTab = 'all';
+
+        // Avatar background colors (Android Material Palette)
+        const avatarColors = [
+            '#e51c23', '#e91e63', '#9c27b0', '#673ab7', 
+            '#3f51b5', '#5677fc', '#0288d1', '#009688', 
+            '#25a69a', '#4caf50', '#8bc34a', '#ff9800'
+        ];
+
+        function getAvatarColor(name) {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % avatarColors.length;
+            return avatarColors[index];
+        }
+
+        /* Tab switching logic */
+        function switchTab(tab) {
+            currentTab = tab;
+            const tabFav = document.getElementById('tab-favorites');
+            const tabAll = document.getElementById('tab-all');
+            const indicator = document.getElementById('tab-indicator');
+            
+            const panelFav = document.getElementById('panel-favorites');
+            const panelAll = document.getElementById('panel-all');
+
+            if (tab === 'all') {
+                tabAll.classList.add('active');
+                tabFav.classList.remove('active');
+                indicator.style.transform = 'translateX(0%)';
+                panelAll.classList.add('active');
+                panelFav.classList.remove('active');
+            } else {
+                tabFav.classList.add('active');
+                tabAll.classList.remove('active');
+                indicator.style.transform = 'translateX(-100%)';
+                panelFav.classList.add('active');
+                panelAll.classList.remove('active');
+            }
+            renderContacts();
+        }
+
+        /* Render contacts in active view */
+        function renderContacts() {
+            const allList = document.getElementById('contacts-list-all');
+            const allEmpty = document.getElementById('empty-state-all');
+            const favList = document.getElementById('contacts-list-fav');
+            const favEmpty = document.getElementById('empty-state-fav');
+
+            // Render ALL tab
+            if (contacts.length === 0) {
+                allList.style.display = 'none';
+                allEmpty.style.display = 'flex';
+            } else {
+                allEmpty.style.display = 'none';
+                allList.style.display = 'block';
+                allList.innerHTML = '';
+
+                contacts.sort((a, b) => a.name.localeCompare(b.name)).forEach(contact => {
+                    allList.appendChild(createContactItem(contact));
+                });
+            }
+
+            // Render FAVORITES tab
+            const favorites = contacts.filter(c => c.favorite);
+            if (favorites.length === 0) {
+                favList.style.display = 'none';
+                favEmpty.style.display = 'flex';
+            } else {
+                favEmpty.style.display = 'none';
+                favList.style.display = 'block';
+                favList.innerHTML = '';
+
+                favorites.forEach(contact => {
+                    favList.appendChild(createContactItem(contact));
+                });
+            }
+        }
+
+        function createContactItem(contact) {
+            const item = document.createElement('div');
+            item.className = 'contact-item';
+            
+            const initial = contact.name.trim().charAt(0).toUpperCase() || '?';
+            const color = getAvatarColor(contact.name);
+
+            item.innerHTML = `
+                <div class="contact-avatar" style="background-color: ${color}">${initial}</div>
+                <div class="contact-info">
+                    <span class="contact-name">${escapeHtml(contact.name)}</span>
+                    ${contact.phone ? `<span class="contact-phone">${escapeHtml(contact.phone)}</span>` : ''}
+                </div>
+                <span class="material-symbols-outlined favorite-star ${contact.favorite ? 'active' : ''}" 
+                      onclick="toggleFavorite(event, '${contact.id}')">
+                      ${contact.favorite ? 'star' : 'star_border'}
+                </span>
+            `;
+            return item;
+        }
+
+        function toggleFavorite(event, id) {
+            event.stopPropagation();
+            const contact = contacts.find(c => c.id === id);
+            if (contact) {
+                contact.favorite = !contact.favorite;
+                renderContacts();
+            }
+        }
+
+        /* Sub Activity Controls */
+        function openCreateContactActivity() {
+            document.getElementById('input-name').value = '';
+            document.getElementById('input-phone').value = '';
+            document.getElementById('input-email').value = '';
+            document.getElementById('create-contact-activity').classList.add('open');
+        }
+
+        function closeCreateContactActivity() {
+            document.getElementById('create-contact-activity').classList.remove('open');
+        }
+
+        function saveNewContact() {
+            const nameInput = document.getElementById('input-name').value.trim();
+            const phoneInput = document.getElementById('input-phone').value.trim();
+            const emailInput = document.getElementById('input-email').value.trim();
+
+            if (!nameInput) {
+                alert('Please enter a name.');
+                return;
+            }
+
+            const newContact = {
+                id: Date.now().toString(),
+                name: nameInput,
+                phone: phoneInput,
+                email: emailInput,
+                favorite: false
+            };
+
+            contacts.push(newContact);
+            closeCreateContactActivity();
+            renderContacts();
+        }
+
+        /* Dialog Controls */
+        function openAddAccountDialog() {
+            document.getElementById('dialog-account').classList.add('open');
+        }
+
+        function openImportDialog() {
+            document.getElementById('dialog-import').classList.add('open');
+        }
+
+        function closeDialog(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+
+        function simulateAccountAdd(type) {
+            closeDialog('dialog-account');
+            alert(`Added ${type} account successfully.`);
+        }
+
+        function simulateImport(source) {
+            closeDialog('dialog-import');
+            contacts.push(
+                { id: '1', name: 'Alex Johnson', phone: '+1 555-0199', email: 'alex@example.com', favorite: true },
+                { id: '2', name: 'Maria Garcia', phone: '+1 555-0143', email: 'maria@example.com', favorite: false }
+            );
+            renderContacts();
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+
+        // Initialize state
+        window.onload = function() {
+            renderContacts();
+        };
+    </script>
+</body>
+</html>
