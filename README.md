@@ -1,0 +1,3 @@
+https://polandballhub-operator.github.io/appsforechoshowsilk/documentsui/
+https://polandballhub-operator.github.io/appsforechoshowsilk/bookmark/
+https://polandballhub-operator.github.io/appsforechoshowsilk/memo/
