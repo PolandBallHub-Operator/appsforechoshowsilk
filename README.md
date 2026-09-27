@@ -9,3 +9,4 @@
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/devtool.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gallery.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/camera.html
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/firesetting.html
