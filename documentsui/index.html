@@ -1409,16 +1409,24 @@
 
         function installAddonFromFile(file) {
             try {
-                let jsonStr = file.content;
-                if (file.content instanceof Blob) {
+                const source = file instanceof Blob ? file : (file && file.content);
+                if (source instanceof Blob) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         processAddonJson(e.target.result);
                     };
-                    reader.readAsText(file.content);
+                    reader.readAsText(source);
                     return;
                 }
-                processAddonJson(jsonStr);
+                if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
+                    processAddonJson(new TextDecoder('utf-8').decode(source));
+                    return;
+                }
+                if (typeof source === 'string') {
+                    processAddonJson(source);
+                } else {
+                    showToast('アドオンファイルの読み込みに失敗しました');
+                }
             } catch(e) {
                 showToast('アドオンファイルの読み込みに失敗しました');
             }
@@ -1757,87 +1765,296 @@
             }
         });
 
-        let broadcastChannel = null;
-        try {
-            broadcastChannel = new BroadcastChannel('android_docs_peer_channel');
-            broadcastChannel.onmessage = async (e) => {
-                const data = e.data;
-                if (data && data.type === 'FILE_TRANSFER' && data.targetCode === customPeerCode) {
-                    await saveFileToDB({
-                        id: 'received_' + Date.now(),
-                        name: data.name,
-                        parentId: 'folder_download',
-                        isFolder: false,
-                        size: data.size,
-                        mimeType: data.mimeType,
-                        content: data.content,
-                        updatedAt: Date.now()
-                    });
-                    showToast(`「${data.name}」を受信し /Download/ に保存しました`);
-                    renderFiles();
-                }
-            };
-        } catch (err) {}
+        const PEER_TRANSFER_CHUNK_BYTES = 16 * 1024;
+        const PEER_TRANSFER_WINDOW_CHUNKS = 8;
+        const incomingPeerTransfers = new Map();
 
-        function initPeerJS() {
-            if (peer) {
-                try { peer.destroy(); } catch(e){}
+        async function peerContentToBytes(content) {
+            if (typeof content === 'string') return new TextEncoder().encode(content);
+            if (content instanceof Blob) return new Uint8Array(await content.arrayBuffer());
+            if (content instanceof ArrayBuffer) return new Uint8Array(content);
+            if (ArrayBuffer.isView(content)) {
+                return new Uint8Array(content.buffer, content.byteOffset, content.byteLength);
             }
-
-            document.getElementById('peer-id-tag').innerText = `Peer: ${customPeerCode}`;
-            
-            try {
-                peer = new Peer(customPeerCode, { debug: 1 });
-
-                peer.on('open', (id) => {
-                    document.getElementById('peer-id-tag').innerText = `Peer Code: ${id}`;
-                });
-
-                peer.on('connection', (conn) => {
-                    conn.on('data', async (data) => {
-                        if (data && data.type === 'FILE_TRANSFER') {
-                            await saveFileToDB({
-                                id: 'received_' + Date.now(),
-                                name: data.name,
-                                parentId: 'folder_download',
-                                isFolder: false,
-                                size: data.size,
-                                mimeType: data.mimeType,
-                                content: data.content,
-                                updatedAt: Date.now()
-                            });
-                            showToast(`「${data.name}」を受信し /Download/ に保存しました`);
-                            renderFiles();
-                        }
-                    });
-                });
-            } catch (err) {}
+            if (content == null) return new Uint8Array(0);
+            return new TextEncoder().encode(String(content));
         }
 
-        async function sendSelectedViaPeer(targetCode) {
-            if (selectedFileIds.size === 0) return;
-            const allFiles = await getAllFilesFromDB();
-            const filesToSend = allFiles.filter(f => selectedFileIds.has(f.id) && !f.isFolder);
+        function peerBytesToBase64(bytes) {
+            let binary = '';
+            const encodeStep = 0x4000;
+            for (let offset = 0; offset < bytes.length; offset += encodeStep) {
+                binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + encodeStep, bytes.length)));
+            }
+            return btoa(binary);
+        }
 
-            filesToSend.forEach(file => {
-                if (broadcastChannel) {
-                    broadcastChannel.postMessage({
-                        type: 'FILE_TRANSFER',
-                        targetCode: targetCode,
-                        name: file.name,
-                        size: file.size,
-                        mimeType: file.mimeType,
-                        content: file.content
-                    });
-                }
+        function peerBase64ToBytes(value) {
+            const binary = atob(value);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return bytes;
+        }
+
+        function removePeerListener(emitter, eventName, listener) {
+            if (typeof emitter.off === 'function') emitter.off(eventName, listener);
+            else if (typeof emitter.removeListener === 'function') emitter.removeListener(eventName, listener);
+        }
+
+        function waitForPeerEvent(emitter, eventName, timeoutMs, predicate) {
+            return new Promise((resolve, reject) => {
+                let settled = false;
+                const cleanup = () => {
+                    clearTimeout(timer);
+                    removePeerListener(emitter, eventName, onEvent);
+                    removePeerListener(emitter, 'error', onError);
+                    removePeerListener(emitter, 'close', onClose);
+                };
+                const finish = (fn, value) => {
+                    if (settled) return;
+                    settled = true;
+                    cleanup();
+                    fn(value);
+                };
+                const onEvent = value => {
+                    if (!predicate || predicate(value)) finish(resolve, value);
+                };
+                const onError = err => finish(reject, err instanceof Error ? err : new Error(String(err)));
+                const onClose = () => finish(reject, new Error('Peer接続が閉じられました'));
+                const timer = setTimeout(() => finish(reject, new Error('Peer接続がタイムアウトしました')), timeoutMs);
+                emitter.on(eventName, onEvent);
+                if (eventName !== 'error') emitter.on('error', onError);
+                if (eventName !== 'close') emitter.on('close', onClose);
             });
+        }
 
-            showToast(`${filesToSend.length} 個のファイルを ${targetCode} 宛に送信しました`);
-            isSelectionMode = false;
-            selectedFileIds.clear();
+        function waitForPeerSignal(conn, type, transferId, timeoutMs, throughIndex) {
+            return new Promise((resolve, reject) => {
+                let settled = false;
+                const cleanup = () => {
+                    clearTimeout(timer);
+                    removePeerListener(conn, 'data', onData);
+                    removePeerListener(conn, 'error', onError);
+                    removePeerListener(conn, 'close', onClose);
+                };
+                const finish = (fn, value) => {
+                    if (settled) return;
+                    settled = true;
+                    cleanup();
+                    fn(value);
+                };
+                const onData = packet => {
+                    if (!packet || packet.transferId !== transferId) return;
+                    if (packet.type === 'FILE_TRANSFER_ERROR') {
+                        finish(reject, new Error(packet.message || '受信側で保存できませんでした'));
+                    } else if (packet.type === type && (throughIndex == null || packet.throughIndex >= throughIndex)) {
+                        finish(resolve, packet);
+                    }
+                };
+                const onError = err => finish(reject, err instanceof Error ? err : new Error(String(err)));
+                const onClose = () => finish(reject, new Error('Peer接続が閉じられました'));
+                const timer = setTimeout(() => finish(reject, new Error('相手からの応答がタイムアウトしました')), timeoutMs);
+                conn.on('data', onData);
+                conn.on('error', onError);
+                conn.on('close', onClose);
+            });
+        }
+
+        async function savePeerReceivedFile(conn, transferId, metadata, parts) {
+            const expectedSize = Number(metadata.size) || 0;
+            const receivedSize = parts.reduce((sum, part) => sum + part.byteLength, 0);
+            if (receivedSize !== expectedSize) {
+                throw new Error('受信データのサイズが一致しません');
+            }
+            const blob = new Blob(parts, { type: metadata.mimeType || 'application/octet-stream' });
+            await saveFileToDB({
+                id: 'received_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+                name: String(metadata.name || 'received_file'),
+                parentId: 'folder_download',
+                isFolder: false,
+                size: receivedSize,
+                mimeType: metadata.mimeType || 'application/octet-stream',
+                content: blob,
+                updatedAt: Date.now()
+            });
+            conn.send({ type: 'FILE_TRANSFER_COMPLETE', transferId, ok: true, name: metadata.name });
+            showToast(`「${metadata.name}」を受信し /Download/ に保存しました`);
             renderFiles();
         }
 
+        async function handlePeerTransferPacket(conn, packet) {
+            if (!packet || typeof packet !== 'object') return;
+            if (packet.type === 'FILE_TRANSFER') {
+                const bytes = await peerContentToBytes(packet.content);
+                await savePeerReceivedFile(conn, packet.transferId || ('legacy_' + Date.now()), {
+                    name: packet.name,
+                    size: packet.size == null ? bytes.byteLength : packet.size,
+                    mimeType: packet.mimeType
+                }, [bytes]);
+                return;
+            }
+            if (packet.type === 'FILE_TRANSFER_START') {
+                const transferId = String(packet.transferId || '');
+                const totalChunks = Number(packet.totalChunks);
+                const size = Number(packet.size);
+                if (!transferId || !Number.isSafeInteger(totalChunks) || totalChunks < 0 ||
+                    !Number.isSafeInteger(size) || size < 0) {
+                    throw new Error('不正な転送情報です');
+                }
+                const key = String(conn.peer || 'peer') + ':' + transferId;
+                const state = {
+                    conn,
+                    transferId,
+                    key,
+                    metadata: { name: packet.name, size, mimeType: packet.mimeType },
+                    totalChunks,
+                    parts: new Array(totalChunks),
+                    receivedChunks: 0
+                };
+                incomingPeerTransfers.set(key, state);
+                if (totalChunks === 0) {
+                    try {
+                        await savePeerReceivedFile(conn, transferId, state.metadata, []);
+                    } catch (err) {
+                        conn.send({ type: 'FILE_TRANSFER_ERROR', transferId, message: err.message });
+                    } finally {
+                        incomingPeerTransfers.delete(key);
+                    }
+                }
+                return;
+            }
+            if (packet.type === 'FILE_TRANSFER_CHUNK') {
+                const transferId = String(packet.transferId || '');
+                const key = String(conn.peer || 'peer') + ':' + transferId;
+                const state = incomingPeerTransfers.get(key);
+                const index = Number(packet.index);
+                if (!state || !Number.isSafeInteger(index) || index < 0 || index >= state.totalChunks || typeof packet.data !== 'string') {
+                    throw new Error('不正なファイルチャンクです');
+                }
+                if (!state.parts[index]) {
+                    state.parts[index] = peerBase64ToBytes(packet.data);
+                    state.receivedChunks++;
+                }
+                if ((index + 1) % PEER_TRANSFER_WINDOW_CHUNKS === 0 && index + 1 < state.totalChunks) {
+                    conn.send({ type: 'FILE_TRANSFER_ACK', transferId, throughIndex: index });
+                }
+                if (state.receivedChunks === state.totalChunks) {
+                    try {
+                        await savePeerReceivedFile(conn, transferId, state.metadata, state.parts);
+                    } catch (err) {
+                        conn.send({ type: 'FILE_TRANSFER_ERROR', transferId, message: err.message || 'ファイルを保存できませんでした' });
+                    } finally {
+                        incomingPeerTransfers.delete(key);
+                    }
+                }
+            }
+        }
+
+        function attachPeerReceiver(conn) {
+            conn.on('data', packet => {
+                handlePeerTransferPacket(conn, packet).catch(err => {
+                    showToast('Peer受信エラー: ' + (err && err.message ? err.message : err));
+                });
+            });
+            conn.on('close', () => {
+                for (const [key, state] of incomingPeerTransfers) {
+                    if (state.conn === conn) incomingPeerTransfers.delete(key);
+                }
+            });
+            conn.on('error', err => showToast('Peer受信エラー: ' + (err && err.message ? err.message : err)));
+        }
+
+        function initPeerJS() {
+            if (peer) {
+                try { peer.destroy(); } catch(e) {}
+            }
+            const statusTag = document.getElementById('peer-id-tag');
+            statusTag.innerText = `Peer: ${customPeerCode} (接続中)`;
+            if (typeof Peer !== 'function') {
+                statusTag.innerText = 'PeerJSを読み込めません';
+                showToast('PeerJSライブラリを読み込めません');
+                return;
+            }
+            try {
+                peer = new Peer(customPeerCode, { debug: 0 });
+                peer.on('open', id => {
+                    statusTag.innerText = `Peer Code: ${id}`;
+                });
+                peer.on('connection', attachPeerReceiver);
+                peer.on('error', err => {
+                    statusTag.innerText = `Peerエラー: ${err.type || err.message || '接続失敗'}`;
+                    showToast('Peer接続エラー: ' + (err.type || err.message || '接続に失敗しました'));
+                });
+            } catch (err) {
+                statusTag.innerText = 'Peer接続エラー';
+                showToast('Peer初期化に失敗しました: ' + (err.message || err));
+            }
+        }
+
+        async function sendSelectedViaPeer(targetCode) {
+            const target = String(targetCode || '').trim();
+            if (!target) {
+                showToast('送信先Peer Codeを入力してください');
+                return;
+            }
+            if (target === customPeerCode) {
+                showToast('自分自身のPeer Codeには送信できません');
+                return;
+            }
+            if (!selectedFileIds.size) {
+                showToast('送信するファイルを選択してください');
+                return;
+            }
+            let conn = null;
+            try {
+                if (!peer) throw new Error('Peerが初期化されていません');
+                if (!peer.open) await waitForPeerEvent(peer, 'open', 20000);
+                const allFiles = await getAllFilesFromDB();
+                const filesToSend = allFiles.filter(file => selectedFileIds.has(file.id) && !file.isFolder);
+                if (!filesToSend.length) throw new Error('選択中の送信可能なファイルがありません');
+
+                conn = peer.connect(target, { reliable: true, serialization: 'json' });
+                if (!conn.open) await waitForPeerEvent(conn, 'open', 30000);
+                for (const file of filesToSend) {
+                    const bytes = await peerContentToBytes(file.content);
+                    const chunkCount = Math.ceil(bytes.byteLength / PEER_TRANSFER_CHUNK_BYTES);
+                    const transferId = Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+                    const complete = waitForPeerSignal(conn, 'FILE_TRANSFER_COMPLETE', transferId, 180000);
+                    complete.catch(() => {});
+                    conn.send({
+                        type: 'FILE_TRANSFER_START',
+                        transferId,
+                        name: file.name,
+                        size: bytes.byteLength,
+                        mimeType: file.mimeType || 'application/octet-stream',
+                        totalChunks: chunkCount
+                    });
+                    for (let start = 0; start < chunkCount; start += PEER_TRANSFER_WINDOW_CHUNKS) {
+                        const end = Math.min(start + PEER_TRANSFER_WINDOW_CHUNKS, chunkCount);
+                        const ack = end < chunkCount
+                            ? waitForPeerSignal(conn, 'FILE_TRANSFER_ACK', transferId, 60000, end - 1)
+                            : null;
+                        if (ack) ack.catch(() => {});
+                        for (let index = start; index < end; index++) {
+                            const offset = index * PEER_TRANSFER_CHUNK_BYTES;
+                            const chunk = bytes.subarray(offset, Math.min(offset + PEER_TRANSFER_CHUNK_BYTES, bytes.byteLength));
+                            conn.send({ type: 'FILE_TRANSFER_CHUNK', transferId, index, data: peerBytesToBase64(chunk) });
+                        }
+                        if (ack) await ack;
+                    }
+                    const result = await complete;
+                    if (!result.ok) throw new Error('相手側でファイルを保存できませんでした');
+                }
+                showToast(`${filesToSend.length} 個のファイルを ${target} に送信しました`);
+                isSelectionMode = false;
+                selectedFileIds.clear();
+                renderFiles();
+                try { conn.close(); } catch(e) {}
+            } catch (err) {
+                showToast('Peer送信失敗: ' + (err && err.message ? err.message : err));
+                if (conn) { try { conn.close(); } catch(e) {} }
+            }
+        }
         function showToast(msg) {
             const toast = document.getElementById('toast-message');
             toast.innerText = msg;
@@ -1925,6 +2142,15 @@
             document.getElementById('btn-action-addon').onclick = openAddonActionPicker;
 
             document.getElementById('btn-action-send').onclick = () => {
+                document.getElementById('peer-send-modal').classList.add('show');
+            };
+
+            document.getElementById('menu-send-peer').onclick = () => {
+                optionsMenu.classList.remove('show');
+                if (!selectedFileIds.size) {
+                    showToast('送信するファイルを先に選択してください');
+                    return;
+                }
                 document.getElementById('peer-send-modal').classList.add('show');
             };
 
