@@ -1,0 +1,1271 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#1a2b3c">
+  <title>Medi - Music Player</title>
+  
+  <!-- External Libraries for PeerJS and ID3 Metadata Parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js" defer></script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #1c2530;
+      --bg-card: #253342;
+      --line: rgba(235, 241, 245, 0.18);
+      --text: #f5f7f8;
+      --subtext: #adbcc7;
+      --accent: #00e5ec;
+      --player-bg: linear-gradient(135deg, #185a9d 0%, #0c2b4e 100%);
+      --app-dpi: 1;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Noto Sans JP", "Yu Gothic UI", sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; cursor: pointer; border: 0; background: transparent; }
+    button:active { opacity: .72; }
+    .hidden { display: none !important; }
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+
+    /* Screen Layout Standardized for Echo Show */
+    .screen {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: calc(100vw / var(--app-dpi));
+      height: calc(100dvh / var(--app-dpi));
+      zoom: var(--app-dpi);
+      overflow: auto;
+      padding: clamp(16px, 4vh, 32px) clamp(20px, 5vw, 48px);
+      background: var(--bg);
+    }
+
+    .home-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 48px;
+      flex: 0 0 48px;
+      border-bottom: 1px solid var(--line);
+      color: #e0e7f0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .header-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .icon-button {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+    }
+
+    .page-content { flex: 1; overflow-y: auto; padding-top: 12px; }
+    .track-list { display: flex; flex-direction: column; gap: 2px; padding-bottom: 80px; }
+    .track-card {
+      display: flex;
+      min-height: 72px;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      border-radius: 8px;
+      background: transparent;
+      text-align: left;
+      transition: background 0.15s ease;
+    }
+    .track-card:hover, .track-card:active {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .track-artwork-thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: var(--bg-card);
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      color: var(--subtext);
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .card-copy {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .card-copy strong {
+      overflow: hidden;
+      font-size: 16px;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+    }
+    .card-copy small {
+      overflow: hidden;
+      color: var(--subtext);
+      font-size: 13px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .track-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-action {
+      padding: 8px 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .delete-action {
+      color: #ff8b8b;
+      font-size: 18px;
+      padding: 8px;
+    }
+
+    .fab-upload-pill {
+      position: fixed;
+      right: clamp(20px, 5vw, 40px);
+      bottom: clamp(20px, 5vh, 36px);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 52px;
+      padding: 0 24px;
+      border-radius: 999px;
+      background: #ffffff;
+      color: #121820;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      transition: transform 0.12s ease;
+    }
+    .fab-upload-pill:active {
+      transform: scale(0.95);
+      background: #f0f0f0;
+    }
+
+    .player-activity-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      width: calc(100vw / var(--app-dpi));
+      height: calc(100dvh / var(--app-dpi));
+      zoom: var(--app-dpi);
+      background: var(--player-bg);
+      background-size: cover;
+      background-position: center;
+      overflow: hidden;
+      padding: clamp(16px, 4vh, 28px) clamp(24px, 6vw, 56px);
+    }
+    .player-overlay-backdrop {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 30%, rgba(18, 55, 95, 0.75), rgba(5, 15, 28, 0.92));
+      backdrop-filter: blur(28px);
+      z-index: 1;
+    }
+    .player-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      justify-content: space-between;
+    }
+    .player-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+    }
+    .service-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      opacity: 0.9;
+    }
+
+    .player-main-layout {
+      display: flex;
+      align-items: center;
+      gap: clamp(20px, 4vw, 40px);
+      margin: auto 0;
+    }
+    .player-cover-art {
+      width: clamp(130px, 26vh, 220px);
+      height: clamp(130px, 26vh, 220px);
+      border-radius: 12px;
+      object-fit: cover;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+      background: rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+    .player-info {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      color: #ffffff;
+    }
+    .player-service-tag {
+      font-size: clamp(13px, 1.8vw, 16px);
+      opacity: 0.85;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .player-title {
+      font-size: clamp(22px, 3.8vw, 36px);
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .player-artist {
+      font-size: clamp(15px, 2.3vw, 20px);
+      font-weight: 600;
+      margin: 0;
+      opacity: 0.9;
+    }
+    .player-album {
+      font-size: clamp(13px, 1.8vw, 16px);
+      margin: 0;
+      opacity: 0.7;
+    }
+
+    .player-controls-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+    .progress-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+    }
+    .time-stamp {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.8);
+      font-variant-numeric: tabular-nums;
+      min-width: 90px;
+      text-align: right;
+    }
+    .playback-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .media-buttons-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .ctrl-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .ctrl-btn.play-main {
+      width: 56px;
+      height: 56px;
+      font-size: 26px;
+      background: #ffffff;
+      color: #0c2b4e;
+    }
+    .reaction-buttons {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .reaction-btn {
+      font-size: 20px;
+      padding: 8px;
+      opacity: 0.8;
+    }
+
+    .sub-screen { padding-top: clamp(14px, 3vh, 28px); }
+    .sub-header {
+      display: flex;
+      min-height: 46px;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .sub-header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+    .back-button {
+      width: 32px;
+      height: 32px;
+      font-size: 28px;
+      line-height: 1;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .setting-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px 2px;
+      border-bottom: 1px solid var(--line);
+      width: 100%;
+    }
+    .setting-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-block-header strong { font-size: 16px; font-weight: 600; }
+    .setting-block-header .val-badge { font-size: 16px; font-weight: bold; color: var(--accent); }
+
+    .setting-row {
+      display: flex;
+      min-height: 68px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 2px;
+      border-bottom: 1px solid var(--line);
+    }
+    .setting-row > div:first-child { display: flex; flex-direction: column; gap: 4px; }
+    .setting-row strong { font-size: 16px; font-weight: 500; }
+    .setting-row small { color: var(--subtext); font-size: 12px; }
+
+    /* Custom White Slider Component */
+    .slider-container { width: 100%; display: flex; align-items: center; padding: 6px 0; }
+    .white-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      outline: none;
+      margin: 0;
+      background: linear-gradient(
+        to right,
+        #ffffff 0%,
+        #ffffff var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) 100%
+      );
+      cursor: pointer;
+    }
+    .white-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+    }
+    .white-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+    }
+
+    /* Switch Component */
+    .switch { position: relative; flex: 0 0 50px; width: 50px; height: 27px; }
+    .switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .switch span {
+      position: absolute; inset: 0; border: 1px solid #d9e0e4;
+      border-radius: 16px; background: #d9e0e4;
+    }
+    .switch span::before {
+      position: absolute; top: 3px; left: 3px; width: 19px; height: 19px;
+      border-radius: 50%; background: #15202a; content: ""; transition: transform .16s;
+    }
+    .switch input:checked + span { border-color: var(--accent); background: var(--accent); }
+    .switch input:checked + span::before { transform: translateX(23px); background: #08212b; }
+
+    /* Dialogs & Modals */
+    .dialog {
+      width: min(520px, calc(100vw - 32px));
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #253342;
+      color: var(--text);
+    }
+    .dialog::backdrop { background: rgba(0,0,0,0.7); }
+    .dialog header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .dialog h2 { margin: 0; font-size: 19px; font-weight: 600; }
+    .dialog label { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; font-size: 14px; color: var(--subtext); }
+    .dialog input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #1a2530;
+      color: var(--text);
+    }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .pill-button {
+      min-height: 42px;
+      padding: 8px 22px;
+      border-radius: 999px;
+      background: #ffffff;
+      color: #121820;
+      font-weight: 600;
+    }
+    .pill-button.muted { background: rgba(255,255,255,0.15); color: var(--text); }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 16px;
+      color: var(--subtext);
+      text-align: center;
+      gap: 12px;
+    }
+    .empty-state-icon { font-size: 48px; opacity: 0.6; }
+
+    .toast {
+      position: fixed;
+      z-index: 100;
+      bottom: 24px;
+      left: 50%;
+      max-width: calc(100vw - 40px);
+      padding: 12px 22px;
+      transform: translateX(-50%);
+      border-radius: 30px;
+      background: #2b3a4a;
+      border: 1px solid var(--line);
+      color: var(--text);
+      font-size: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .toast.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+  <main id="home" class="screen">
+    <header class="home-header">
+      <span>Medi Music</span>
+      <div class="header-actions-group">
+        <button class="icon-button" id="btn-open-settings" title="設定" aria-label="設定">⚙</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div id="track-list" class="track-list"></div>
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-state-icon">🎵</div>
+        <strong>音楽ファイルが登録されていません</strong>
+        <small>右下の「＋ 追加 / 送信」ボタンから追加またはスマホから受信してください</small>
+      </div>
+    </div>
+
+    <!-- White Oval Upload Button -->
+    <button id="fab-upload" class="fab-upload-pill">
+      <span>＋</span>
+      <span>追加 / 送信</span>
+    </button>
+  </main>
+
+  <section id="player-activity" class="player-activity-screen hidden">
+    <div id="player-backdrop" class="player-overlay-backdrop"></div>
+    <div class="player-content">
+      <div class="player-top-bar">
+        <button id="player-minimize" class="icon-button" aria-label="閉じる">⌄</button>
+        <div class="service-badge">
+          <span>🎵 Medi</span>
+        </div>
+        <button id="player-speaker-icon" class="icon-button" aria-label="スピーカー">🔊</button>
+      </div>
+
+      <div class="player-main-layout">
+        <img id="player-cover" class="player-cover-art" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5'><rect x='2' y='2' width='20' height='20' rx='4'/><circle cx='12' cy='12' r='4'/></svg>" alt="Jacket Art">
+        <div class="player-info">
+          <div class="player-service-tag">
+            <span style="font-size: 18px;"></span> Music
+          </div>
+          <h2 id="player-title" class="player-title">曲名を選択</h2>
+          <p id="player-artist" class="player-artist">アーティスト名</p>
+          <p id="player-album" class="player-album">アルバム名</p>
+        </div>
+      </div>
+
+      <div class="player-controls-area">
+        <div class="progress-row">
+          <input type="range" id="player-seek" class="white-slider" value="0" min="0" max="100" aria-label="再生位置">
+          <span id="player-time" class="time-stamp">00:00 / 00:00</span>
+        </div>
+
+        <div class="playback-buttons">
+          <div class="media-buttons-left">
+            <button id="player-prev" class="ctrl-btn" aria-label="前の曲">⏮</button>
+            <button id="player-play" class="ctrl-btn play-main" aria-label="再生/一時停止">▶</button>
+            <button id="player-next" class="ctrl-btn" aria-label="次の曲">⏭</button>
+          </div>
+
+          <div class="reaction-buttons">
+            <button id="btn-like-dislike" class="reaction-btn" aria-label="低評価">👎</button>
+            <button id="btn-like-like" class="reaction-btn" aria-label="高評価">👍</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="settings-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" id="btn-back-settings" aria-label="戻る">‹</button>
+      <h1>Medi 設定</h1>
+    </header>
+
+    <div class="page-content">
+      <!-- App DPI Scale Slider -->
+      <article class="setting-block">
+        <div class="setting-block-header">
+          <div>
+            <strong>App DPI スケール</strong>
+            <small style="display:block; color:var(--subtext); font-size:12px; margin-top:2px;">
+              このアプリの表示倍率（IndexedDBに保存）
+            </small>
+          </div>
+          <span id="dpi-value-label" class="val-badge">100%</span>
+        </div>
+        <div class="slider-container">
+          <input type="range" id="app-dpi-slider" class="white-slider" min="75" max="150" step="5" value="100" aria-label="App DPI">
+        </div>
+      </article>
+
+      <!-- PeerJS Settings -->
+      <article class="setting-row">
+        <div>
+          <strong>My Peer Code (この端末)</strong>
+          <small id="peer-code-display">接続準備中...</small>
+        </div>
+        <button class="pill-button muted" id="btn-edit-peercode">変更</button>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>My Device Name</strong>
+          <small id="device-name-display">Amazon Echo Show</small>
+        </div>
+        <button class="pill-button muted" id="btn-edit-devicename">変更</button>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>Echo Showに合わせる</strong>
+          <small>画面フィット・解像度調整</small>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="fit-screen" checked>
+          <span></span>
+        </label>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>画面スリープを防止</strong>
+          <small>再生中の画面スリープを抑制</small>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="keep-awake">
+          <span></span>
+        </label>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>サンプル楽曲の読み込み</strong>
+          <small>動作確認用オーディオを追加</small>
+        </div>
+        <button class="pill-button" id="btn-add-sample">追加</button>
+      </article>
+    </div>
+  </section>
+
+  <dialog id="upload-dialog" class="dialog">
+    <header>
+      <h2>音楽ファイルの追加・送信</h2>
+      <button type="button" id="upload-dialog-close" style="font-size:24px;">×</button>
+    </header>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <!-- Hidden System File Input (Fallback if available) -->
+      <input type="file" id="system-file-input" accept="audio/mp3,audio/m4a,audio/ogg,audio/wav,audio/*" style="display:none;">
+
+      <button class="pill-button" id="btn-trigger-file-select" style="text-align:center;">
+        📁 端末からファイルを選択
+      </button>
+
+      <button class="pill-button muted" id="btn-open-url-modal">
+        🔗 WEB上の音楽URLから読み込む
+      </button>
+
+      <button class="pill-button muted" id="btn-open-send-peer">
+        📲 スマホからこのEchoにファイルを送信
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Peer Send Dialog -->
+  <dialog id="send-dialog" class="dialog">
+    <header>
+      <h2>ファイルを他端末へ送信</h2>
+      <button type="button" id="send-dialog-close" style="font-size:24px;">×</button>
+    </header>
+    <label>
+      送信先の Peer Code を入力
+      <input id="target-peer-code" placeholder="例: echo-show-living" required>
+    </label>
+    <div class="dialog-actions">
+      <button class="pill-button muted" id="btn-cancel-send">キャンセル</button>
+      <button class="pill-button" id="btn-confirm-send">送信開始</button>
+    </div>
+  </dialog>
+
+  <!-- URL Input Dialog -->
+  <dialog id="url-dialog" class="dialog">
+    <header>
+      <h2>URLから音楽を追加</h2>
+      <button type="button" id="url-dialog-close" style="font-size:24px;">×</button>
+    </header>
+    <label>
+      オーディオファイルURL (.mp3, .m4a, .ogg, .wav)
+      <input id="input-audio-url" type="url" placeholder="https://example.com/audio.mp3" required>
+    </label>
+    <label>
+      曲名 (任意)
+      <input id="input-audio-title" placeholder="Broken Glass">
+    </label>
+    <div class="dialog-actions">
+      <button class="pill-button muted" id="btn-cancel-url">キャンセル</button>
+      <button class="pill-button" id="btn-confirm-url">保存</button>
+    </div>
+  </dialog>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Hidden HTML5 Audio Element for Playback -->
+  <audio id="audio-engine" style="display:none;"></audio>
+
+  <script>
+    (() => {
+      'use strict';
+      const $ = (s) => document.querySelector(s);
+      const DB_NAME = 'MediEchoShowDB';
+      const DB_VERSION = 1;
+      
+      let db = null;
+      let peer = null;
+      let toastTimer = 0;
+      let tracksStore = [];
+      let currentTrackIndex = -1;
+      let isPlaying = false;
+      let sendTrackCandidate = null;
+
+      // Audio Engine Reference
+      const audioElement = $('#audio-engine');
+
+      function openDatabase() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (e) => {
+            const database = e.target.result;
+            if (!database.objectStoreNames.contains('tracks')) {
+              database.createObjectStore('tracks', { keyPath: 'id' });
+            }
+            if (!database.objectStoreNames.contains('settings')) {
+              database.createObjectStore('settings');
+            }
+          };
+          request.onsuccess = () => {
+            db = request.result;
+            resolve(db);
+          };
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function getSetting(key, fallback) {
+        if (!db) await openDatabase();
+        return new Promise((resolve) => {
+          const tx = db.transaction('settings', 'readonly');
+          const store = tx.objectStore('settings');
+          const req = store.get(key);
+          req.onsuccess = () => resolve(req.result !== undefined ? req.result : fallback);
+          req.onerror = () => resolve(fallback);
+        });
+      }
+
+      async function setSetting(key, value) {
+        if (!db) await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('settings', 'readwrite');
+          const store = tx.objectStore('settings');
+          const req = store.put(value, key);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function getAllTracks() {
+        if (!db) await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('tracks', 'readonly');
+          const store = tx.objectStore('tracks');
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result.sort((a,b) => b.savedAt - a.savedAt));
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function saveTrack(track) {
+        if (!db) await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('tracks', 'readwrite');
+          const store = tx.objectStore('tracks');
+          const req = store.put(track);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function deleteTrack(id) {
+        if (!db) await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('tracks', 'readwrite');
+          const store = tx.objectStore('tracks');
+          const req = store.delete(id);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      function toast(message) {
+        const el = $('#toast');
+        el.textContent = message;
+        el.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('visible'), 3000);
+      }
+
+      function updateSliderTrack(slider) {
+        const min = Number(slider.min) || 75;
+        const max = Number(slider.max) || 150;
+        const val = Number(slider.value) || 100;
+        const progress = ((val - min) / (max - min)) * 100;
+        slider.style.setProperty('--slider-progress', `${progress}%`);
+      }
+
+      function applyAppDpi(dpiVal) {
+        document.documentElement.style.setProperty('--app-dpi', String(dpiVal / 100));
+        $('#dpi-value-label').textContent = `${dpiVal}%`;
+      }
+
+      async function initDpiSetting() {
+        const slider = $('#app-dpi-slider');
+        const savedDpi = await getSetting('appDpi', 100);
+        slider.value = savedDpi;
+        updateSliderTrack(slider);
+        applyAppDpi(savedDpi);
+
+        slider.addEventListener('input', (e) => {
+          const val = Number(e.target.value);
+          updateSliderTrack(e.target);
+          applyAppDpi(val);
+        });
+
+        slider.addEventListener('change', async (e) => {
+          const val = Number(e.target.value);
+          await setSetting('appDpi', val);
+          toast(`DPIを ${val}% に保存しました`);
+        });
+      }
+
+      async function initPeerJS() {
+        const savedPeerCode = await getSetting('myPeerCode', 'echo-show-' + Math.random().toString(36).substring(2, 7));
+        const savedDeviceName = await getSetting('myDeviceName', 'Amazon Echo Show');
+        
+        $('#peer-code-display').textContent = savedPeerCode;
+        $('#device-name-display').textContent = savedDeviceName;
+
+        try {
+          if (typeof Peer !== 'undefined') {
+            peer = new Peer(savedPeerCode, { debug: 1 });
+            
+            peer.on('open', (id) => {
+              $('#peer-code-display').textContent = id;
+            });
+
+            peer.on('connection', (conn) => {
+              toast('他デバイスからのファイル受信接続を受け入れました');
+              let incomingBuffer = [];
+              let fileMeta = null;
+
+              conn.on('data', async (data) => {
+                if (data.type === 'file-start') {
+                  fileMeta = data;
+                  incomingBuffer = [];
+                  toast(`受信中: ${data.name}`);
+                } else if (data.type === 'file-chunk') {
+                  incomingBuffer.push(data.chunk);
+                } else if (data.type === 'file-end') {
+                  const blob = new Blob(incomingBuffer, { type: fileMeta.mime || 'audio/mp3' });
+                  await parseAndSaveAudioBlob(blob, fileMeta.name);
+                  toast(`${fileMeta.name} の受信が完了しました`);
+                  loadTrackList();
+                }
+              });
+            });
+
+            peer.on('error', (err) => {
+              if (err.type === 'unavailable-id') {
+                toast('PeerCodeが既に使用されています。ランダム作成します。');
+                const randomCode = 'echo-' + Math.random().toString(36).substring(2, 8);
+                setSetting('myPeerCode', randomCode);
+                initPeerJS();
+              }
+            });
+          }
+        } catch (e) {
+          console.error('PeerJS init failed:', e);
+        }
+      }
+
+      async function sendTrackViaPeer(targetCode, track) {
+        if (!peer) {
+          toast('PeerJSが準備されていません');
+          return;
+        }
+
+        toast(`${targetCode} へ接続中...`);
+        const conn = peer.connect(targetCode);
+
+        conn.on('open', async () => {
+          toast('送信中...');
+          const blob = track.blob;
+          const arrayBuffer = await blob.arrayBuffer();
+          const chunkSize = 16384; // 16KB chunks
+          
+          conn.send({
+            type: 'file-start',
+            name: track.title + '.mp3',
+            mime: track.type || 'audio/mp3',
+            size: blob.size
+          });
+
+          for (let offset = 0; offset < arrayBuffer.byteLength; offset += chunkSize) {
+            const chunk = arrayBuffer.slice(offset, offset + chunkSize);
+            conn.send({ type: 'file-chunk', chunk });
+          }
+
+          conn.send({ type: 'file-end' });
+          toast('ファイルの送信が完了しました！');
+        });
+
+        conn.on('error', () => {
+          toast('送信相手に接続できませんでした');
+        });
+      }
+
+      function parseAndSaveAudioBlob(blob, defaultName) {
+        return new Promise((resolve) => {
+          let title = defaultName.replace(/\.[^/.]+$/, "");
+          let artist = "Unknown Artist";
+          let album = "Unknown Album";
+          let coverUrl = null;
+
+          if (window.jsmediatags) {
+            window.jsmediatags.read(blob, {
+              onSuccess: async (tag) => {
+                const tags = tag.tags;
+                if (tags.title) title = tags.title;
+                if (tags.artist) artist = tags.artist;
+                if (tags.album) album = tags.album;
+
+                if (tags.picture) {
+                  const { data, format } = tags.picture;
+                  let base64String = "";
+                  for (let i = 0; i < data.length; i++) {
+                    base64String += String.fromCharCode(data[i]);
+                  }
+                  coverUrl = `data:${format};base64,${window.btoa(base64String)}`;
+                }
+
+                const trackRecord = {
+                  id: Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+                  title,
+                  artist,
+                  album,
+                  coverUrl,
+                  blob,
+                  type: blob.type || 'audio/mp3',
+                  savedAt: Date.now()
+                };
+
+                await saveTrack(trackRecord);
+                resolve(trackRecord);
+              },
+              onError: async () => {
+                const trackRecord = {
+                  id: Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+                  title,
+                  artist,
+                  album,
+                  coverUrl: null,
+                  blob,
+                  type: blob.type || 'audio/mp3',
+                  savedAt: Date.now()
+                };
+                await saveTrack(trackRecord);
+                resolve(trackRecord);
+              }
+            });
+          } else {
+            const trackRecord = {
+              id: Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+              title,
+              artist,
+              album,
+              coverUrl: null,
+              blob,
+              type: blob.type || 'audio/mp3',
+              savedAt: Date.now()
+            };
+            saveTrack(trackRecord).then(() => resolve(trackRecord));
+          }
+        });
+      }
+
+      async function loadTrackList() {
+        tracksStore = await getAllTracks();
+        const container = $('#track-list');
+        const emptyState = $('#empty-state');
+        container.replaceChildren();
+
+        if (tracksStore.length === 0) {
+          emptyState.classList.remove('hidden');
+          return;
+        } else {
+          emptyState.classList.add('hidden');
+        }
+
+        tracksStore.forEach((track, index) => {
+          const card = document.createElement('div');
+          card.className = 'track-card';
+
+          const defaultArt = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5'><rect x='2' y='2' width='20' height='20' rx='4'/><path d='M9 18V5l12-2v13'/><circle cx='6' cy='18' r='3'/><circle cx='18' cy='16' r='3'/></svg>";
+
+          card.innerHTML = `
+            <img class="track-artwork-thumb" src="${track.coverUrl || defaultArt}" alt="Artwork">
+            <div class="card-copy">
+              <strong>${escapeHtml(track.title)}</strong>
+              <small>${escapeHtml(track.artist)} • ${escapeHtml(track.album)}</small>
+            </div>
+            <div class="track-actions">
+              <button class="card-action btn-send-track">送信</button>
+              <button class="card-action delete-action">×</button>
+            </div>
+          `;
+
+          // Tap card to open Sub-Activity Player
+          card.addEventListener('click', (e) => {
+            if (e.target.closest('.track-actions')) return;
+            openPlayerActivity(index);
+          });
+
+          // Send button
+          card.querySelector('.btn-send-track').addEventListener('click', (e) => {
+            e.stopPropagation();
+            sendTrackCandidate = track;
+            $('#send-dialog').showModal();
+          });
+
+          // Delete button
+          card.querySelector('.delete-action').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await deleteTrack(track.id);
+            toast('曲を削除しました');
+            loadTrackList();
+          });
+
+          container.appendChild(card);
+        });
+      }
+
+      function escapeHtml(str) {
+        return String(str || '').replace(/[&<>"']/g, match => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[match]));
+      }
+
+      function openPlayerActivity(index) {
+        if (index < 0 || index >= tracksStore.length) return;
+        currentTrackIndex = index;
+        const track = tracksStore[currentTrackIndex];
+
+        $('#player-title').textContent = track.title;
+        $('#player-artist').textContent = track.artist;
+        $('#player-album').textContent = track.album;
+
+        const defaultArt = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5'><rect x='2' y='2' width='20' height='20' rx='4'/><circle cx='12' cy='12' r='4'/></svg>";
+        const artUrl = track.coverUrl || defaultArt;
+        $('#player-cover').src = artUrl;
+        $('#player-backdrop').style.backgroundImage = `url(${artUrl})`;
+
+        // Load Audio
+        if (track.blob) {
+          audioElement.src = URL.createObjectURL(track.blob);
+        } else if (track.url) {
+          audioElement.src = track.url;
+        }
+
+        audioElement.play();
+        isPlaying = true;
+        updatePlayButtonUI();
+
+        $('#player-activity').classList.remove('hidden');
+      }
+
+      function updatePlayButtonUI() {
+        $('#player-play').textContent = isPlaying ? '⏸' : '▶';
+      }
+
+      function formatTime(seconds) {
+        if (isNaN(seconds)) return '00:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+      }
+
+      audioElement.addEventListener('timeupdate', () => {
+        const cur = audioElement.currentTime || 0;
+        const dur = audioElement.duration || 0;
+        const pct = dur > 0 ? (cur / dur) * 100 : 0;
+        
+        const slider = $('#player-seek');
+        slider.value = pct;
+        updateSliderTrack(slider);
+
+        $('#player-time').textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+      });
+
+      audioElement.addEventListener('ended', () => {
+        if (currentTrackIndex + 1 < tracksStore.length) {
+          openPlayerActivity(currentTrackIndex + 1);
+        } else {
+          isPlaying = false;
+          updatePlayButtonUI();
+        }
+      });
+
+      $('#player-seek').addEventListener('input', (e) => {
+        const pct = Number(e.target.value);
+        if (audioElement.duration) {
+          audioElement.currentTime = (pct / 100) * audioElement.duration;
+        }
+        updateSliderTrack(e.target);
+      });
+
+      $('#player-play').addEventListener('click', () => {
+        if (isPlaying) {
+          audioElement.pause();
+          isPlaying = false;
+        } else {
+          audioElement.play();
+          isPlaying = true;
+        }
+        updatePlayButtonUI();
+      });
+
+      $('#player-prev').addEventListener('click', () => {
+        if (currentTrackIndex > 0) openPlayerActivity(currentTrackIndex - 1);
+      });
+
+      $('#player-next').addEventListener('click', () => {
+        if (currentTrackIndex + 1 < tracksStore.length) openPlayerActivity(currentTrackIndex + 1);
+      });
+
+      $('#player-minimize').addEventListener('click', () => {
+        $('#player-activity').classList.add('hidden');
+      });
+
+      $('#btn-open-settings').addEventListener('click', () => {
+        $('#home').classList.add('hidden');
+        $('#settings-screen').classList.remove('hidden');
+      });
+
+      $('#btn-back-settings').addEventListener('click', () => {
+        $('#settings-screen').classList.add('hidden');
+        $('#home').classList.remove('hidden');
+      });
+
+      $('#fab-upload').addEventListener('click', () => {
+        $('#upload-dialog').showModal();
+      });
+
+      $('#upload-dialog-close').addEventListener('click', () => {
+        $('#upload-dialog').close();
+      });
+
+      // System File Selection Trigger
+      $('#btn-trigger-file-select').addEventListener('click', () => {
+        $('#upload-dialog').close();
+        $('#system-file-input').click();
+      });
+
+      $('#system-file-input').addEventListener('change', async (e) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+        toast('ファイルを読み込み中...');
+        for (let i = 0; i < files.length; i++) {
+          await parseAndSaveAudioBlob(files[i], files[i].name);
+        }
+        toast('ファイルを追加しました');
+        loadTrackList();
+        e.target.value = '';
+      });
+
+      // Web URL Dialog
+      $('#btn-open-url-modal').addEventListener('click', () => {
+        $('#upload-dialog').close();
+        $('#url-dialog').showModal();
+      });
+
+      $('#url-dialog-close').addEventListener('click', () => $('#url-dialog').close());
+      $('#btn-cancel-url').addEventListener('click', () => $('#url-dialog').close());
+
+      $('#btn-confirm-url').addEventListener('click', async () => {
+        const url = $('#input-audio-url').value.trim();
+        const title = $('#input-audio-title').value.trim() || 'URL Track';
+        if (!url) return;
+
+        try {
+          toast('URLから音楽をダウンロード中...');
+          const res = await fetch(url);
+          const blob = await res.blob();
+          await parseAndSaveAudioBlob(blob, title);
+          toast('URLの楽曲を保存しました');
+          loadTrackList();
+          $('#url-dialog').close();
+        } catch (e) {
+          toast('URLからの読み込みに失敗しました');
+        }
+      });
+
+      // Peer Code Send Dialog
+      $('#btn-open-send-peer').addEventListener('click', () => {
+        $('#upload-dialog').close();
+        toast('ライブラリの曲一覧の「送信」ボタンからも送ることができます');
+      });
+
+      $('#send-dialog-close').addEventListener('click', () => $('#send-dialog').close());
+      $('#btn-cancel-send').addEventListener('click', () => $('#send-dialog').close());
+
+      $('#btn-confirm-send').addEventListener('click', () => {
+        const target = $('#target-peer-code').value.trim();
+        if (!target || !sendTrackCandidate) return;
+        sendTrackViaPeer(target, sendTrackCandidate);
+        $('#send-dialog').close();
+      });
+
+      // Settings Edit Buttons
+      $('#btn-edit-peercode').addEventListener('click', async () => {
+        const newCode = prompt('新しい My Peer Code を入力してください:', $('#peer-code-display').textContent);
+        if (newCode && newCode.trim()) {
+          await setSetting('myPeerCode', newCode.trim());
+          initPeerJS();
+          toast('Peer Codeを更新しました');
+        }
+      });
+
+      $('#btn-edit-devicename').addEventListener('click', async () => {
+        const newName = prompt('My Device Name を入力:', $('#device-name-display').textContent);
+        if (newName && newName.trim()) {
+          await setSetting('myDeviceName', newName.trim());
+          $('#device-name-display').textContent = newName.trim();
+          toast('Device Nameを更新しました');
+        }
+      });
+
+      // Sample Track Auto Loader
+      $('#btn-add-sample').addEventListener('click', async () => {
+        toast('サンプル楽曲を読み込み中...');
+        try {
+          const sampleUrl = "https://cdn.jsdelivr.net/gh/rafaelreis-hotmart/Audio-Sample-files@master/sample.mp3";
+          const res = await fetch(sampleUrl);
+          const blob = await res.blob();
+          await parseAndSaveAudioBlob(blob, "Broken Glass - Sample");
+          toast('サンプル曲を追加しました！');
+          loadTrackList();
+        } catch {
+          toast('サンプルの取得に失敗しました');
+        }
+      });
+
+      window.addEventListener('DOMContentLoaded', async () => {
+        await openDatabase();
+        await initDpiSetting();
+        await initPeerJS();
+        await loadTrackList();
+      });
+    })();
+  </script>
+</body>
+</html>
