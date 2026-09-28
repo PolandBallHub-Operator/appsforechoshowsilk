@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Android 7.1 Messenger - Echo Show 5 Gen 3</title>
+    <!-- Google Material Symbols CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Roboto', sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+
+        /* Echo Show 5 Gen 3 Full screen container */
+        #app-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+
+        /* Sub Activities management */
+        .activity {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            background-color: #ffffff;
+            z-index: 1;
+        }
+
+        .activity.active {
+            display: flex;
+            z-index: 2;
+        }
+
+        /* Action Bar / Header */
+        .action-bar {
+            height: 56px;
+            min-height: 56px;
+            background-color: #0081cb; /* Android 7.1 Messenger primary blue */
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .action-bar-dark {
+            background-color: #3949ab; /* Deep indigo for conversation activity */
+        }
+
+        .action-bar .icon-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            outline: none;
+        }
+
+        .action-bar .icon-btn:active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .action-bar .title {
+            font-size: 20px;
+            font-weight: 500;
+            margin-left: 8px;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .action-bar .actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        /* Hide HTML default checkbox */
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* Switch Track (OFF State) */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        /* Switch Thumb / Knob (OFF State) */
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Switch Track (ON State) */
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        /* Switch Thumb / Knob (ON State) */
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        /* Activity 1: Main Conversation List */
+        #activity-main .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #ffffff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .empty-illustration {
+            width: 140px;
+            height: 100px;
+            margin-bottom: 24px;
+            opacity: 0.85;
+        }
+
+        .empty-text {
+            color: #757575;
+            font-size: 15px;
+            line-height: 1.4;
+            max-width: 280px;
+        }
+
+        /* Floating Action Button (FAB) */
+        .fab {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: #0081cb;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            border: none;
+            cursor: pointer;
+            z-index: 5;
+            outline: none;
+        }
+
+        .fab:active {
+            background-color: #0069a5;
+        }
+
+        /* Activity 2: Settings Activity Styling */
+        #activity-settings {
+            background-color: #f5f5f5;
+        }
+
+        .settings-list {
+            list-style: none;
+            background-color: #ffffff;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            min-height: 64px;
+        }
+
+        .settings-item-text {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            color: #212121;
+        }
+
+        .settings-subtitle {
+            font-size: 14px;
+            color: #757575;
+        }
+
+        /* Activity 3: Chat / Message Thread Styling */
+        #activity-chat {
+            background-color: #eceff1;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .message-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .message-bubble-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            background: #ffffff;
+            padding: 10px 14px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            max-width: 70%;
+        }
+
+        .message-text {
+            font-size: 15px;
+            color: #212121;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #9e9e9e;
+            margin-top: 4px;
+        }
+
+        .avatar-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #00a65a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            flex-shrink: 0;
+        }
+
+        /* Bottom Message Input Bar */
+        .chat-input-bar {
+            min-height: 56px;
+            padding: 8px;
+            background-color: #eceff1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .attach-btn {
+            background: none;
+            border: none;
+            color: #757575;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            background-color: #ffffff;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            height: 44px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-wrapper input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            color: #212121;
+        }
+
+        .input-wrapper input::placeholder {
+            color: #9e9e9e;
+        }
+
+        .emoji-btn {
+            background: none;
+            border: none;
+            color: #757575;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-avatar-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #00a65a;
+            border: none;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* Activity 4: New Conversation (To...) Styling */
+        .recipient-header {
+            background-color: #0081cb;
+            padding: 0 12px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .recipient-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #ffffff;
+            font-size: 18px;
+            margin-left: 12px;
+        }
+
+        .recipient-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .tabs-bar {
+            height: 48px;
+            background-color: #0081cb;
+            display: flex;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 9;
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            position: relative;
+            text-transform: uppercase;
+        }
+
+        .tab-item.active {
+            color: #ffffff;
+        }
+
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: #ffffff;
+        }
+
+        #activity-new .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .new-msg-illustration {
+            width: 150px;
+            height: 110px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        /* Overflow Popup Menu */
+        .popup-menu {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            display: none;
+            flex-direction: column;
+            padding: 8px 0;
+            z-index: 100;
+            min-width: 140px;
+        }
+
+        .popup-menu.active {
+            display: flex;
+        }
+
+        .menu-item {
+            padding: 12px 16px;
+            font-size: 15px;
+            color: #212121;
+            cursor: pointer;
+        }
+
+        .menu-item:active {
+            background-color: #eeeeee;
+        }
+
+        /* Backdrop overlay for menu */
+        .backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 99;
+            display: none;
+        }
+
+        .backdrop.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <div id="backdrop" class="backdrop" onclick="closeMenu()"></div>
+
+        <!-- Popover Menu for Main Activity -->
+        <div id="main-menu" class="popup-menu">
+            <div class="menu-item" onclick="openSettings()">Settings</div>
+        </div>
+
+        <!-- ==================== ACTIVITY 1: MAIN MESSENGER ==================== -->
+        <div id="activity-main" class="activity active">
+            <header class="action-bar">
+                <span class="title">Messenger</span>
+                <div class="actions">
+                    <button class="icon-btn" aria-label="Search">
+                        <span class="material-symbols-outlined">search</span>
+                    </button>
+                    <button class="icon-btn" onclick="toggleMenu()" aria-label="More options">
+                        <span class="material-symbols-outlined">more_vert</span>
+                    </button>
+                </div>
+            </header>
+
+            <main class="content">
+                <!-- SVG Replica of Empty Conversation Placeholder Illustration -->
+                <svg class="empty-illustration" viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Top circle and lines -->
+                    <circle cx="50" cy="40" r="18" fill="#D9D9D9"/>
+                    <rect x="76" y="28" width="50" height="10" rx="2" fill="#D9D9D9"/>
+                    <rect x="76" y="44" width="100" height="8" rx="2" fill="#E5E5E5"/>
+                    <rect x="76" y="56" width="22" height="6" rx="2" fill="#E5E5E5"/>
+
+                    <!-- Bottom circle and lines -->
+                    <circle cx="50" cy="90" r="18" fill="#E5E5E5"/>
+                    <rect x="76" y="78" width="80" height="10" rx="2" fill="#E5E5E5"/>
+                    <rect x="76" y="94" width="110" height="8" rx="2" fill="#E5E5E5"/>
+                    <rect x="76" y="106" width="22" height="6" rx="2" fill="#E5E5E5"/>
+                </svg>
+
+                <p class="empty-text">Once you start a new conversation, you’ll see it listed here</p>
+            </main>
+
+            <button class="fab" onclick="openNewChat()" aria-label="Start new conversation">
+                <span class="material-symbols-outlined" style="font-size: 28px;">add</span>
+            </button>
+        </div>
+
+        <!-- ==================== ACTIVITY 2: SETTINGS ==================== -->
+        <div id="activity-settings" class="activity">
+            <header class="action-bar">
+                <button class="icon-btn" onclick="openMain()" aria-label="Back">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <span class="title">Settings</span>
+            </header>
+
+            <main style="flex: 1; overflow-y: auto;">
+                <ul class="settings-list">
+                    <li class="settings-item">
+                        <div class="settings-item-text">
+                            <span class="settings-title">Default SMS app</span>
+                            <span class="settings-subtitle">Messenger</span>
+                        </div>
+                    </li>
+
+                    <li class="settings-item">
+                        <div class="settings-item-text">
+                            <span class="settings-title">Outgoing message sounds</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </li>
+
+                    <li class="settings-item">
+                        <div class="settings-item-text">
+                            <span class="settings-title">Notifications</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </li>
+
+                    <li class="settings-item">
+                        <div class="settings-item-text">
+                            <span class="settings-title">Sound</span>
+                            <span class="settings-subtitle">Default ringtone (On The Hunt)</span>
+                        </div>
+                    </li>
+
+                    <li class="settings-item">
+                        <div class="settings-item-text">
+                            <span class="settings-title">Vibrate</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </li>
+
+                    <li class="settings-item">
+                        <div class="settings-item-text">
+                            <span class="settings-title">Your current country</span>
+                            <span class="settings-subtitle">Automatically detected (United States)</span>
+                        </div>
+                    </li>
+
+                    <li class="settings-item">
+                        <div class="settings-item-text">
+                            <span class="settings-title">Advanced</span>
+                        </div>
+                    </li>
+                </ul>
+            </main>
+        </div>
+
+        <!-- ==================== ACTIVITY 3: CHAT / CONVERSATION ==================== -->
+        <div id="activity-chat" class="activity">
+            <header class="action-bar action-bar-dark">
+                <button class="icon-btn" onclick="openMain()" aria-label="Back">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <span class="title" id="chat-phone-number">00000000000</span>
+                <div class="actions">
+                    <button class="icon-btn" aria-label="Call">
+                        <span class="material-symbols-outlined">call</span>
+                    </button>
+                    <button class="icon-btn" aria-label="More options">
+                        <span class="material-symbols-outlined">more_vert</span>
+                    </button>
+                </div>
+            </header>
+
+            <main class="chat-messages" id="chat-messages-list">
+                <div class="message-row">
+                    <div class="message-bubble-container">
+                        <span class="message-text">Hello</span>
+                        <span class="message-time">Now</span>
+                    </div>
+                    <div class="avatar-circle">
+                        <span class="material-symbols-outlined">person</span>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="chat-input-bar">
+                <button class="attach-btn" aria-label="Attach file">
+                    <span class="material-symbols-outlined">attach_file</span>
+                </button>
+                <div class="input-wrapper">
+                    <input type="text" id="message-input" placeholder="Send message" onkeypress="handleKeyPress(event)">
+                    <button class="emoji-btn" aria-label="Emoji picker">
+                        <span class="material-symbols-outlined">sentiment_satisfied</span>
+                    </button>
+                </div>
+                <button class="send-avatar-btn" onclick="sendMessage()" aria-label="Send message">
+                    <span class="material-symbols-outlined">person</span>
+                </button>
+            </footer>
+        </div>
+
+        <!-- ==================== ACTIVITY 4: NEW CONVERSATION ==================== -->
+        <div id="activity-new" class="activity">
+            <div class="recipient-header">
+                <button class="icon-btn" onclick="openMain()" aria-label="Back">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <input type="text" id="recipient-input" class="recipient-input" placeholder="To" onkeypress="handleRecipientEnter(event)">
+                <button class="icon-btn" aria-label="Dialpad">
+                    <span class="material-symbols-outlined">apps</span>
+                </button>
+            </div>
+
+            <div class="tabs-bar">
+                <div class="tab-item" onclick="switchTab('frequents')">FREQUENTS</div>
+                <div class="tab-item active" onclick="switchTab('contacts')">ALL CONTACTS</div>
+            </div>
+
+            <main class="content">
+                <!-- SVG Icon graphic for start new conversation -->
+                <svg class="new-msg-illustration" viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Main Chat bubble -->
+                    <path d="M20 20 H100 V75 H40 L20 95 Z" fill="#C2C2C2"/>
+                    <!-- Inner triangle cutout -->
+                    <polygon points="45,40 70,60 95,40" fill="#E5E5E5"/>
+                    <polygon points="45,40 70,60 45,60" fill="#D0D0D0"/>
+                    
+                    <!-- Secondary Chat bubble -->
+                    <path d="M70 45 H130 V90 H90 L70 105 Z" fill="#D9D9D9"/>
+                    <rect x="85" y="58" width="30" height="5" fill="#B0B0B0" rx="1"/>
+                    <rect x="85" y="68" width="30" height="5" fill="#B0B0B0" rx="1"/>
+                    <rect x="85" y="78" width="18" height="5" fill="#B0B0B0" rx="1"/>
+                </svg>
+
+                <p class="empty-text">Enter a contact name or phone number to start a new message</p>
+            </main>
+        </div>
+
+    </div>
+
+    <script>
+        // Activity Switcher Logic
+        function showActivity(activityId) {
+            closeMenu();
+            const activities = document.querySelectorAll('.activity');
+            activities.forEach(act => act.classList.remove('active'));
+            document.getElementById(activityId).classList.add('active');
+        }
+
+        function openMain() {
+            showActivity('activity-main');
+        }
+
+        function openSettings() {
+            showActivity('activity-settings');
+        }
+
+        function openNewChat() {
+            showActivity('activity-new');
+            setTimeout(() => {
+                document.getElementById('recipient-input').focus();
+            }, 100);
+        }
+
+        function openChat(phoneNumber) {
+            if (phoneNumber) {
+                document.getElementById('chat-phone-number').innerText = phoneNumber;
+            }
+            showActivity('activity-chat');
+        }
+
+        // Popup Menu Control
+        function toggleMenu() {
+            const menu = document.getElementById('main-menu');
+            const backdrop = document.getElementById('backdrop');
+            const isVisible = menu.classList.contains('active');
+            
+            if (isVisible) {
+                closeMenu();
+            } else {
+                menu.classList.add('active');
+                backdrop.classList.add('active');
+            }
+        }
+
+        function closeMenu() {
+            document.getElementById('main-menu').classList.remove('active');
+            document.getElementById('backdrop').classList.remove('active');
+        }
+
+        // Tab Switcher for New Conversation Screen
+        function switchTab(tabName) {
+            const tabs = document.querySelectorAll('.tab-item');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            if (tabName === 'frequents') {
+                tabs[0].classList.add('active');
+            } else {
+                tabs[1].classList.add('active');
+            }
+        }
+
+        // Send Message Logic
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const chatList = document.getElementById('chat-messages-list');
+            
+            // Create message bubble
+            const row = document.createElement('div');
+            row.className = 'message-row';
+
+            const bubbleContainer = document.createElement('div');
+            bubbleContainer.className = 'message-bubble-container';
+
+            const msgText = document.createElement('span');
+            msgText.className = 'message-text';
+            msgText.innerText = text;
+
+            const msgTime = document.createElement('span');
+            msgTime.className = 'message-time';
+            msgTime.innerText = 'Now';
+
+            bubbleContainer.appendChild(msgText);
+            bubbleContainer.appendChild(msgTime);
+
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar-circle';
+            avatar.innerHTML = '<span class="material-symbols-outlined">person</span>';
+
+            row.appendChild(bubbleContainer);
+            row.appendChild(avatar);
+
+            chatList.appendChild(row);
+
+            // Clear input & scroll to bottom
+            input.value = '';
+            chatList.scrollTop = chatList.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function handleRecipientEnter(event) {
+            if (event.key === 'Enter') {
+                const val = event.target.value.trim();
+                if (val) {
+                    openChat(val);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
