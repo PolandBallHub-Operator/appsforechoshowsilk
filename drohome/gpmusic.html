@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MusicPlay</title>
+    <!-- Material Icons CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <!-- PeerJS CDN for P2P file transfer -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <!-- jsmediatags for parsing ID3 tags & Album Covers -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: Roboto, 'Segoe UI', 'Helvetica Neue', sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            color: #212121;
+        }
+
+        /* App Container without status bar or border */
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background-color: #f5f5f5;
+        }
+
+        /* Top Header Bar */
+        .app-bar {
+            height: 56px;
+            background-color: #f57c00;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .app-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .app-bar-title {
+            font-size: 20px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .app-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            border-radius: 50%;
+        }
+
+        .icon-btn:active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .tabs {
+            height: 48px;
+            background-color: #f57c00;
+            display: flex;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            z-index: 9;
+            flex-shrink: 0;
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .tab-item.active {
+            color: #ffffff;
+        }
+
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: #ffffff;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            padding-bottom: 60px; /* Space for mini player */
+        }
+
+        .drawer-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .drawer-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .drawer {
+            position: absolute;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 101;
+            transition: transform 0.3s ease;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .drawer-overlay.open .drawer {
+            transform: translateX(280px);
+        }
+
+        /* Android Play Music Header Banner */
+        .drawer-header {
+            height: 140px;
+            background: linear-gradient(135deg, #42a5f5, #26a69a 30%, #ffee58 70%, #ff7043);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            position: relative;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        }
+
+        .avatar {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-email {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .drawer-menu {
+            padding: 8px 0;
+            flex: 1;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            height: 48px;
+            padding: 0 16px;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            gap: 24px;
+        }
+
+        .drawer-item .material-icons {
+            color: #616161;
+            font-size: 22px;
+        }
+
+        .drawer-item.active {
+            color: #f57c00;
+            background-color: #f5f5f5;
+        }
+
+        .drawer-item.active .material-icons {
+            color: #f57c00;
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 8px 0;
+        }
+
+        .switch-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            height: 48px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        .page-view {
+            display: none;
+            width: 100%;
+            min-height: 100%;
+            background-color: #f5f5f5;
+        }
+
+        .page-view.active {
+            display: block;
+        }
+
+        /* Grid View for My Library Albums/Artists */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            padding: 8px;
+        }
+
+        @media (min-width: 600px) {
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 2px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .card-art {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: #e0e0e0;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-art .material-icons {
+            font-size: 48px;
+            color: #9e9e9e;
+        }
+
+        .card-info {
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+        }
+
+        .card-text {
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #212121;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-subtitle {
+            font-size: 11px;
+            color: #757575;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-menu-btn {
+            color: #757575;
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+        }
+
+        /* Song List Item View */
+        .list-container {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+        }
+
+        .list-item-art {
+            width: 40px;
+            height: 40px;
+            background-color: #eee;
+            border-radius: 2px;
+            margin-right: 16px;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .list-item-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .list-item-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #212121;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .list-item-sub {
+            font-size: 12px;
+            color: #757575;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Subscribe Screen (Listen Now Mock/Intro) */
+        .subscribe-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .play-music-badge {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 24px;
+        }
+
+        .subscribe-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #212121;
+            margin-bottom: 8px;
+        }
+
+        .subscribe-desc {
+            font-size: 13px;
+            color: #616161;
+            max-width: 280px;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .btn-subscribe {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 2px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+
+        .btn-learn {
+            color: #616161;
+            background: none;
+            border: none;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* Settings View */
+        .settings-group {
+            background-color: #ffffff;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .settings-header {
+            padding: 16px 16px 8px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #f57c00;
+            text-transform: uppercase;
+        }
+
+        .settings-item {
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .settings-item-title {
+            font-size: 14px;
+            color: #212121;
+        }
+
+        .settings-item-sub {
+            font-size: 12px;
+            color: #757575;
+            margin-top: 2px;
+        }
+
+        .mini-player {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 56px;
+            background-color: #ffffff;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            z-index: 20;
+            cursor: pointer;
+        }
+
+        .mini-player-art {
+            width: 40px;
+            height: 40px;
+            background-color: #ddd;
+            border-radius: 2px;
+            margin-right: 12px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .mini-player-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .mini-player-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #212121;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .mini-player-artist {
+            font-size: 11px;
+            color: #757575;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .mini-player-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mini-player-controls .icon-btn {
+            color: #616161;
+        }
+
+        /* Full Screen Now Playing Sub Activity (Exact Screenshot 2 Reproduction) */
+        .now-playing-subactivity {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #fafafa;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+
+        .now-playing-subactivity.open {
+            transform: translateY(0);
+        }
+
+        .subactivity-bar {
+            height: 56px;
+            padding: 0 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #e8e8e8;
+        }
+
+        .subactivity-info {
+            flex: 1;
+            margin: 0 12px;
+            overflow: hidden;
+        }
+
+        .subactivity-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: #212121;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .subactivity-artist {
+            font-size: 12px;
+            color: #616161;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .album-art-container {
+            flex: 1;
+            position: relative;
+            background-color: #212121;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .album-art-full {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Feedback Thumbs Over Art */
+        .feedback-overlay {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .feedback-overlay .icon-btn {
+            color: white;
+        }
+
+        .feedback-time {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Seekbar */
+        .seeker-container {
+            height: 4px;
+            background-color: #bdbdbd;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .seeker-progress {
+            height: 100%;
+            background-color: #ef6c00;
+            width: 0%;
+            position: relative;
+        }
+
+        .seeker-thumb {
+            width: 14px;
+            height: 14px;
+            background-color: #ef6c00;
+            border-radius: 50%;
+            position: absolute;
+            right: -7px;
+            top: -5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+
+        /* Bottom Controls Bar */
+        .player-controls-bar {
+            height: 72px;
+            background-color: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 16px;
+        }
+
+        .btn-play-orange {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #ff6d00;
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+
+        .control-icon-btn {
+            background: none;
+            border: none;
+            color: #424242;
+            cursor: pointer;
+        }
+
+        .control-icon-btn.active {
+            color: #ff6d00;
+        }
+
+        /* Context Menu Popup */
+        .context-menu {
+            position: fixed;
+            background: white;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.23);
+            border-radius: 2px;
+            z-index: 300;
+            display: none;
+            min-width: 160px;
+            padding: 4px 0;
+        }
+
+        .context-menu-item {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #212121;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .context-menu-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* Modal Dialogs */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.5);
+            z-index: 400;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 2px;
+            width: 85%;
+            max-width: 360px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            margin-bottom: 16px;
+            outline: none;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-text {
+            background: none;
+            border: none;
+            color: #f57c00;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        /* Hidden File Input */
+        #file-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="app-bar">
+        <div class="app-bar-left">
+            <button class="icon-btn" id="menu-btn">
+                <i class="material-icons">menu</i>
+            </button>
+            <div class="app-bar-title" id="page-title">My Library</div>
+        </div>
+        <div class="app-bar-actions">
+            <button class="icon-btn" id="add-file-btn" title="Add Music File">
+                <i class="material-icons">add</i>
+            </button>
+            <button class="icon-btn" id="search-btn">
+                <i class="material-icons">search</i>
+            </button>
+        </div>
+    </div>
+
+    <div class="tabs" id="library-tabs">
+        <div class="tab-item" data-tab="genres">GENRES</div>
+        <div class="tab-item active" data-tab="artists">ARTISTS</div>
+        <div class="tab-item" data-tab="albums">ALBUMS</div>
+        <div class="tab-item" data-tab="songs">SONGS</div>
+    </div>
+
+    <div class="drawer-overlay" id="drawer-overlay">
+        <div class="drawer">
+            <div class="drawer-header">
+                <div class="avatar">
+                    <img src="https://raw.githubusercontent.com/PolandBallHub-Operator/appsforechoshowsilk/refs/heads/main/drohome/email.png" alt="Email Icon" onerror="this.src='https://placehold.co/54x54/e0e0e0/666?text=U'">
+                </div>
+                <div class="user-email">android@email.com</div>
+            </div>
+            <div class="drawer-menu">
+                <div class="drawer-item" data-target="listen-now">
+                    <i class="material-icons" style="color:#f57c00;">play_circle_filled</i>今すぐ聴こう
+                </div>
+                <div class="drawer-item" data-target="recent">
+                    <i class="material-icons">history</i>最近
+                </div>
+                <div class="drawer-item" data-target="top-charts">
+                    <i class="material-icons">star</i>トップチャート
+                </div>
+                <div class="drawer-item" data-target="new-releases">
+                    <i class="material-icons">new_releases</i>新作
+                </div>
+                <div class="drawer-item active" data-target="library">
+                    <i class="material-icons">library_music</i>音楽ライブラリ
+                </div>
+                <div class="drawer-item" data-target="store">
+                    <i class="material-icons">shopping_basket</i>ストア
+                </div>
+
+                <div class="drawer-divider"></div>
+
+                <div class="switch-row">
+                    <span>ダウンロード済みのみ</span>
+                    <label class="switch">
+                        <input type="checkbox" id="downloaded-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="drawer-item" data-target="settings">
+                    <i class="material-icons">settings</i>設定
+                </div>
+                <div class="drawer-item" data-target="help">
+                    <i class="material-icons">help</i>ヘルプとフィードバック
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <!-- My Library View -->
+        <div class="page-view active" id="view-library">
+            <div class="grid-container" id="library-grid">
+                <!-- Dynamically populated from IndexedDB -->
+            </div>
+            <div class="list-container" id="library-list" style="display: none;">
+                <!-- Song list view dynamically populated -->
+            </div>
+        </div>
+
+        <!-- Listen Now View (Screenshot 4/5 Reproduction) -->
+        <div class="page-view" id="view-listen-now">
+            <div class="subscribe-view">
+                <img src="https://raw.githubusercontent.com/PolandBallHub-Operator/appsforechoshowsilk/refs/heads/main/drohome/music.png" class="play-music-badge" alt="MusicPlay Icon">
+                <div class="subscribe-title">Subscribe to MusicPlay</div>
+                <div class="subscribe-desc">Buy music on the Store, upload from your computer, or transfer using PeerJS P2P</div>
+                <button class="btn-subscribe">SUBSCRIBE</button>
+                <button class="btn-learn">LEARN MORE</button>
+            </div>
+        </div>
+
+        <!-- Music Settings View (Screenshot 6 Reproduction) -->
+        <div class="page-view" id="view-settings">
+            <div class="settings-group">
+                <div class="settings-header">ACCOUNT</div>
+                <div class="settings-item">
+                    <div class="settings-item-title">Tap to choose account</div>
+                    <div class="settings-item-sub">android@email.com</div>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <div class="settings-header">PLAYBACK & P2P TRANSFER</div>
+                <div class="settings-item">
+                    <div class="settings-item-title">Device Name</div>
+                    <div class="settings-item-sub">Echo show 5 gen3</div>
+                </div>
+                <div class="settings-item" id="peer-code-setting">
+                    <div class="settings-item-title">My peer device code</div>
+                    <div class="settings-item-sub" id="peer-id-display">Generating...</div>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <div class="settings-header">ABOUT MUSICPLAY</div>
+                <div class="settings-item">
+                    <div class="settings-item-title">Open source licenses</div>
+                </div>
+                <div class="settings-item">
+                    <div class="settings-item-title">Version 6.13.3321-0.F.3241253</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mini-player" id="mini-player">
+        <div class="mini-player-art" id="mini-art"></div>
+        <div class="mini-player-info">
+            <div class="mini-player-title" id="mini-title">No track selected</div>
+            <div class="mini-player-artist" id="mini-artist">Select a song from library</div>
+        </div>
+        <div class="mini-player-controls">
+            <button class="icon-btn" id="mini-play-btn">
+                <i class="material-icons" id="mini-play-icon">play_arrow</i>
+            </button>
+        </div>
+    </div>
+
+    <div class="now-playing-subactivity" id="now-playing-activity">
+        <div class="subactivity-bar">
+            <button class="icon-btn" id="close-subactivity-btn">
+                <i class="material-icons" style="color: #616161;">expand_more</i>
+            </button>
+            <div class="subactivity-info">
+                <div class="subactivity-title" id="sub-title">Track Name</div>
+                <div class="subactivity-artist" id="sub-artist">Artist Name</div>
+            </div>
+            <button class="icon-btn">
+                <i class="material-icons" style="color: #616161;">queue_music</i>
+            </button>
+            <button class="icon-btn">
+                <i class="material-icons" style="color: #616161;">more_vert</i>
+            </button>
+        </div>
+
+        <div class="album-art-container">
+            <img src="" id="sub-art" class="album-art-full" alt="Album Art">
+            <div class="feedback-overlay">
+                <button class="icon-btn"><i class="material-icons">thumb_up</i></button>
+                <div class="feedback-time">
+                    <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+                </div>
+                <button class="icon-btn"><i class="material-icons">thumb_down</i></button>
+            </div>
+        </div>
+
+        <div class="seeker-container" id="seeker-bar">
+            <div class="seeker-progress" id="seeker-progress">
+                <div class="seeker-thumb"></div>
+            </div>
+        </div>
+
+        <div class="player-controls-bar">
+            <button class="control-icon-btn" id="btn-repeat">
+                <i class="material-icons">repeat</i>
+            </button>
+            <button class="control-icon-btn" id="btn-prev">
+                <i class="material-icons" style="font-size: 32px;">skip_previous</i>
+            </button>
+            <button class="btn-play-orange" id="btn-main-play">
+                <i class="material-icons" id="main-play-icon" style="font-size: 32px;">play_arrow</i>
+            </button>
+            <button class="control-icon-btn" id="btn-next">
+                <i class="material-icons" style="font-size: 32px;">skip_next</i>
+            </button>
+            <button class="control-icon-btn" id="btn-shuffle">
+                <i class="material-icons">shuffle</i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Context Menu -->
+<div class="context-menu" id="context-menu">
+    <div class="context-menu-item" id="menu-opt-play">
+        <i class="material-icons">play_arrow</i>再生
+    </div>
+    <div class="context-menu-item" id="menu-opt-transfer">
+        <i class="material-icons">send</i>ファイル転送 (PeerJS)
+    </div>
+    <div class="context-menu-item" id="menu-opt-delete">
+        <i class="material-icons">delete</i>削除
+    </div>
+</div>
+
+<!-- Peer Transfer Modal -->
+<div class="modal-overlay" id="transfer-modal">
+    <div class="modal">
+        <div class="modal-title">転送先デバイスIDを入力</div>
+        <input type="text" class="modal-input" id="target-peer-id" placeholder="相手の My peer device code">
+        <div class="modal-actions">
+            <button class="btn-text" id="modal-cancel">キャンセル</button>
+            <button class="btn-text" id="modal-send">送信</button>
+        </div>
+    </div>
+</div>
+
+<!-- File Input Element -->
+<input type="file" id="file-input" accept="audio/*" multiple>
+
+<!-- HTML5 Audio Element -->
+<audio id="audio-player"></audio>
+
+<script>
+
+    // Application State Variables
+    let db = null;
+    let peer = null;
+    let myPeerId = '';
+    let currentTracks = [];
+    let currentTrackIndex = -1;
+    let selectedTrackForAction = null;
+    let isPlaying = false;
+    let activeTransfer = null;
+
+    // PeerJS messages are deliberately kept small.  A 10MB file is sent as
+    // hundreds of binary chunks instead of one oversized DataConnection packet.
+    const MAX_TRANSFER_SIZE = 40 * 1024 * 1024;
+    const TRANSFER_CHUNK_SIZE = 16 * 1024;
+    const TRANSFER_BUFFER_LIMIT = 512 * 1024;
+
+    // Default Placeholder Artwork (Play Music Style)
+    const DEFAULT_COVER = 'https://placehold.co/400x400/f57c00/ffffff?text=MusicPlay';
+
+    // Elements
+    const audio = document.getElementById('audio-player');
+    const drawerOverlay = document.getElementById('drawer-overlay');
+    const menuBtn = document.getElementById('menu-btn');
+    const addFileBtn = document.getElementById('add-file-btn');
+    const fileInput = document.getElementById('file-input');
+    const contextMenu = document.getElementById('context-menu');
+    const transferModal = document.getElementById('transfer-modal');
+
+    function initDatabase() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('MusicPlayDB', 1);
+            
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('tracks')) {
+                    db.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                resolve(db);
+            };
+
+            request.onerror = (e) => {
+                console.error('IndexedDB Error:', e);
+                reject(e);
+            };
+        });
+    }
+
+    /* Save Song to IndexedDB */
+    function saveTrackToDB(trackData) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('tracks', 'readwrite');
+            const store = tx.objectStore('tracks');
+            const req = store.add(trackData);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function ensureStorageCapacity(requiredBytes) {
+        if (!navigator.storage || typeof navigator.storage.estimate !== 'function') return;
+        const estimate = await navigator.storage.estimate();
+        if (Number.isFinite(estimate.quota) && Number.isFinite(estimate.usage) &&
+            estimate.quota - estimate.usage < requiredBytes * 1.1) {
+            throw new Error('IndexedDBの空き容量が不足しています');
+        }
+    }
+
+    /* Get All Songs from IndexedDB */
+    function getAllTracksFromDB() {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('tracks', 'readonly');
+            const store = tx.objectStore('tracks');
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    /* Delete Song from IndexedDB */
+    function deleteTrackFromDB(id) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('tracks', 'readwrite');
+            const store = tx.objectStore('tracks');
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    function initPeerJS() {
+        // Auto generate clean peer ID
+        const randomCode = Math.floor(100000 + Math.random() * 900000);
+        myPeerId = `echo-show5-${randomCode}`;
+
+        if (peer) {
+            try { peer.destroy(); } catch (e) { console.warn('Peer cleanup failed', e); }
+        }
+        peer = new Peer(myPeerId, { reliable: true });
+
+        peer.on('open', (id) => {
+            document.getElementById('peer-id-display').innerText = id;
+        });
+
+        peer.on('connection', (conn) => {
+            handleIncomingTransfer(conn);
+        });
+
+        peer.on('error', (err) => {
+            console.error('PeerJS error:', err);
+            alert('PeerJSエラー: ' + (err.type || err.message || '接続に失敗しました'));
+        });
+    }
+
+    function bytesFromPeerValue(value) {
+        if (value instanceof ArrayBuffer) return new Uint8Array(value);
+        if (ArrayBuffer.isView(value)) {
+            return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+        }
+        return new Uint8Array(value || []);
+    }
+
+    function handleIncomingTransfer(conn) {
+        let state = null;
+
+        conn.on('data', async (data) => {
+            if (!data || typeof data !== 'object') return;
+
+            // Keep compatibility with older versions, but new transfers use chunks.
+            if (data.type === 'MUSIC_TRANSFER') {
+                if (!data.track || !(data.track.fileData instanceof ArrayBuffer)) {
+                    alert('古い転送形式、または不正なファイルデータです');
+                    return;
+                }
+                try {
+                    await saveTrackToDB(data.track);
+                    await loadLibrary();
+                    alert(`「${data.track.title}」を受信しました！`);
+                } catch (err) {
+                    alert('受信ファイルの保存に失敗しました: ' + (err.message || err));
+                }
+                return;
+            }
+
+            if (data.type === 'MUSIC_TRANSFER_START') {
+                const size = Number(data.size);
+                const totalChunks = Number(data.totalChunks);
+                if (!Number.isSafeInteger(size) || size < 0 || size > MAX_TRANSFER_SIZE ||
+                    !Number.isSafeInteger(totalChunks) || totalChunks < 0) {
+                    conn.send({ type: 'MUSIC_TRANSFER_ERROR', message: '不正または大きすぎるファイルです' });
+                    return;
+                }
+                state = {
+                    metadata: data.metadata || {},
+                    size,
+                    totalChunks,
+                    chunks: new Array(totalChunks),
+                    received: 0,
+                    receivedBytes: 0
+                };
+                return;
+            }
+
+            if (data.type === 'MUSIC_TRANSFER_CHUNK') {
+                if (!state || !Number.isSafeInteger(data.index) || data.index < 0 ||
+                    data.index >= state.totalChunks || state.chunks[data.index]) return;
+                const chunk = bytesFromPeerValue(data.chunk);
+                state.chunks[data.index] = chunk;
+                state.received++;
+                state.receivedBytes += chunk.byteLength;
+                return;
+            }
+
+            if (data.type === 'MUSIC_TRANSFER_END') {
+                if (!state || state.received !== state.totalChunks || state.receivedBytes !== state.size) {
+                    conn.send({ type: 'MUSIC_TRANSFER_ERROR', message: '受信データのサイズが一致しません' });
+                    state = null;
+                    return;
+                }
+                try {
+                    const metadata = state.metadata;
+                    const blob = new Blob(state.chunks, { type: metadata.mimeType || 'audio/mpeg' });
+                    const track = {
+                        ...metadata,
+                        fileData: await blob.arrayBuffer(),
+                        addedAt: Date.now()
+                    };
+                    await ensureStorageCapacity(state.size);
+                    await saveTrackToDB(track);
+                    await loadLibrary();
+                    conn.send({ type: 'MUSIC_TRANSFER_COMPLETE' });
+                    alert(`「${metadata.title || metadata.fileName || '音楽ファイル'}」を受信しました！`);
+                } catch (err) {
+                    console.error('IndexedDB receive save failed:', err);
+                    conn.send({ type: 'MUSIC_TRANSFER_ERROR', message: 'IndexedDBへの保存に失敗しました' });
+                    alert('受信ファイルの保存に失敗しました: ' + (err.message || err));
+                } finally {
+                    state = null;
+                }
+            }
+        });
+
+        conn.on('error', (err) => {
+            console.error('Incoming transfer error:', err);
+            state = null;
+        });
+    }
+
+    addFileBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async (e) => {
+        const files = e.target.files;
+        if (!files.length) return;
+
+        for (let file of files) {
+            await processAndSaveAudioFile(file);
+        }
+        await loadLibrary();
+        fileInput.value = '';
+    });
+
+    function processAndSaveAudioFile(file) {
+        return new Promise((resolve) => {
+            window.jsmediatags.read(file, {
+                onSuccess: async function(tag) {
+                    const tags = tag.tags;
+                    let title = tags.title || file.name.replace(/\.[^/.]+$/, "");
+                    let artist = tags.artist || 'Unknown Artist';
+                    let album = tags.album || 'Unknown Album';
+                    let genre = tags.genre || 'Unknown Genre';
+                    let coverUrl = DEFAULT_COVER;
+
+                    if (tags.picture) {
+                        const { data, format } = tags.picture;
+                        let base64String = "";
+                        for (let i = 0; i < data.length; i++) {
+                            base64String += String.fromCharCode(data[i]);
+                        }
+                        coverUrl = `data:${format};base64,${btoa(base64String)}`;
+                    }
+
+                    const arrayBuffer = await file.arrayBuffer();
+
+                    const trackData = {
+                        title: title,
+                        artist: artist,
+                        album: album,
+                        genre: genre,
+                        fileName: file.name,
+                        coverUrl: coverUrl,
+                        fileData: arrayBuffer,
+                        mimeType: file.type || 'audio/mp3',
+                        addedAt: Date.now()
+                    };
+
+                    await saveTrackToDB(trackData);
+                    resolve();
+                },
+                onError: async function(error) {
+                    // Fallback if tag parsing fails
+                    const arrayBuffer = await file.arrayBuffer();
+                    const trackData = {
+                        title: file.name.replace(/\.[^/.]+$/, ""),
+                        artist: 'Unknown Artist',
+                        album: 'Unknown Album',
+                        genre: 'Unknown Genre',
+                        fileName: file.name,
+                        coverUrl: DEFAULT_COVER,
+                        fileData: arrayBuffer,
+                        mimeType: file.type || 'audio/mp3',
+                        addedAt: Date.now()
+                    };
+                    await saveTrackToDB(trackData);
+                    resolve();
+                }
+            });
+        });
+    }
+
+    async function loadLibrary() {
+        currentTracks = await getAllTracksFromDB();
+        renderLibraryGrid();
+        renderLibraryList();
+    }
+
+    function renderLibraryGrid() {
+        const grid = document.getElementById('library-grid');
+        grid.innerHTML = '';
+
+        if (currentTracks.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #757575;">
+                    <i class="material-icons" style="font-size: 48px; color: #bdbdbd;">music_off</i>
+                    <p style="margin-top: 12px; font-size: 14px;">曲がありません。右上の＋から音楽ファイルを追加してください。</p>
+                </div>
+            `;
+            return;
+        }
+
+        currentTracks.forEach((track, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-art" style="background-image: url('${track.coverUrl}')"></div>
+                <div class="card-info">
+                    <div class="card-text">
+                        <div class="card-title">${escapeHtml(track.title)}</div>
+                        <div class="card-subtitle">${escapeHtml(track.artist)}</div>
+                    </div>
+                    <button class="card-menu-btn" data-index="${index}">
+                        <i class="material-icons">more_vert</i>
+                    </button>
+                </div>
+            `;
+
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.card-menu-btn')) return;
+                playTrack(index);
+            });
+
+            card.querySelector('.card-menu-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                showContextMenu(e, track);
+            });
+
+            grid.appendChild(card);
+        });
+    }
+
+    function renderLibraryList() {
+        const list = document.getElementById('library-list');
+        list.innerHTML = '';
+
+        currentTracks.forEach((track, index) => {
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            item.innerHTML = `
+                <div class="list-item-art" style="background-image: url('${track.coverUrl}')"></div>
+                <div class="list-item-info">
+                    <div class="list-item-title">${escapeHtml(track.title)}</div>
+                    <div class="list-item-sub">${escapeHtml(track.artist)} • ${escapeHtml(track.album)}</div>
+                </div>
+                <button class="card-menu-btn" data-index="${index}">
+                    <i class="material-icons">more_vert</i>
+                </button>
+            `;
+
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.card-menu-btn')) return;
+                playTrack(index);
+            });
+
+            item.querySelector('.card-menu-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                showContextMenu(e, track);
+            });
+
+            list.appendChild(item);
+        });
+    }
+
+    function escapeHtml(str) {
+        return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function playTrack(index) {
+        if (index < 0 || index >= currentTracks.length) return;
+        currentTrackIndex = index;
+        const track = currentTracks[index];
+
+        const blob = new Blob([track.fileData], { type: track.mimeType });
+        const audioUrl = URL.createObjectURL(blob);
+
+        audio.src = audioUrl;
+        audio.play();
+        isPlaying = true;
+
+        updatePlayerUI(track);
+    }
+
+    function updatePlayerUI(track) {
+        // Mini player update
+        document.getElementById('mini-art').style.backgroundImage = `url('${track.coverUrl}')`;
+        document.getElementById('mini-title').innerText = track.title;
+        document.getElementById('mini-artist').innerText = track.artist;
+        document.getElementById('mini-play-icon').innerText = 'pause';
+
+        // SubActivity update
+        document.getElementById('sub-art').src = track.coverUrl;
+        document.getElementById('sub-title').innerText = track.title;
+        document.getElementById('sub-artist').innerText = track.artist;
+        document.getElementById('main-play-icon').innerText = 'pause';
+    }
+
+    function togglePlayPause() {
+        if (!audio.src) {
+            if (currentTracks.length > 0) playTrack(0);
+            return;
+        }
+
+        if (isPlaying) {
+            audio.pause();
+            isPlaying = false;
+            document.getElementById('mini-play-icon').innerText = 'play_arrow';
+            document.getElementById('main-play-icon').innerText = 'play_arrow';
+        } else {
+            audio.play();
+            isPlaying = true;
+            document.getElementById('mini-play-icon').innerText = 'pause';
+            document.getElementById('main-play-icon').innerText = 'pause';
+        }
+    }
+
+    // Audio progress updates
+    audio.addEventListener('timeupdate', () => {
+        if (!audio.duration) return;
+        const pct = (audio.currentTime / audio.duration) * 100;
+        document.getElementById('seeker-progress').style.width = pct + '%';
+
+        document.getElementById('current-time').innerText = formatTime(audio.currentTime);
+        document.getElementById('total-time').innerText = formatTime(audio.duration);
+    });
+
+    audio.addEventListener('ended', () => {
+        if (currentTrackIndex + 1 < currentTracks.length) {
+            playTrack(currentTrackIndex + 1);
+        } else {
+            isPlaying = false;
+            document.getElementById('mini-play-icon').innerText = 'play_arrow';
+            document.getElementById('main-play-icon').innerText = 'play_arrow';
+        }
+    });
+
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return "0:00";
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    // Seeker Click
+    document.getElementById('seeker-bar').addEventListener('click', (e) => {
+        if (!audio.duration) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const pct = clickX / rect.width;
+        audio.currentTime = pct * audio.duration;
+    });
+
+    // Player Buttons
+    document.getElementById('mini-play-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePlayPause();
+    });
+
+    document.getElementById('btn-main-play').addEventListener('click', togglePlayPause);
+    document.getElementById('btn-next').addEventListener('click', () => {
+        if (currentTrackIndex + 1 < currentTracks.length) playTrack(currentTrackIndex + 1);
+    });
+    document.getElementById('btn-prev').addEventListener('click', () => {
+        if (currentTrackIndex - 1 >= 0) playTrack(currentTrackIndex - 1);
+    });
+
+    function showContextMenu(e, track) {
+        selectedTrackForAction = track;
+        contextMenu.style.display = 'block';
+        contextMenu.style.top = `${e.clientY}px`;
+        contextMenu.style.left = `${Math.min(e.clientX, window.innerWidth - 180)}px`;
+    }
+
+    document.addEventListener('click', () => {
+        contextMenu.style.display = 'none';
+    });
+
+    document.getElementById('menu-opt-play').addEventListener('click', () => {
+        const idx = currentTracks.findIndex(t => t.id === selectedTrackForAction.id);
+        if (idx !== -1) playTrack(idx);
+    });
+
+    document.getElementById('menu-opt-delete').addEventListener('click', async () => {
+        if (selectedTrackForAction) {
+            await deleteTrackFromDB(selectedTrackForAction.id);
+            await loadLibrary();
+        }
+    });
+
+    document.getElementById('menu-opt-transfer').addEventListener('click', () => {
+        transferModal.style.display = 'flex';
+    });
+
+    document.getElementById('modal-cancel').addEventListener('click', () => {
+        transferModal.style.display = 'none';
+    });
+
+    document.getElementById('modal-send').addEventListener('click', () => {
+        if (activeTransfer) return;
+        const targetId = document.getElementById('target-peer-id').value.trim();
+        if (!targetId || !selectedTrackForAction) {
+            alert('転送先IDを入力してください');
+            return;
+        }
+
+        activeTransfer = (async () => {
+            if (!peer || peer.destroyed) throw new Error('PeerJSが初期化されていません');
+            if (!peer.open) {
+                await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => reject(new Error('PeerJS接続がタイムアウトしました')), 20000);
+                    const onOpen = () => {
+                        clearTimeout(timer);
+                        peer.off?.('open', onOpen);
+                        peer.off?.('error', onError);
+                        resolve();
+                    };
+                    const onError = (err) => {
+                        clearTimeout(timer);
+                        peer.off?.('open', onOpen);
+                        peer.off?.('error', onError);
+                        reject(err instanceof Error ? err : new Error('PeerJS接続に失敗しました'));
+                    };
+                    peer.on('open', onOpen);
+                    peer.on('error', onError);
+                });
+            }
+
+            const rawFileData = selectedTrackForAction.fileData;
+            const fileBytes = bytesFromPeerValue(rawFileData);
+            if (!fileBytes.byteLength || fileBytes.byteLength > MAX_TRANSFER_SIZE) {
+                throw new Error('40MBを超えるファイル、または空のファイルは送信できません');
+            }
+
+            const conn = peer.connect(targetId, { reliable: true, serialization: 'binary' });
+            if (!conn.open) {
+                await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => reject(new Error('相手への接続がタイムアウトしました')), 30000);
+                    const cleanup = () => {
+                        clearTimeout(timer);
+                        conn.off?.('open', onOpen);
+                        conn.off?.('error', onError);
+                        conn.off?.('close', onClose);
+                    };
+                    const onOpen = () => { cleanup(); resolve(); };
+                    const onError = (err) => { cleanup(); reject(err instanceof Error ? err : new Error('Peer接続に失敗しました')); };
+                    const onClose = () => { cleanup(); reject(new Error('Peer接続が閉じられました')); };
+                    conn.on('open', onOpen);
+                    conn.on('error', onError);
+                    conn.on('close', onClose);
+                });
+            }
+
+            const track = selectedTrackForAction;
+            const metadata = {
+                title: track.title,
+                artist: track.artist,
+                album: track.album,
+                genre: track.genre,
+                fileName: track.fileName || `${track.title || 'music'}.mp3`,
+                coverUrl: track.coverUrl || DEFAULT_COVER,
+                mimeType: track.mimeType || 'audio/mpeg'
+            };
+            const totalChunks = Math.ceil(fileBytes.byteLength / TRANSFER_CHUNK_SIZE);
+            conn.send({
+                type: 'MUSIC_TRANSFER_START',
+                metadata,
+                size: fileBytes.byteLength,
+                totalChunks
+            });
+
+            for (let index = 0; index < totalChunks; index++) {
+                const start = index * TRANSFER_CHUNK_SIZE;
+                const chunk = fileBytes.slice(start, Math.min(start + TRANSFER_CHUNK_SIZE, fileBytes.byteLength));
+                conn.send({ type: 'MUSIC_TRANSFER_CHUNK', index, chunk });
+                if (conn.dataChannel) {
+                    while (conn.dataChannel.bufferedAmount > TRANSFER_BUFFER_LIMIT) {
+                        await new Promise(resolve => setTimeout(resolve, 20));
+                        if (conn.closed || conn.dataChannel.readyState !== 'open') {
+                            throw new Error('送信中にPeer接続が閉じられました');
+                        }
+                    }
+                }
+            }
+
+            if (conn.dataChannel) {
+                while (conn.dataChannel.bufferedAmount > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 20));
+                }
+            }
+
+            const result = new Promise((resolve, reject) => {
+                const timer = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('受信側のIndexedDB保存確認がタイムアウトしました'));
+                }, 180000);
+                const cleanup = () => {
+                    clearTimeout(timer);
+                    conn.off?.('data', onData);
+                    conn.off?.('error', onError);
+                    conn.off?.('close', onClose);
+                };
+                const onData = (response) => {
+                    if (response?.type === 'MUSIC_TRANSFER_COMPLETE') {
+                        cleanup();
+                        resolve();
+                    } else if (response?.type === 'MUSIC_TRANSFER_ERROR') {
+                        cleanup();
+                        reject(new Error(response.message || '受信側で保存できませんでした'));
+                    }
+                };
+                const onError = (err) => { cleanup(); reject(err instanceof Error ? err : new Error('Peer接続エラー')); };
+                const onClose = () => { cleanup(); reject(new Error('Peer接続が閉じられました')); };
+                conn.on('data', onData);
+                conn.on('error', onError);
+                conn.on('close', onClose);
+            });
+            conn.send({ type: 'MUSIC_TRANSFER_END' });
+            await result;
+            transferModal.style.display = 'none';
+            alert(`「${metadata.title || metadata.fileName}」の転送と保存が完了しました。`);
+        })().catch((err) => {
+            console.error('Transfer failed:', err);
+            alert('転送エラー: ' + (err.message || err));
+        }).finally(() => {
+            activeTransfer = null;
+        });
+    });
+
+    menuBtn.addEventListener('click', () => {
+        drawerOverlay.classList.add('open');
+    });
+
+    drawerOverlay.addEventListener('click', (e) => {
+        if (e.target === drawerOverlay) {
+            drawerOverlay.classList.remove('open');
+        }
+    });
+
+    // Subactivity Slide Up/Down
+    const nowPlayingActivity = document.getElementById('now-playing-activity');
+    document.getElementById('mini-player').addEventListener('click', () => {
+        nowPlayingActivity.classList.add('open');
+    });
+
+    document.getElementById('close-subactivity-btn').addEventListener('click', () => {
+        nowPlayingActivity.classList.remove('open');
+    });
+
+    // Navigation Drawer Menu Switcher
+    document.querySelectorAll('.drawer-item').forEach(item => {
+        item.addEventListener('click', function() {
+            document.querySelectorAll('.drawer-item').forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
+
+            const target = this.dataset.target;
+            drawerOverlay.classList.remove('open');
+
+            // Switch Page Views
+            document.querySelectorAll('.page-view').forEach(view => view.classList.remove('active'));
+            const tabs = document.getElementById('library-tabs');
+
+            if (target === 'library') {
+                document.getElementById('view-library').classList.add('active');
+                document.getElementById('page-title').innerText = 'My Library';
+                tabs.style.display = 'flex';
+            } else if (target === 'listen-now') {
+                document.getElementById('view-listen-now').classList.add('active');
+                document.getElementById('page-title').innerText = 'Listen Now';
+                tabs.style.display = 'none';
+            } else if (target === 'settings') {
+                document.getElementById('view-settings').classList.add('active');
+                document.getElementById('page-title').innerText = 'Music settings';
+                tabs.style.display = 'none';
+            } else {
+                document.getElementById('view-listen-now').classList.add('active');
+                document.getElementById('page-title').innerText = this.innerText.trim();
+                tabs.style.display = 'none';
+            }
+        });
+    });
+
+    // Tab Switching for Library View
+    document.querySelectorAll('.tab-item').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+
+            const tabName = this.dataset.tab;
+            const grid = document.getElementById('library-grid');
+            const list = document.getElementById('library-list');
+
+            if (tabName === 'songs') {
+                grid.style.display = 'none';
+                list.style.display = 'block';
+            } else {
+                grid.style.display = 'grid';
+                list.style.display = 'none';
+            }
+        });
+    });
+
+    /* App Start Initialization */
+    window.onload = async () => {
+        await initDatabase();
+        await loadLibrary();
+        initPeerJS();
+    };
+</script>
+</body>
+</html>
