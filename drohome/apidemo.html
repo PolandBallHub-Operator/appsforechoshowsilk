@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>API Demos - Android 7.1 Nougat</title>
+    <!-- Google Material Symbols CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            color: #212121;
+        }
+
+        /* Echo Show 5 Gen 3 Fullscreen Container (No Frame / No Navbar) */
+        #android-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            position: relative;
+        }
+
+        /* Android 7.1 Action Bar */
+        .action-bar {
+            height: 48px;
+            background-color: #212121;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.24);
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .action-bar .back-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-right: 12px;
+            color: #ffffff;
+            background: none;
+            border: none;
+            padding: 4px;
+            border-radius: 50%;
+            outline: none;
+        }
+
+        .action-bar .back-btn:active {
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .action-bar .title {
+            font-size: 18px;
+            font-weight: 500;
+            letter-spacing: 0.25px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Main Viewport Content */
+        .content-container {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #ffffff;
+            position: relative;
+        }
+
+        /* Custom Android Scrollbar */
+        .content-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .content-container::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+        }
+
+        /* Android ListView Styling */
+        .list-view {
+            list-style: none;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .list-item {
+            min-height: 48px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 15px;
+            color: #212121;
+            cursor: pointer;
+            background-color: #ffffff;
+        }
+
+        .list-item:active {
+            background-color: #e0e0e0;
+        }
+
+        .list-item-text {
+            font-size: 15px;
+            color: #212121;
+            line-height: 1.2;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        .demo-container {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 100%;
+        }
+
+        .demo-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eeeeee;
+        }
+
+        .demo-label {
+            font-size: 15px;
+            color: #333333;
+        }
+
+        .android-btn {
+            background-color: #d6d6d6;
+            color: #212121;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 2px;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            cursor: pointer;
+            outline: none;
+        }
+
+        .android-btn:active {
+            background-color: #bebebe;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .android-btn-primary {
+            background-color: #009688;
+            color: #ffffff;
+        }
+
+        .android-btn-primary:active {
+            background-color: #00796b;
+        }
+
+        .android-input {
+            width: 100%;
+            padding: 8px 0;
+            border: none;
+            border-bottom: 2px solid #009688;
+            outline: none;
+            font-size: 15px;
+            background: transparent;
+            color: #212121;
+        }
+
+        .android-card {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 2px;
+            padding: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .android-dialog-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .android-dialog {
+            background: #ededed;
+            width: 86%;
+            max-width: 360px;
+            border-radius: 2px;
+            padding: 24px 24px 16px 24px;
+            box-shadow: 0 11px 15px -7px rgba(0,0,0,0.2), 0 24px 38px 3px rgba(0,0,0,0.14);
+        }
+
+        .android-dialog-title {
+            font-size: 20px;
+            font-weight: 500;
+            color: #212121;
+            margin-bottom: 20px;
+            letter-spacing: 0.15px;
+        }
+
+        .android-dialog-body {
+            font-size: 16px;
+            color: #212121;
+            margin-bottom: 28px;
+            line-height: 1.4;
+        }
+
+        .android-dialog-radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .android-dialog-radio-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #212121;
+        }
+
+        .android-dialog-radio-item input[type="radio"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #757575;
+            border-radius: 50%;
+            outline: none;
+            position: relative;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .android-dialog-radio-item input[type="radio"]:checked {
+            border-color: #00796b;
+        }
+
+        .android-dialog-radio-item input[type="radio"]:checked::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 10px;
+            height: 10px;
+            background-color: #00796b;
+            border-radius: 50%;
+        }
+
+        .android-dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .android-dialog-btn {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #00796b;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.8px;
+            padding: 8px 12px;
+            border-radius: 2px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .android-dialog-btn:active {
+            background-color: rgba(0, 121, 107, 0.12);
+        }
+
+        /* Tabs UI */
+        .tab-bar {
+            display: flex;
+            background-color: #009688;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 12px 0;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-item.active {
+            border-bottom: 3px solid #ffffff;
+        }
+
+        /* Star Rating Bar */
+        .rating-stars {
+            display: flex;
+            gap: 4px;
+            color: #fbc02d;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        /* Expandable List Styling */
+        .group-header {
+            background-color: #f0f0f0;
+            font-weight: 500;
+            padding: 10px 16px;
+            border-bottom: 1px solid #d0d0d0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .group-item {
+            padding: 10px 32px;
+            border-bottom: 1px solid #eee;
+            background-color: #fafafa;
+        }
+
+        /* D-Pad Simulation */
+        .dpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(3, 50px);
+            gap: 4px;
+            justify-content: center;
+            margin: 10px auto;
+        }
+
+        .dpad-btn {
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        .dpad-btn.active {
+            background: #009688;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="android-container">
+        <!-- Action Bar Header -->
+        <header class="action-bar">
+            <button class="back-btn" id="back-btn" aria-label="Back">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <span class="title" id="action-bar-title">API Demos</span>
+        </header>
+
+        <!-- Dynamic Activity / ListView Content Region -->
+        <main class="content-container" id="content-container">
+            <!-- Dynamically Rendered by JS -->
+        </main>
+    </div>
+
+    <script>
+        
+        // Exact API Demos Tree Structure (All Root Nodes & Sub Activities fully implemented)
+        const apiDemosData = {
+            title: "API Demos",
+            type: "list",
+            items: [
+                { name: "Accessibility", type: "activity", actType: "accessibility" },
+                { name: "Animation", type: "activity", actType: "animation" },
+                { name: "App", type: "activity", actType: "app" },
+                { name: "Content", type: "activity", actType: "content" },
+                { name: "Graphics", type: "activity", actType: "graphics" },
+                { name: "Hardware", type: "activity", actType: "hardware" },
+                { name: "Media", type: "activity", actType: "media" },
+                { name: "NFC", type: "activity", actType: "nfc" },
+                { name: "OS", type: "activity", actType: "os" },
+                { name: "Preference", type: "activity", actType: "preference" },
+                { name: "Security", type: "activity", actType: "security" },
+                { 
+                    name: "Views", 
+                    type: "list", 
+                    items: [
+                        { name: "Animation", type: "demo", demoType: "views_animation" },
+                        { name: "Auto Complete", type: "demo", demoType: "autocomplete" },
+                        { name: "Buttons", type: "demo", demoType: "buttons" },
+                        { name: "Chronometer", type: "demo", demoType: "chronometer" },
+                        { name: "Controls", type: "demo", demoType: "controls" },
+                        { name: "Custom", type: "demo", demoType: "custom_view" },
+                        { name: "Date Widgets", type: "demo", demoType: "date_widgets" },
+                        { name: "Drag and Drop", type: "demo", demoType: "drag_drop" },
+                        { name: "Expandable Lists", type: "demo", demoType: "expandable_list" },
+                        { name: "Focus", type: "demo", demoType: "focus_nav" },
+                        { name: "Game Controller Input", type: "demo", demoType: "gamepad" },
+                        { name: "Grid", type: "demo", demoType: "grid_view" },
+                        { name: "Hover Events", type: "demo", demoType: "hover_events" },
+                        { name: "ImageButton", type: "demo", demoType: "image_button" },
+                        { name: "Rating Bar", type: "demo", demoType: "rating" },
+                        { name: "Rotating Button", type: "demo", demoType: "rotating_button" },
+                        { name: "ScrollBars", type: "demo", demoType: "scrollbars" },
+                        { name: "Search View", type: "demo", demoType: "search_view" },
+                        { name: "Secure View", type: "demo", demoType: "secure_view" },
+                        { name: "Seek Bar", type: "demo", demoType: "seekbar" },
+                        { name: "Spinner", type: "demo", demoType: "spinner" },
+                        { name: "Splitting Touches across Views", type: "demo", demoType: "split_touch" },
+                        { name: "Switches", type: "demo", demoType: "switches" },
+                        { name: "System UI Visibility", type: "demo", demoType: "system_ui" },
+                        { name: "Tabs", type: "demo", demoType: "tabs" },
+                        { name: "Text", type: "demo", demoType: "text_view" },
+                        { name: "Visibility", type: "demo", demoType: "visibility" },
+                        { name: "WebView", type: "demo", demoType: "webview" }
+                    ]
+                }
+            ]
+        };
+
+        const historyStack = [apiDemosData];
+        const container = document.getElementById("content-container");
+        const titleEl = document.getElementById("action-bar-title");
+        const backBtn = document.getElementById("back-btn");
+
+        function renderCurrentState() {
+            const currentState = historyStack[historyStack.length - 1];
+            
+            // Header Title and Back Button Toggle
+            if (historyStack.length === 1) {
+                titleEl.textContent = "API Demos";
+                backBtn.style.display = "none";
+            } else {
+                titleEl.textContent = currentState.title || currentState.name;
+                backBtn.style.display = "flex";
+            }
+
+            container.innerHTML = "";
+
+            if (currentState.type === "list") {
+                renderListView(currentState.items);
+            } else if (currentState.type === "demo") {
+                renderSubActivityDemo(currentState.demoType);
+            } else if (currentState.type === "activity") {
+                renderRootCategoryActivity(currentState.actType);
+            }
+        }
+
+        function renderListView(items) {
+            const ul = document.createElement("ul");
+            ul.className = "list-view";
+
+            items.forEach(item => {
+                const li = document.createElement("li");
+                li.className = "list-item";
+
+                const span = document.createElement("span");
+                span.className = "list-item-text";
+                span.textContent = item.name;
+                li.appendChild(span);
+
+                li.addEventListener("click", () => {
+                    pushState({ ...item, title: item.name });
+                });
+
+                ul.appendChild(li);
+            });
+
+            container.appendChild(ul);
+        }
+
+        function renderRootCategoryActivity(actType) {
+            const demoDiv = document.createElement("div");
+            demoDiv.className = "demo-container";
+
+            switch (actType) {
+                case "accessibility":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:8px;">Accessibility Service Status</h4>
+                            <div class="demo-row">
+                                <span class="demo-label">TalkBack Feedback Simulation</span>
+                                <label class="switch"><input type="checkbox" id="acc-tb"><span class="slider"></span></label>
+                            </div>
+                            <div class="demo-row">
+                                <span class="demo-label">High Contrast Text Mode</span>
+                                <label class="switch"><input type="checkbox" id="acc-hc"><span class="slider"></span></label>
+                            </div>
+                            <div style="margin-top:12px; font-size:13px; color:#666;" id="acc-log">Accessibility Node Provider: Idle</div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const tb = document.getElementById("acc-tb");
+                        const log = document.getElementById("acc-log");
+                        if (tb) tb.onchange = (e) => log.textContent = `Accessibility Node: TalkBack ${e.target.checked ? "ACTIVE (Speech Synthesizer Ready)" : "DISABLED"}`;
+                    }, 0);
+                    break;
+
+                case "animation":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="text-align:center;">
+                            <h4 style="margin-bottom:8px;">Bouncing Ball Canvas Physics</h4>
+                            <canvas id="anim-canvas" width="280" height="140" style="border:1px solid #ccc; background:#fafafa;"></canvas>
+                            <div style="margin-top:10px; display:flex; gap:8px; justify-content:center;">
+                                <button class="android-btn android-btn-primary" id="btn-anim-start">Drop Ball</button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(initBouncingBallCanvas, 0);
+                    break;
+
+                case "app":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:12px; font-weight:500;">App Framework Components</h4>
+                            <button class="android-btn android-btn-primary" id="btn-show-msg-dialog" style="width:100%; margin-bottom:10px;">Show Message Dialog</button>
+                            <button class="android-btn android-btn-primary" id="btn-show-radio-dialog" style="width:100%; margin-bottom:10px;">Show Single Choice Dialog</button>
+                            <button class="android-btn" id="btn-trigger-notif" style="width:100%;">Trigger Notification Banner</button>
+                            <div id="notif-banner" style="display:none; margin-top:12px; background:#323232; color:white; padding:10px; border-radius:4px; font-size:13px;">
+                                🔔 <strong>API Demos Notification:</strong> Foreground Service Running
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        document.getElementById("btn-show-msg-dialog").onclick = () => {
+                            showAndroidDialog({
+                                title: "I am the title",
+                                message: "I am the message"
+                            });
+                        };
+                        document.getElementById("btn-show-radio-dialog").onclick = () => {
+                            showAndroidDialog({
+                                title: "I am the title",
+                                options: ["Item One", "Item Two", "Item Three"],
+                                selectedIndex: 0
+                            });
+                        };
+                        document.getElementById("btn-trigger-notif").onclick = () => {
+                            const b = document.getElementById("notif-banner");
+                            b.style.display = "block";
+                            setTimeout(() => b.style.display = "none", 3000);
+                        };
+                    }, 0);
+                    break;
+
+                case "content":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:8px;">Content Provider & Storage</h4>
+                            <input type="text" class="android-input" id="content-input" value="Stored Content Key-Value">
+                            <div style="display:flex; gap:8px; margin-top:12px;">
+                                <button class="android-btn android-btn-primary" id="btn-save-content">Save to Provider</button>
+                                <button class="android-btn" id="btn-load-content">Load Content</button>
+                            </div>
+                            <div id="content-status" style="margin-top:8px; font-size:13px; color:#009688;"></div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        document.getElementById("btn-save-content").onclick = () => {
+                            const val = document.getElementById("content-input").value;
+                            localStorage.setItem("apidemos_content", val);
+                            document.getElementById("content-status").textContent = "Saved to content://com.example.apidemos/data";
+                        };
+                        document.getElementById("btn-load-content").onclick = () => {
+                            const val = localStorage.getItem("apidemos_content") || "No Record";
+                            document.getElementById("content-input").value = val;
+                            document.getElementById("content-status").textContent = "Read from ContentProvider";
+                        };
+                    }, 0);
+                    break;
+
+                case "graphics":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="text-align:center;">
+                            <h4 style="margin-bottom:8px;">2D Canvas Graphic Paths</h4>
+                            <canvas id="gfx-canvas" width="280" height="130" style="border:1px solid #ddd;"></canvas>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const canvas = document.getElementById("gfx-canvas");
+                        if (!canvas) return;
+                        const ctx = canvas.getContext("2d");
+                        ctx.fillStyle = "#009688";
+                        ctx.beginPath();
+                        ctx.arc(70, 65, 45, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = "#FF5722";
+                        ctx.fillRect(150, 20, 90, 90);
+                    }, 0);
+                    break;
+
+                case "hardware":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:8px;">Hardware Sensors Test</h4>
+                            <div class="demo-row">
+                                <span>Accelerometer X/Y:</span>
+                                <strong id="accel-val">0.00 / 0.00</strong>
+                            </div>
+                            <div class="demo-row">
+                                <span>Vibrator Haptic Engine:</span>
+                                <button class="android-btn" id="btn-vibrate">Vibrate (200ms)</button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        document.getElementById("btn-vibrate").onclick = () => {
+                            if (navigator.vibrate) navigator.vibrate(200);
+                            alert("Vibration executed!");
+                        };
+                        window.ondeviceorientation = (e) => {
+                            const el = document.getElementById("accel-val");
+                            if (el && e.gamma) el.textContent = `${e.gamma.toFixed(1)} / ${e.beta.toFixed(1)}`;
+                        };
+                    }, 0);
+                    break;
+
+                case "media":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:8px;">Audio Synthesizer (Tone.js Simulation)</h4>
+                            <p style="font-size:13px; color:#666; margin-bottom:12px;">Android Audio Track Sound Pool Generator</p>
+                            <div style="display:flex; gap:8px;">
+                                <button class="android-btn android-btn-primary" id="btn-play-tone1">Play Tone A (440Hz)</button>
+                                <button class="android-btn" id="btn-play-tone2">Play Tone B (880Hz)</button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const playTone = (freq) => {
+                            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                            const osc = ctx.createOscillator();
+                            osc.frequency.value = freq;
+                            osc.connect(ctx.destination);
+                            osc.start();
+                            osc.stop(ctx.currentTime + 0.3);
+                        };
+                        document.getElementById("btn-play-tone1").onclick = () => playTone(440);
+                        document.getElementById("btn-play-tone2").onclick = () => playTone(880);
+                    }, 0);
+                    break;
+
+                case "nfc":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:8px;">NFC Reader & Tag Beam</h4>
+                            <div style="padding:16px; background:#e8f5e9; border:1px dashed #4caf50; text-align:center; border-radius:4px;">
+                                <span class="material-symbols-outlined" style="font-size:40px; color:#4caf50;">nfc</span>
+                                <p style="font-size:13px; margin-top:4px;">Hold NFC Tag against back panel</p>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "os":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:8px;">Operating System Battery Status</h4>
+                            <div class="demo-row">
+                                <span>Battery Level:</span>
+                                <strong id="bat-lvl">100%</strong>
+                            </div>
+                            <div class="demo-row">
+                                <span>Charging Status:</span>
+                                <strong id="bat-state">Discharging</strong>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        if (navigator.getBattery) {
+                            navigator.getBattery().then(bat => {
+                                document.getElementById("bat-lvl").textContent = `${Math.round(bat.level * 100)}%`;
+                                document.getElementById("bat-state").textContent = bat.charging ? "AC Power Charging" : "Discharging";
+                            });
+                        }
+                    }, 0);
+                    break;
+
+                case "preference":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:12px;">Shared Preferences Headers</h4>
+                            <div class="demo-row">
+                                <span class="demo-label">Enable Sync Background</span>
+                                <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                            </div>
+                            <div class="demo-row">
+                                <span class="demo-label">Automatic Updates</span>
+                                <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "security":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:8px;">Android KeyStore Hardware Encryption</h4>
+                            <input type="password" class="android-input" value="SecretPassword123">
+                            <button class="android-btn android-btn-primary" style="margin-top:12px; width:100%;" onclick="alert('Key generated in KeyStore: RSA 2048-bit')">Generate Hardware Key</button>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+            }
+        }
+
+        function renderSubActivityDemo(demoType) {
+            const demoDiv = document.createElement("div");
+            demoDiv.className = "demo-container";
+
+            switch (demoType) {
+                case "switches":
+                    // Exact HTML / CSS structure specified for Android 7.1 Switches
+                    demoDiv.innerHTML = `
+                        <div class="demo-row">
+                            <span class="demo-label">Standard Switch (OFF)</span>
+                            <label class="switch">
+                                <input type="checkbox">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="demo-row">
+                            <span class="demo-label">Standard Switch (ON)</span>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="demo-row">
+                            <span class="demo-label">Monitored Switch</span>
+                            <label class="switch">
+                                <input type="checkbox" id="monitored-switch">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div style="font-size: 13px; color: #666; margin-top: -8px; padding-left: 2px;" id="switch-status">
+                            Status: OFF
+                        </div>
+
+                        <div class="demo-row" style="margin-top: 10px;">
+                            <span class="demo-label">Customized Style Switch</span>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const sw = document.getElementById("monitored-switch");
+                        const status = document.getElementById("switch-status");
+                        if (sw && status) {
+                            sw.addEventListener("change", (e) => {
+                                status.textContent = `Status: ${e.target.checked ? "ON" : "OFF"}`;
+                            });
+                        }
+                    }, 0);
+                    break;
+
+                case "views_animation":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="text-align:center;">
+                            <div id="flipper-box" style="width:100%; height:80px; background:#009688; color:white; display:flex; align-items:center; justify-content:center; font-weight:500; font-size:18px; border-radius:4px; transition:transform 0.4s ease;">
+                                View 1
+                            </div>
+                            <button class="android-btn android-btn-primary" id="btn-flip" style="margin-top:12px;">Flip View</button>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        let step = 1;
+                        document.getElementById("btn-flip").onclick = () => {
+                            step = step === 1 ? 2 : 1;
+                            const box = document.getElementById("flipper-box");
+                            box.style.transform = "rotateY(180deg)";
+                            setTimeout(() => {
+                                box.textContent = `View ${step}`;
+                                box.style.background = step === 1 ? "#009688" : "#FF5722";
+                                box.style.transform = "rotateY(0deg)";
+                            }, 200);
+                        };
+                    }, 0);
+                    break;
+
+                case "autocomplete":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <label style="font-size:12px; color:#757575;">AutoCompleteTextView (Type 'An')</label>
+                            <input type="text" class="android-input" id="auto-input" placeholder="Type country name...">
+                            <div id="auto-suggestions" style="border:1px solid #ccc; background:white; display:none; max-height:100px; overflow-y:auto; margin-top:2px;"></div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const countries = ["Android", "Andorra", "Angola", "Argentina", "Armenia", "Australia", "Austria"];
+                        const inp = document.getElementById("auto-input");
+                        const sug = document.getElementById("auto-suggestions");
+                        inp.oninput = () => {
+                            const v = inp.value.toLowerCase();
+                            sug.innerHTML = "";
+                            if (!v) { sug.style.display = "none"; return; }
+                            const matches = countries.filter(c => c.toLowerCase().startsWith(v));
+                            if (matches.length > 0) {
+                                sug.style.display = "block";
+                                matches.forEach(m => {
+                                    const d = document.createElement("div");
+                                    d.style.padding = "8px 12px";
+                                    d.style.cursor = "pointer";
+                                    d.textContent = m;
+                                    d.onclick = () => { inp.value = m; sug.style.display = "none"; };
+                                    sug.appendChild(d);
+                                });
+                            } else {
+                                sug.style.display = "none";
+                            }
+                        };
+                    }, 0);
+                    break;
+
+                case "buttons":
+                    demoDiv.innerHTML = `
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button class="android-btn">Normal Button</button>
+                            <button class="android-btn android-btn-primary">Colored Button</button>
+                            <button class="android-btn" disabled style="opacity: 0.5;">Disabled Button</button>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "chronometer":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="text-align:center;">
+                            <div id="chrono-display" style="font-size:36px; font-weight:300; margin-bottom:12px;">00:00</div>
+                            <div style="display:flex; gap:8px; justify-content:center;">
+                                <button class="android-btn android-btn-primary" id="chrono-start">Start</button>
+                                <button class="android-btn" id="chrono-stop">Stop</button>
+                                <button class="android-btn" id="chrono-reset">Reset</button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        let sec = 0, timer = null;
+                        const disp = document.getElementById("chrono-display");
+                        const update = () => {
+                            sec++;
+                            const m = String(Math.floor(sec / 60)).padStart(2, '0');
+                            const s = String(sec % 60).padStart(2, '0');
+                            disp.textContent = `${m}:${s}`;
+                        };
+                        document.getElementById("chrono-start").onclick = () => { if(!timer) timer = setInterval(update, 1000); };
+                        document.getElementById("chrono-stop").onclick = () => { clearInterval(timer); timer = null; };
+                        document.getElementById("chrono-reset").onclick = () => { clearInterval(timer); timer = null; sec = 0; disp.textContent = "00:00"; };
+                    }, 0);
+                    break;
+
+                case "controls":
+                    demoDiv.innerHTML = `
+                        <div style="margin-bottom: 8px;">
+                            <label style="font-size: 12px; color: #757575;">Text Entry Widget</label>
+                            <input type="text" class="android-input" value="Android 7.1 Nougat Input">
+                        </div>
+                        <div class="demo-row">
+                            <span class="demo-label">Checkbox Control</span>
+                            <input type="checkbox" style="width: 20px; height: 20px; accent-color: #009688;" checked>
+                        </div>
+                        <div class="demo-row">
+                            <span class="demo-label">Toggle Switch</span>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="demo-row">
+                            <span class="demo-label">Radio Button Option</span>
+                            <input type="radio" name="demo-radio" style="width: 20px; height: 20px; accent-color: #009688;" checked>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "custom_view":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="text-align:center;">
+                            <h4 style="margin-bottom:8px;">Custom Circular Speedometer View</h4>
+                            <canvas id="custom-gauge" width="160" height="120"></canvas>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const c = document.getElementById("custom-gauge");
+                        if (!c) return;
+                        const ctx = c.getContext("2d");
+                        ctx.beginPath();
+                        ctx.arc(80, 80, 60, Math.PI, 0);
+                        ctx.lineWidth = 14;
+                        ctx.strokeStyle = "#e0e0e0";
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(80, 80, 60, Math.PI, Math.PI * 1.6);
+                        ctx.strokeStyle = "#009688";
+                        ctx.stroke();
+                    }, 0);
+                    break;
+
+                case "date_widgets":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <h4 style="margin-bottom:8px;">DatePicker & TimePicker</h4>
+                            <input type="date" class="android-input" value="2026-09-28" style="margin-bottom:12px;">
+                            <input type="time" class="android-input" value="14:30">
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "drag_drop":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="height:160px; position:relative;" id="drag-zone">
+                            <p style="font-size:12px; color:#888;">Drag the green box around target area</p>
+                            <div id="drag-box" style="width:50px; height:50px; background:#009688; color:white; display:flex; align-items:center; justify-content:center; border-radius:4px; position:absolute; top:40px; left:20px; cursor:move;">
+                                Drag
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const box = document.getElementById("drag-box");
+                        let active = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+                        box.onmousedown = (e) => {
+                            initialX = e.clientX - xOffset; initialY = e.clientY - yOffset;
+                            active = true;
+                        };
+                        window.onmousemove = (e) => {
+                            if (active) {
+                                currentX = e.clientX - initialX; currentY = e.clientY - initialY;
+                                xOffset = currentX; yOffset = currentY;
+                                box.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+                            }
+                        };
+                        window.onmouseup = () => active = false;
+                    }, 0);
+                    break;
+
+                case "expandable_list":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="padding:0;">
+                            <div class="group-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'">
+                                <span>Group 1: Fruits</span><span class="material-symbols-outlined">expand_more</span>
+                            </div>
+                            <div>
+                                <div class="group-item">Apple</div>
+                                <div class="group-item">Banana</div>
+                            </div>
+                            <div class="group-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'">
+                                <span>Group 2: Vegetables</span><span class="material-symbols-outlined">expand_more</span>
+                            </div>
+                            <div style="display:none;">
+                                <div class="group-item">Carrot</div>
+                                <div class="group-item">Broccoli</div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "focus_nav":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="text-align:center;">
+                            <h4>Directional Focus Grid</h4>
+                            <div class="dpad-grid">
+                                <div class="dpad-btn">1</div><div class="dpad-btn active">2</div><div class="dpad-btn">3</div>
+                                <div class="dpad-btn">4</div><div class="dpad-btn">5</div><div class="dpad-btn">6</div>
+                                <div class="dpad-btn">7</div><div class="dpad-btn">8</div><div class="dpad-btn">9</div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "gamepad":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="text-align:center;">
+                            <h4>Game Controller Event Monitor</h4>
+                            <div style="margin-top:10px; font-size:13px; color:#009688;">AXIS_X: 0.00 | AXIS_Y: 0.00</div>
+                            <div style="margin-top:6px; font-size:13px; color:#666;">BUTTON_A: RELEASED</div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "grid_view":
+                    demoDiv.innerHTML = `
+                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+                            <div style="height:60px; background:#e0f2f1; display:flex; align-items:center; justify-content:center;">Item 1</div>
+                            <div style="height:60px; background:#b2dfdb; display:flex; align-items:center; justify-content:center;">Item 2</div>
+                            <div style="height:60px; background:#80cbc4; display:flex; align-items:center; justify-content:center;">Item 3</div>
+                            <div style="height:60px; background:#4db6ac; display:flex; align-items:center; justify-content:center; color:white;">Item 4</div>
+                            <div style="height:60px; background:#26a69a; display:flex; align-items:center; justify-content:center; color:white;">Item 5</div>
+                            <div style="height:60px; background:#009688; display:flex; align-items:center; justify-content:center; color:white;">Item 6</div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "hover_events":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" id="hover-target" style="height:100px; display:flex; align-items:center; justify-content:center; background:#f0f0f0;">
+                            <span id="hover-pos">Hover pointer over here</span>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const target = document.getElementById("hover-target");
+                        const pos = document.getElementById("hover-pos");
+                        target.onmousemove = (e) => {
+                            const rect = target.getBoundingClientRect();
+                            pos.textContent = `Hover X: ${Math.round(e.clientX - rect.left)} | Y: ${Math.round(e.clientY - rect.top)}`;
+                        };
+                    }, 0);
+                    break;
+
+                case "image_button":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="text-align:center;">
+                            <button class="android-btn" style="padding:12px; display:inline-flex; align-items:center; gap:8px;">
+                                <span class="material-symbols-outlined" style="color:#009688;">android</span>
+                                <span>Image Button</span>
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "rating":
+                    demoDiv.innerHTML = `
+                        <div style="text-align: center; padding: 20px 0;">
+                            <p style="margin-bottom: 12px; font-size: 15px;">Rating Bar Widget</p>
+                            <div class="rating-stars" id="star-container">
+                                <span onclick="setStars(1)">★</span>
+                                <span onclick="setStars(2)">★</span>
+                                <span onclick="setStars(3)">★</span>
+                                <span onclick="setStars(4)">★</span>
+                                <span onclick="setStars(5)">☆</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "rotating_button":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="text-align:center; perspective:400px;">
+                            <button class="android-btn android-btn-primary" id="rot-btn" style="transition:transform 0.1s; margin-bottom:16px;">Rotating View</button>
+                            <div class="demo-row">
+                                <span>Rotate Y Axis:</span>
+                                <input type="range" min="-180" max="180" value="0" id="rot-slider" style="accent-color:#009688;">
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const slider = document.getElementById("rot-slider");
+                        const btn = document.getElementById("rot-btn");
+                        slider.oninput = (e) => btn.style.transform = `rotateY(${e.target.value}deg)`;
+                    }, 0);
+                    break;
+
+                case "scrollbars":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="height:120px; overflow-y:scroll;" id="scroll-box">
+                            <p style="line-height:2;">
+                                Paragraph 1 with long standard text.<br>
+                                Paragraph 2 showing customized Android scrollbar physics.<br>
+                                Paragraph 3 fast scrolling demo content.<br>
+                                Paragraph 4 end of content region.
+                            </p>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "search_view":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <input type="search" class="android-input" placeholder="Search API Demos..." id="search-input">
+                            <p style="margin-top:12px; font-size:13px; color:#666;" id="search-result">Query: None</p>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const inp = document.getElementById("search-input");
+                        const res = document.getElementById("search-result");
+                        inp.oninput = () => res.textContent = `Query: ${inp.value || "None"}`;
+                    }, 0);
+                    break;
+
+                case "secure_view":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <p style="font-size:13px; color:#333; margin-bottom:8px;">FLAG_SECURE Active (Overlay Filtering)</p>
+                            <div style="background:#fff3e0; border:1px solid #ffe0b2; padding:10px; font-size:12px;">
+                                Touch events from obscure overlays are filtered for security.
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "seekbar":
+                    demoDiv.innerHTML = `
+                        <div class="demo-row">
+                            <span class="demo-label">Seek Bar Value: <span id="seekbar-val">50</span></span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <input type="range" min="0" max="100" value="50" style="width:100%; accent-color:#009688;" id="demo-seekbar">
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        const sb = document.getElementById("demo-seekbar");
+                        const val = document.getElementById("seekbar-val");
+                        if (sb && val) {
+                            sb.addEventListener("input", (e) => val.textContent = e.target.value);
+                        }
+                    }, 0);
+                    break;
+
+                case "spinner":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <label style="font-size:12px; color:#757575;">Dropdown Spinner Choice</label>
+                            <select class="android-input" style="background:white; margin-top:4px;">
+                                <option>Mercury</option>
+                                <option selected>Venus</option>
+                                <option>Earth</option>
+                                <option>Mars</option>
+                            </select>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "split_touch":
+                    demoDiv.innerHTML = `
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <div style="height:70px; background:#e0e0e0; display:flex; align-items:center; justify-content:center;" onclick="this.style.background='#80cbd2'">Quadrant 1</div>
+                            <div style="height:70px; background:#e0e0e0; display:flex; align-items:center; justify-content:center;" onclick="this.style.background='#80cbd2'">Quadrant 2</div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "system_ui":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <div class="demo-row">
+                                <span class="demo-label">Hide Status Bar (Fullscreen)</span>
+                                <label class="switch"><input type="checkbox" id="chk-fs"><span class="slider"></span></label>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    setTimeout(() => {
+                        document.getElementById("chk-fs").onchange = (e) => {
+                            if (e.target.checked) document.documentElement.requestFullscreen?.();
+                            else document.exitFullscreen?.();
+                        };
+                    }, 0);
+                    break;
+
+                case "tabs":
+                    demoDiv.innerHTML = `
+                        <div class="tab-bar">
+                            <div class="tab-item active" onclick="switchTab(0, this)">TAB 1</div>
+                            <div class="tab-item" onclick="switchTab(1, this)">TAB 2</div>
+                        </div>
+                        <div class="android-card" id="tab-content" style="margin-top:12px;">
+                            Content Page 1
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "text_view":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <p style="font-weight:bold; margin-bottom:4px;">Bold Styled Text</p>
+                            <p style="color:#009688; text-decoration:underline;">Colored & Underlined Span</p>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "visibility":
+                    demoDiv.innerHTML = `
+                        <div class="android-card">
+                            <div id="vis-box" style="padding:10px; background:#009688; color:white; margin-bottom:12px; text-align:center;">
+                                Target View Block
+                            </div>
+                            <div style="display:flex; gap:4px;">
+                                <button class="android-btn" onclick="document.getElementById('vis-box').style.display='block'">VISIBLE</button>
+                                <button class="android-btn" onclick="document.getElementById('vis-box').style.display='none'">GONE</button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+
+                case "webview":
+                    demoDiv.innerHTML = `
+                        <div class="android-card" style="padding:0; overflow:hidden;">
+                            <div style="background:#eeeeee; padding:8px 12px; font-size:12px; border-bottom:1px solid #cccccc; display:flex; justify-content:space-between; align-items:center; color:#212121;">
+                                <span>URL: https://www.android.com</span>
+                                <span style="color:#009688; font-weight:bold;">Android WebKit View</span>
+                            </div>
+                            <iframe src="https://www.android.com" id="wv-frame" style="width:100%; height:280px; border:none; background:#ffffff;" title="Android WebKit WebView"></iframe>
+                        </div>
+                    `;
+                    container.appendChild(demoDiv);
+                    break;
+            }
+        }
+
+        function pushState(newState) {
+            historyStack.push(newState);
+            renderCurrentState();
+        }
+
+        function popState() {
+            if (historyStack.length > 1) {
+                historyStack.pop();
+                renderCurrentState();
+            }
+        }
+
+        backBtn.addEventListener("click", popState);
+
+        function showAndroidDialog(titleOrConfig, message, onOk) {
+            let config = {};
+            if (typeof titleOrConfig === 'string') {
+                config = { title: titleOrConfig, message: message, onPositive: onOk };
+            } else {
+                config = titleOrConfig || {};
+            }
+
+            const overlay = document.createElement("div");
+            overlay.className = "android-dialog-overlay";
+            
+            let contentHtml = "";
+            if (config.options && Array.isArray(config.options)) {
+                contentHtml = `<div class="android-dialog-radio-group">`;
+                config.options.forEach((opt, idx) => {
+                    const isChecked = idx === (config.selectedIndex ?? 0) ? "checked" : "";
+                    contentHtml += `
+                        <label class="android-dialog-radio-item">
+                            <input type="radio" name="dialog_opt" value="${idx}" ${isChecked}>
+                            <span>${opt}</span>
+                        </label>
+                    `;
+                });
+                contentHtml += `</div>`;
+            } else if (config.message) {
+                contentHtml = `<div class="android-dialog-body">${config.message}</div>`;
+            }
+
+            overlay.innerHTML = `
+                <div class="android-dialog">
+                    <div class="android-dialog-title">${config.title || "I am the title"}</div>
+                    ${contentHtml}
+                    <div class="android-dialog-actions">
+                        <button class="android-dialog-btn" id="dlg-neg">${config.negativeText || "NEGATIVE"}</button>
+                        <button class="android-dialog-btn" id="dlg-pos">${config.positiveText || "POSITIVE"}</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            const close = () => overlay.remove();
+            document.getElementById("dlg-neg").onclick = () => {
+                close();
+                if (config.onNegative) config.onNegative();
+            };
+            document.getElementById("dlg-pos").onclick = () => {
+                close();
+                if (config.onPositive) config.onPositive();
+            };
+            overlay.onclick = (e) => {
+                if (e.target === overlay) close();
+            };
+        }
+
+        function switchTab(idx, el) {
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('tab-content').textContent = `Content Page ${idx + 1}`;
+        }
+
+        function setStars(count) {
+            const container = document.getElementById("star-container");
+            if (!container) return;
+            let html = "";
+            for (let i = 1; i <= 5; i++) {
+                html += `<span onclick="setStars(${i})">${i <= count ? '★' : '☆'}</span>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function initBouncingBallCanvas() {
+            const canvas = document.getElementById("anim-canvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            let y = 20, vy = 0, gravity = 0.6, bouncing = false;
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.arc(140, y, 16, 0, Math.PI * 2);
+                ctx.fillStyle = "#009688";
+                ctx.fill();
+
+                if (bouncing) {
+                    vy += gravity;
+                    y += vy;
+                    if (y >= 120) {
+                        y = 120;
+                        vy = -vy * 0.7;
+                        if (Math.abs(vy) < 1) bouncing = false;
+                    }
+                    requestAnimationFrame(draw);
+                }
+            }
+            draw();
+
+            document.getElementById("btn-anim-start").onclick = () => {
+                y = 20; vy = 0; bouncing = true; draw();
+            };
+        }
+
+        // Initialize Native Screen Render
+        window.onload = function() {
+            renderCurrentState();
+        };
+    </script>
+</body>
+</html>
