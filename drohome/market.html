@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AppsPlayer - Android 7.1 Play Store</title>
+
+    <!-- Google Material Symbols & Material Icons CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Roboto', sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            color: #212121;
+        }
+
+        /* Fullscreen Viewport for Echo Show 5 Gen 3 */
+        #app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+
+        /* Drawer Overlay & Menu */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.54);
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        .drawer-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .drawer-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background-color: #ffffff;
+            z-index: 201;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+        }
+
+        .drawer-menu.active {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            height: 140px;
+            background: linear-gradient(135deg, #0088cc 0%, #00a2ed 35%, #689f38 70%, #fbc02d 100%);
+            position: relative;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .drawer-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #0288d1;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 12px;
+            border: 2px solid #ffffff;
+        }
+
+        .drawer-account-info {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 8px 0;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #333333;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            gap: 20px;
+        }
+
+        .drawer-item:active {
+            background-color: #eeeeee;
+        }
+
+        .drawer-item .material-symbols-outlined {
+            color: #616161;
+            font-size: 22px;
+        }
+
+        .drawer-item.active {
+            color: #689f38;
+            background-color: #f1f8e9;
+        }
+
+        .drawer-item.active .material-symbols-outlined {
+            color: #689f38;
+        }
+
+        .drawer-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #333333;
+        }
+
+        /* Android 7.1 (Nougat) Switch Component */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        /* Hide HTML default checkbox */
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* Switch Track (OFF State) */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        /* Switch Thumb / Knob (OFF State) */
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Switch Track (ON State) */
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        /* Switch Thumb / Knob (ON State) */
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        /* View switching containers */
+        .view-screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .view-screen.active {
+            display: flex;
+        }
+
+        /* Top Header Area & Search Bar on Main Activity */
+        .main-header-wrapper {
+            background-color: #689f38;
+            padding-top: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .search-card-bar {
+            background-color: #ffffff;
+            margin: 0 12px 8px 12px;
+            height: 44px;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: #616161;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+        }
+
+        .icon-btn:active {
+            background-color: #eeeeee;
+        }
+
+        .search-input-placeholder {
+            flex: 1;
+            font-size: 16px;
+            color: #757575;
+        }
+
+        /* Category Navigation Tabs Bar */
+        .main-tabs-bar {
+            background-color: #689f38;
+            display: flex;
+            height: 42px;
+            flex-shrink: 0;
+        }
+
+        .main-tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .main-tab.active {
+            color: #ffffff;
+            border-bottom-color: #ffffff;
+        }
+
+        /* Chips Bar */
+        .chips-scroll-bar {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            overflow-x: auto;
+            background-color: #f5f5f5;
+            flex-shrink: 0;
+        }
+
+        .chip-btn {
+            background-color: #689f38;
+            color: #ffffff;
+            border: none;
+            border-radius: 16px;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            white-space: nowrap;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* Main Content Scroll Container */
+        .store-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0 16px 0;
+        }
+
+        /* Section Block */
+        .store-section {
+            margin-bottom: 16px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 12px 8px 12px;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: #212121;
+        }
+
+        .section-more {
+            color: #689f38;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        /* Horizontal Apps Carousel */
+        .apps-horizontal-scroll {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 0 12px;
+        }
+
+        /* App Card */
+        .app-card {
+            width: 110px;
+            background-color: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .app-card-thumb {
+            width: 94px;
+            height: 94px;
+            border-radius: 4px;
+            object-fit: cover;
+            margin-bottom: 6px;
+        }
+
+        .app-card-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .app-card-title {
+            font-size: 12px;
+            color: #212121;
+            line-height: 1.2;
+            height: 28px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .app-card-options {
+            color: #757575;
+            font-size: 16px;
+            margin-left: 2px;
+        }
+
+        .app-card-rating {
+            font-size: 10px;
+            color: #616161;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        /* My Apps & Games Toolbar Header */
+        .my-apps-header {
+            background-color: #689f38;
+            color: #ffffff;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header-title-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .my-apps-tabs {
+            background-color: #689f38;
+            display: flex;
+            height: 40px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 2px rgba(0,0,0,0.1);
+        }
+
+        .my-apps-tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .my-apps-tab.active {
+            color: #ffffff;
+            border-bottom-color: #ffffff;
+        }
+
+        /* My Apps List View Content */
+        .my-apps-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 12px;
+        }
+
+        .list-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .list-section-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: #212121;
+        }
+
+        .update-all-btn {
+            background-color: #689f38;
+            color: #ffffff;
+            border: none;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .app-list-item {
+            background-color: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            margin-bottom: 8px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .app-list-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-list-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+
+        .app-list-meta {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-list-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #212121;
+        }
+
+        .app-list-developer {
+            font-size: 11px;
+            color: #757575;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .app-list-rating {
+            font-size: 11px;
+            color: #616161;
+            margin-top: 2px;
+        }
+
+        .btn-action-text {
+            color: #689f38;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Sub Activity Screen */
+        .sub-activity-screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #00a2ed;
+            overflow: hidden;
+        }
+
+        .top-bar {
+            height: 44px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            z-index: 10;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 100%);
+        }
+
+        .top-bar-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+        }
+
+        .top-bar-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .banner-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .banner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 100%);
+        }
+
+        .play-center-btn {
+            position: absolute;
+            top: 18%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: rgba(0, 40, 70, 0.7);
+            border: 2px solid rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            z-index: 2;
+        }
+
+        .main-card {
+            position: absolute;
+            top: 26%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            max-width: 92%;
+            max-height: 72vh;
+            background-color: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .app-header {
+            display: flex;
+            align-items: flex-start;
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .app-icon {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .app-meta {
+            flex-grow: 1;
+            padding-right: 110px;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #212121;
+            line-height: 1.2;
+            margin-bottom: 4px;
+        }
+
+        .app-developer {
+            font-size: 13px;
+            color: #616161;
+            margin-bottom: 4px;
+        }
+
+        .app-pegi {
+            display: inline-block;
+            border: 1px solid #757575;
+            font-size: 10px;
+            padding: 0 3px;
+            color: #616161;
+            font-weight: 500;
+            border-radius: 1px;
+        }
+
+        .bookmark-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            color: #689f38;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .install-btn {
+            position: absolute;
+            right: 0;
+            top: 34px;
+            background-color: #689f38;
+            color: #ffffff;
+            border: none;
+            padding: 8px 20px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 2px;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+        }
+
+        .install-btn:active {
+            background-color: #558b2f;
+        }
+
+        .badges-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 8px 0 12px 0;
+        }
+
+        .badges-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 4px 0;
+            margin-bottom: 12px;
+        }
+
+        .badge-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+        }
+
+        .badge-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 4px;
+            position: relative;
+        }
+
+        .badge-circle.downloads {
+            border: 2px solid #ff7043;
+            color: #ff7043;
+            font-size: 15px;
+        }
+
+        .badge-circle.downloads .sub-tag {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            background-color: #ff7043;
+            color: #fff;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .badge-circle.rating {
+            background-color: #689f38;
+            font-size: 13px;
+        }
+
+        .badge-circle.rating .stars {
+            font-size: 8px;
+            margin-top: -2px;
+        }
+
+        .badge-circle.category {
+            background-color: #689f38;
+        }
+
+        .badge-circle.similar {
+            background-color: #00897b;
+        }
+
+        .badge-label {
+            font-size: 11px;
+            color: #757575;
+            line-height: 1.2;
+        }
+
+        .description-text {
+            font-size: 13px;
+            color: #424242;
+            line-height: 1.5;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .more-link {
+            color: #689f38;
+            font-size: 12px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .screenshots-container {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .screenshot-item {
+            height: 120px;
+            border-radius: 2px;
+            object-fit: cover;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .bottom-right-widget {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+            z-index: 2;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+        }
+
+        .widget-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+        }
+
+        .widget-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .widget-title {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .widget-sub {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+
+        /* Settings JSON Modal */
+        .settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.6);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-modal.active {
+            display: flex;
+        }
+
+        .settings-content {
+            background-color: #ffffff;
+            width: 520px;
+            max-width: 90%;
+            max-height: 85vh;
+            border-radius: 2px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #212121;
+        }
+
+        .json-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #616161;
+            margin-bottom: 6px;
+        }
+
+        .json-textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 8px;
+            border: 1px solid #cccccc;
+            border-radius: 2px;
+            resize: vertical;
+            background-color: #fafafa;
+            color: #212121;
+            margin-bottom: 12px;
+            outline: none;
+        }
+
+        .json-textarea:focus {
+            border-color: #689f38;
+            background-color: #ffffff;
+        }
+
+        .settings-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .btn-flat {
+            background: none;
+            border: none;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #689f38;
+            cursor: pointer;
+        }
+
+        .btn-raised {
+            background-color: #689f38;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+
+        <!-- Navigation Drawer Overlay -->
+        <div class="drawer-overlay" id="drawer-overlay"></div>
+
+        <!-- Navigation Drawer Menu -->
+        <div class="drawer-menu" id="drawer-menu">
+            <div class="drawer-header">
+                <div class="drawer-avatar">
+                    <span class="material-symbols-outlined" style="font-size:28px;">person</span>
+                </div>
+                <div class="drawer-account-info">AppsPlayer User</div>
+            </div>
+
+            <div class="drawer-item active" id="drawer-nav-home">
+                <span class="material-symbols-outlined">store</span>
+                <span>ホーム</span>
+            </div>
+            <div class="drawer-item" id="drawer-nav-myapps">
+                <span class="material-symbols-outlined">apps</span>
+                <span>マイアプリ＆ゲーム</span>
+            </div>
+            <div class="drawer-item">
+                <span class="material-symbols-outlined">history</span>
+                <span>最近</span>
+            </div>
+            <div class="drawer-item">
+                <span class="material-symbols-outlined">star</span>
+                <span>トップチャート</span>
+            </div>
+            <div class="drawer-item">
+                <span class="material-symbols-outlined">new_releases</span>
+                <span>新作</span>
+            </div>
+
+            <div class="drawer-divider"></div>
+
+            <div class="drawer-toggle-row">
+                <span>ダウンロード済みのみ</span>
+                <label class="switch">
+                    <input type="checkbox" id="drawer-downloaded-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="drawer-divider"></div>
+
+            <div class="drawer-item" id="drawer-nav-json">
+                <span class="material-symbols-outlined">settings</span>
+                <span>設定 (JSON構成)</span>
+            </div>
+            <div class="drawer-item">
+                <span class="material-symbols-outlined">help</span>
+                <span>ヘルプとフィードバック</span>
+            </div>
+        </div>
+
+        <!-- VIEW 1: Main Activity View (Play Store Home) -->
+        <div class="view-screen active" id="view-main">
+            <!-- Green Main Header Wrapper -->
+            <div class="main-header-wrapper">
+                <!-- Search Bar -->
+                <div class="search-card-bar">
+                    <button class="icon-btn" id="menu-btn" title="Menu">
+                        <span class="material-symbols-outlined">menu</span>
+                    </button>
+                    <div class="search-input-placeholder">Web Apps</div>
+                    <button class="icon-btn" title="Voice Search">
+                        <span class="material-symbols-outlined">mic</span>
+                    </button>
+                </div>
+
+                <!-- Header Tabs -->
+                <div class="main-tabs-bar">
+                    <div class="main-tab active">APPS & GAMES</div>
+                    <div class="main-tab">ENTERTAINMENT</div>
+                </div>
+            </div>
+
+            <!-- Chips Row -->
+            <div class="chips-scroll-bar">
+                <button class="chip-btn">TOP CHARTS</button>
+                <button class="chip-btn">GAMES</button>
+                <button class="chip-btn">FAMILY</button>
+                <button class="chip-btn">CATEGORIES</button>
+            </div>
+
+            <!-- Scrollable Store Sections -->
+            <div class="store-content">
+                <!-- Section 1 -->
+                <div class="store-section">
+                    <div class="section-header">
+                        <div class="section-title">New & Updated Games</div>
+                        <div class="section-more">MORE</div>
+                    </div>
+                    <div class="apps-horizontal-scroll" id="carousel-new-updated">
+                        <!-- Dynamic Cards Injected Here -->
+                    </div>
+                </div>
+
+                <!-- Section 2 -->
+                <div class="store-section">
+                    <div class="section-header">
+                        <div class="section-title">Recommended for You</div>
+                        <div class="section-more">MORE</div>
+                    </div>
+                    <div class="apps-horizontal-scroll" id="carousel-recommended">
+                        <!-- Dynamic Cards Injected Here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: My Apps & Games Activity -->
+        <div class="view-screen" id="view-my-apps">
+            <div class="my-apps-header">
+                <div class="header-title-group">
+                    <button class="top-bar-btn" id="myapps-back-btn">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <div class="header-title">My apps & games</div>
+                </div>
+                <button class="top-bar-btn">
+                    <span class="material-symbols-outlined">search</span>
+                </button>
+            </div>
+
+            <div class="my-apps-tabs">
+                <div class="my-apps-tab">SUBSCRIPTIONS</div>
+                <div class="my-apps-tab active">INSTALLED</div>
+                <div class="my-apps-tab">ALL</div>
+                <div class="my-apps-tab">BETA</div>
+            </div>
+
+            <div class="my-apps-content">
+                <div class="list-section-header">
+                    <div class="list-section-title">Updates</div>
+                    <button class="update-all-btn">UPDATE ALL</button>
+                </div>
+
+                <div id="updates-list-container">
+                    <!-- Dynamic Update List Injected Here -->
+                </div>
+
+                <div class="list-section-header" style="margin-top: 16px;">
+                    <div class="list-section-title">Recently updated</div>
+                    <div style="font-size: 12px; color: #757575;" id="recently-updated-count">3 apps</div>
+                </div>
+
+                <div id="recent-list-container">
+                    <!-- Dynamic Installed List Injected Here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: Android 7.1 Play Store Sub-Activity App Details -->
+        <div class="view-screen" id="view-sub-activity">
+            <div class="sub-activity-screen">
+                <div class="top-bar">
+                    <button class="top-bar-btn" id="sub-back-btn" title="Back">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <div class="top-bar-actions" style="display:flex; gap:8px;">
+                        <button class="top-bar-btn" title="Search">
+                            <span class="material-symbols-outlined">search</span>
+                        </button>
+                        <button class="top-bar-btn" id="sub-settings-btn" title="AppsPlayer Settings">
+                            <span class="material-symbols-outlined">settings</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="banner-background" id="banner-bg">
+                    <div class="banner-overlay"></div>
+                    <div class="play-center-btn">
+                        <span class="material-symbols-outlined" style="font-size: 30px;">play_arrow</span>
+                    </div>
+                </div>
+
+                <div class="main-card">
+                    <div class="app-header">
+                        <img id="sub-app-icon" class="app-icon" src="" alt="App Icon">
+                        <div class="app-meta">
+                            <div id="sub-app-title" class="app-title">ES ファイルエクスプローラー</div>
+                            <div id="sub-app-developer" class="app-developer">ES APP Group</div>
+                            <div class="app-pegi">3+</div>
+                        </div>
+                        <button class="bookmark-btn" title="Bookmark">
+                            <span class="material-symbols-outlined">turned_in_not</span>
+                        </button>
+                        <button id="install-btn" class="install-btn">インストール</button>
+                    </div>
+
+                    <div class="badges-divider"></div>
+
+                    <div class="badges-row">
+                        <div class="badge-item">
+                            <div class="badge-circle downloads">
+                                <span id="sub-downloads">1</span>
+                                <div class="sub-tag">★</div>
+                            </div>
+                            <div class="badge-label">ダウンロード数</div>
+                        </div>
+                        <div class="badge-item">
+                            <div class="badge-circle rating">
+                                <span id="sub-rating">4.5</span>
+                                <div class="stars">★★★★★</div>
+                            </div>
+                            <div id="sub-reviews" class="badge-label">1,498,910件</div>
+                        </div>
+                        <div class="badge-item">
+                            <div class="badge-circle category">
+                                <span class="material-symbols-outlined" style="font-size:22px;">folder</span>
+                            </div>
+                            <div id="sub-category" class="badge-label">仕事効率化</div>
+                        </div>
+                        <div class="badge-item">
+                            <div class="badge-circle similar">
+                                <span class="material-symbols-outlined" style="font-size:22px;">widgets</span>
+                            </div>
+                            <div class="badge-label">類似のアイテム</div>
+                        </div>
+                    </div>
+
+                    <div id="sub-description" class="description-text">
+                        ESファイルの管理器は１つの無料で、機能が強い当地とＬＡＮのファイルのプログラムの管理器がと管理器を使用するのです
+                    </div>
+                    <div>
+                        <a class="more-link" id="sub-more-link">もっと読む</a>
+                    </div>
+
+                    <div class="screenshots-container" id="sub-screenshots"></div>
+                </div>
+
+                <div class="bottom-right-widget">
+                    <img id="sub-widget-icon" class="widget-icon" src="" alt="widget icon">
+                    <div class="widget-info">
+                        <div id="sub-widget-title" class="widget-title">ES File Explorer</div>
+                        <div id="sub-widget-sub" class="widget-sub">No.1 Android File Explorer<br>300,000,000+ users</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Settings & JSON Configuration Modal -->
+    <div class="settings-modal" id="settings-modal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <div class="settings-title">このアプリはAOSP7.0の体験を目的としております、なりすます目的はありません。オープンソースです。</div>
+                <button class="icon-btn" id="close-modal-btn">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <label class="json-label" for="json-input">
+                アプリ構成 JSON (appurl, appname, appiconurl, appbannerurl 必須):
+            </label>
+            <textarea id="json-input" class="json-textarea" spellcheck="false"></textarea>
+
+            <div class="settings-actions">
+                <button class="btn-flat" id="reset-json-btn">デフォルトに戻す</button>
+                <button class="btn-raised" id="save-json-btn">保存して更新</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JSON Dataset containing apps with appurl, appname, appiconurl, appbannerurl
+        const DEFAULT_APPS_DATA = [
+            {
+                "appname": "ES ファイルエクスプローラー",
+                "appurl": "https://play.google.com/store/apps",
+                "appiconurl": "https://placehold.co/200x200/00a2ed/ffffff?text=ES+3",
+                "appbannerurl": "https://placehold.co/960x480/0088cc/ffffff?text=ES+File+Explorer+No.1",
+                "developer": "ES APP Group",
+                "rating": "4.5",
+                "downloads": "1",
+                "reviews": "1,498,910件",
+                "category": "仕事効率化",
+                "description": "ESファイルの管理器は１つの無料で、機能が強い当地とＬＡLANのファイルのプログラムの管理器がと管理器を使用するのです"
+            },
+            {
+                "appname": "Tricky Test 2™",
+                "appurl": "https://play.google.com/store/apps",
+                "appiconurl": "https://placehold.co/200x200/29b6f6/ffffff?text=Tricky",
+                "appbannerurl": "https://placehold.co/960x480/0288d1/ffffff?text=Tricky+Test+2",
+                "developer": "Orangenose Studio",
+                "rating": "4.6",
+                "downloads": "10M+",
+                "reviews": "520,110件",
+                "category": "パズル",
+                "description": "頭脳を鍛えるユニークなパズルゲーム！ひっかけ問題に注意しながらチャレンジしよう。"
+            },
+            {
+                "appname": "Animation",
+                "appurl": "https://play.google.com/store/apps",
+                "appiconurl": "https://placehold.co/200x200/e91e63/ffffff?text=Ani",
+                "appbannerurl": "https://placehold.co/960x480/c2185b/ffffff?text=Animation+Game",
+                "developer": "Animation Studio",
+                "rating": "4.6",
+                "downloads": "5M+",
+                "reviews": "120,400件",
+                "category": "エンタメ",
+                "description": "キャラクターたちが活躍するインタラクティブアニメーション。"
+            },
+            {
+                "appname": "Star Trek™",
+                "appurl": "https://play.google.com/store/apps",
+                "appiconurl": "https://placehold.co/200x200/1a237e/ffffff?text=StarTrek",
+                "appbannerurl": "https://placehold.co/960x480/0d47a1/ffffff?text=Star+Trek+Fleet",
+                "developer": "Scopely",
+                "rating": "4.4",
+                "downloads": "1M+",
+                "reviews": "98,000件",
+                "category": "シミュレーション",
+                "description": "広大な宇宙を探索し、艦隊を率いて戦い抜こう！"
+            },
+            {
+                "appname": "Kitchen Story",
+                "appurl": "https://play.google.com/store/apps",
+                "appiconurl": "https://placehold.co/200x200/f48fb1/ffffff?text=Kitchen",
+                "appbannerurl": "https://placehold.co/960x480/ec407a/ffffff?text=Kitchen+Story",
+                "developer": "Cooking Games",
+                "rating": "4.2",
+                "downloads": "500K+",
+                "reviews": "42,000件",
+                "category": "カジュアル",
+                "description": "美味しい料理を作ってお客様を満足させるレストラン経営ゲーム。"
+            },
+            {
+                "appname": "Gmail",
+                "appurl": "https://play.google.com/store/apps/details?id=com.google.android.gm",
+                "appiconurl": "https://placehold.co/200x200/d32f2f/ffffff?text=Gmail",
+                "appbannerurl": "https://placehold.co/960x480/b71c1c/ffffff?text=Gmail",
+                "developer": "Google Inc.",
+                "rating": "4.3",
+                "downloads": "1B+",
+                "reviews": "8,500,000件",
+                "category": "仕事効率化",
+                "description": "速くて安全な大容量メールサービス。"
+            },
+            {
+                "appname": "Google Drive",
+                "appurl": "https://play.google.com/store/apps/details?id=com.google.android.apps.docs",
+                "appiconurl": "https://placehold.co/200x200/fbc02d/ffffff?text=Drive",
+                "appbannerurl": "https://placehold.co/960x480/f57f17/ffffff?text=Google+Drive",
+                "developer": "Google Inc.",
+                "rating": "4.3",
+                "downloads": "1B+",
+                "reviews": "4,200,000件",
+                "category": "仕事効率化",
+                "description": "ファイルをクラウドで安全に保存・共有。"
+            },
+            {
+                "appname": "Google Play Music",
+                "appurl": "https://play.google.com/store/apps",
+                "appiconurl": "https://placehold.co/200x200/ff6f00/ffffff?text=Music",
+                "appbannerurl": "https://placehold.co/960x480/e65100/ffffff?text=Play+Music",
+                "developer": "Google Inc.",
+                "rating": "3.9",
+                "downloads": "1B+",
+                "reviews": "3,100,000件",
+                "category": "音楽＆オーディオ",
+                "description": "お気に入りの音楽をいつでも楽しめる。"
+            }
+        ];
+
+        // State variables
+        let appsData = [];
+        let selectedAppIndex = 0;
+
+        // Screen Navigation
+        function showView(viewId) {
+            document.querySelectorAll('.view-screen').forEach(el => el.classList.remove('active'));
+            const target = document.getElementById(viewId);
+            if (target) target.classList.add('active');
+
+            // Close drawer if open
+            closeDrawer();
+        }
+
+        // Drawer Controls
+        const drawerMenu = document.getElementById('drawer-menu');
+        const drawerOverlay = document.getElementById('drawer-overlay');
+
+        function openDrawer() {
+            drawerMenu.classList.add('active');
+            drawerOverlay.classList.add('active');
+        }
+
+        function closeDrawer() {
+            drawerMenu.classList.remove('active');
+            drawerOverlay.classList.remove('active');
+        }
+
+        document.getElementById('menu-btn').addEventListener('click', openDrawer);
+        drawerOverlay.addEventListener('click', closeDrawer);
+
+        // Drawer Item Clicks
+        document.getElementById('drawer-nav-home').addEventListener('click', () => showView('view-main'));
+        document.getElementById('drawer-nav-myapps').addEventListener('click', () => showView('view-my-apps'));
+        document.getElementById('myapps-back-btn').addEventListener('click', () => showView('view-main'));
+        document.getElementById('drawer-nav-json').addEventListener('click', () => {
+            closeDrawer();
+            openSettingsModal();
+        });
+
+        // Load & Save Storage
+        function loadAppData() {
+            const saved = localStorage.getItem('appsplayer_json');
+            if (saved) {
+                try {
+                    appsData = JSON.parse(saved);
+                } catch(e) {
+                    appsData = DEFAULT_APPS_DATA;
+                }
+            } else {
+                appsData = DEFAULT_APPS_DATA;
+            }
+            renderAllViews();
+        }
+
+        function renderAllViews() {
+            renderMainView();
+            renderMyAppsView();
+            renderSubActivityView();
+        }
+
+        // Render Main View Carousels
+        function renderMainView() {
+            const carousel1 = document.getElementById('carousel-new-updated');
+            const carousel2 = document.getElementById('carousel-recommended');
+
+            carousel1.innerHTML = '';
+            carousel2.innerHTML = '';
+
+            appsData.forEach((app, index) => {
+                const card = createAppCard(app, index);
+                if (index % 2 === 0) {
+                    carousel1.appendChild(card);
+                } else {
+                    carousel2.appendChild(card);
+                }
+            });
+        }
+
+        function createAppCard(app, index) {
+            const card = document.createElement('div');
+            card.className = 'app-card';
+            card.onclick = () => {
+                selectedAppIndex = index;
+                renderSubActivityView();
+                showView('view-sub-activity');
+            };
+
+            const icon = app.appiconurl || 'https://placehold.co/100/689f38/ffffff?text=App';
+            const title = app.appname || 'App';
+            const rating = app.rating || '4.5';
+
+            card.innerHTML = `
+                <img class="app-card-thumb" src="${icon}" alt="${title}" onerror="this.src='https://placehold.co/100/689f38/ffffff?text=App'">
+                <div class="app-card-title-row">
+                    <div class="app-card-title">${title}</div>
+                    <span class="material-symbols-outlined app-card-options">more_vert</span>
+                </div>
+                <div class="app-card-rating">
+                    <span>${rating}</span> ★
+                </div>
+            `;
+            return card;
+        }
+
+        // Render My Apps View
+        function renderMyAppsView() {
+            const updatesContainer = document.getElementById('updates-list-container');
+            const recentContainer = document.getElementById('recent-list-container');
+
+            updatesContainer.innerHTML = '';
+            recentContainer.innerHTML = '';
+
+            appsData.forEach((app, index) => {
+                const item = document.createElement('div');
+                item.className = 'app-list-item';
+                item.onclick = () => {
+                    selectedAppIndex = index;
+                    renderSubActivityView();
+                    showView('view-sub-activity');
+                };
+
+                const icon = app.appiconurl || 'https://placehold.co/100/689f38/ffffff?text=App';
+                const title = app.appname || 'App';
+                const dev = app.developer || 'Google Inc.';
+                const rating = app.rating || '4.3';
+
+                if (index < 3) {
+                    item.innerHTML = `
+                        <div class="app-list-left">
+                            <img class="app-list-icon" src="${icon}" alt="${title}">
+                            <div class="app-list-meta">
+                                <div class="app-list-name">${title}</div>
+                                <div class="app-list-developer">${dev} <span class="material-symbols-outlined" style="font-size:12px; color:#00a2ed;">check_circle</span></div>
+                                <div class="app-list-rating">${rating} ★</div>
+                            </div>
+                        </div>
+                        <button class="btn-action-text">UPDATE</button>
+                    `;
+                    updatesContainer.appendChild(item);
+                } else {
+                    item.innerHTML = `
+                        <div class="app-list-left">
+                            <img class="app-list-icon" src="${icon}" alt="${title}">
+                            <div class="app-list-meta">
+                                <div class="app-list-name">${title}</div>
+                                <div class="app-list-developer">${dev} <span class="material-symbols-outlined" style="font-size:12px; color:#00a2ed;">check_circle</span></div>
+                                <div class="app-list-rating">${rating} ★</div>
+                            </div>
+                        </div>
+                        <span style="font-size:11px; color:#689f38; font-weight:500;">INSTALLED</span>
+                    `;
+                    recentContainer.appendChild(item);
+                }
+            });
+        }
+
+        // Render Sub Activity Details Screen
+        function renderSubActivityView() {
+            if (!appsData || appsData.length === 0) return;
+            const app = appsData[selectedAppIndex] || appsData[0];
+
+            document.getElementById('sub-app-title').textContent = app.appname || "Unknown App";
+            document.getElementById('sub-app-developer').textContent = app.developer || "Developer";
+            document.getElementById('sub-app-icon').src = app.appiconurl || "https://placehold.co/100";
+            
+            const bannerBg = document.getElementById('banner-bg');
+            if (app.appbannerurl) {
+                bannerBg.style.backgroundImage = `url('${app.appbannerurl}')`;
+            } else {
+                bannerBg.style.backgroundImage = 'none';
+                bannerBg.style.backgroundColor = '#00a2ed';
+            }
+
+            document.getElementById('sub-downloads').textContent = app.downloads || "1";
+            document.getElementById('sub-rating').textContent = app.rating || "4.5";
+            document.getElementById('sub-reviews').textContent = app.reviews || "1,000件";
+            document.getElementById('sub-category').textContent = app.category || "アプリ";
+            document.getElementById('sub-description').textContent = app.description || "";
+
+            // Screenshots
+            const scContainer = document.getElementById('sub-screenshots');
+            scContainer.innerHTML = `
+                <img class="screenshot-item" src="${app.appbannerurl || 'https://placehold.co/240x160'}" alt="screen1">
+                <img class="screenshot-item" src="${app.appiconurl || 'https://placehold.co/240x160'}" alt="screen2">
+            `;
+
+            // Corner Widget
+            document.getElementById('sub-widget-icon').src = app.appiconurl || "";
+            document.getElementById('sub-widget-title').textContent = app.appname || "";
+        }
+
+        // Install Button opens appurl
+        document.getElementById('install-btn').addEventListener('click', () => {
+            const app = appsData[selectedAppIndex];
+            if (app && app.appurl) {
+                window.open(app.appurl, '_blank');
+            }
+        });
+
+        document.getElementById('sub-back-btn').addEventListener('click', () => showView('view-main'));
+
+        // Toggle Read More
+        document.getElementById('sub-more-link').addEventListener('click', function() {
+            const desc = document.getElementById('sub-description');
+            if (desc.style.webkitLineClamp === 'unset') {
+                desc.style.webkitLineClamp = '2';
+                this.textContent = 'もっと読む';
+            } else {
+                desc.style.webkitLineClamp = 'unset';
+                this.textContent = '閉じる';
+            }
+        });
+
+        // Settings JSON Modal logic
+        const settingsModal = document.getElementById('settings-modal');
+        const jsonInput = document.getElementById('json-input');
+
+        function openSettingsModal() {
+            jsonInput.value = JSON.stringify(appsData, null, 2);
+            settingsModal.classList.add('active');
+        }
+
+        document.getElementById('sub-settings-btn').addEventListener('click', openSettingsModal);
+        document.getElementById('close-modal-btn').addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+        });
+
+        document.getElementById('save-json-btn').addEventListener('click', () => {
+            try {
+                const parsed = JSON.parse(jsonInput.value);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    appsData = parsed;
+                    localStorage.setItem('appsplayer_json', JSON.stringify(appsData));
+                    selectedAppIndex = 0;
+                    renderAllViews();
+                    settingsModal.classList.remove('active');
+                } else {
+                    alert("1つ以上のアプリ情報を含むJSON配列を入力してください。");
+                }
+            } catch (err) {
+                alert("JSONフォーマットエラー:\n" + err.message);
+            }
+        });
+
+        document.getElementById('reset-json-btn').addEventListener('click', () => {
+            localStorage.removeItem('appsplayer_json');
+            appsData = DEFAULT_APPS_DATA;
+            selectedAppIndex = 0;
+            jsonInput.value = JSON.stringify(appsData, null, 2);
+            renderAllViews();
+        });
+
+        // Initialize on load
+        window.onload = function() {
+            loadAppData();
+        };
+    </script>
+</body>
+</html>
