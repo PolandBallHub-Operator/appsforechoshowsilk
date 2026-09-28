@@ -14,3 +14,4 @@
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/message.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/clock.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/apidemo.html
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gpmusic.html
