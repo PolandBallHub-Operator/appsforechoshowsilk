@@ -1,0 +1,1357 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#333a40">
+  <title>Medi - Media Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js" defer></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #333a40;
+      --line: rgba(235, 241, 245, .20);
+      --text: #f5f7f8;
+      --subtext: #d3d9dd;
+      --accent: #00e5ec;
+      --app-dpi: 1;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    button:active { opacity: .72; }
+    .hidden { display: none !important; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .screen {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: calc(100vw / var(--app-dpi));
+      height: calc(100dvh / var(--app-dpi));
+      zoom: var(--app-dpi);
+      overflow: auto;
+      padding: clamp(18px, 5vh, 42px) clamp(20px, 6vw, 64px);
+      background: var(--bg);
+    }
+    .home-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 44px;
+      flex: 0 0 44px;
+      border-bottom: 1px solid var(--line);
+      color: #e0e7f0;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .home-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .home-header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .sub-screen { padding-top: clamp(18px, 4vh, 34px); }
+    .sub-header {
+      display: flex;
+      min-height: 46px;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .sub-header h1 {
+      margin: 0;
+      font-size: 19px;
+      font-weight: 500;
+    }
+    .back-button, .header-action {
+      flex: 0 0 auto;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+    .back-button {
+      width: 26px;
+      color: var(--text);
+      font-size: 32px;
+      font-weight: 300;
+      line-height: 1;
+      text-align: left;
+    }
+    .header-action {
+      min-width: 44px;
+      height: 36px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: #f7f9fa;
+      color: #18252d;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .page-content { flex: 1; overflow: auto; padding-top: 8px; }
+    .file-list { display: flex; flex-direction: column; }
+    .file-card {
+      display: flex;
+      min-height: 72px;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 4px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    .file-card:hover { background: rgba(255,255,255,.03); }
+    .file-cover-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #1e252b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: var(--subtext);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .file-cover-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .card-copy {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .card-copy strong {
+      overflow: hidden;
+      font-size: 16px;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card-copy small {
+      overflow: hidden;
+      color: var(--subtext);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card-action {
+      padding: 8px 12px;
+      border: 0;
+      background: transparent;
+      color: var(--subtext);
+      font-size: 18px;
+    }
+    .card-action.delete-btn { color: #e58b8b; }
+
+    .settings-content { padding-top: 2px; }
+    .setting-row {
+      display: flex;
+      min-height: 72px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 13px 2px;
+      border-bottom: 1px solid var(--line);
+    }
+    .setting-row > div:first-child {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .setting-row strong {
+      font-size: clamp(15px, 2.2vw, 18px);
+      font-weight: 500;
+    }
+    .setting-row small { color: var(--subtext); font-size: 12px; }
+    .setting-row input[type="text"] {
+      width: 200px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      background: #292f34;
+      color: var(--text);
+      border-radius: 4px;
+      text-align: right;
+    }
+
+    .setting-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px 2px;
+      border-bottom: 1px solid var(--line);
+      width: 100%;
+    }
+    .setting-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-block-header strong {
+      font-size: clamp(15px, 2.2vw, 18px);
+      font-weight: 500;
+    }
+    .setting-block-header .val-badge {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .slider-container {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .white-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      outline: none;
+      margin: 0;
+      background: linear-gradient(
+        to right,
+        #ffffff 0%,
+        #ffffff var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) 100%
+      );
+      cursor: pointer;
+    }
+    .white-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .white-slider::-webkit-slider-thumb:active { transform: scale(1.18); }
+    .white-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+    }
+
+    .floating-upload-btn {
+      position: fixed;
+      right: clamp(20px, 6vw, 48px);
+      bottom: clamp(20px, 5vh, 42px);
+      z-index: 5;
+      min-width: 120px;
+      height: 48px;
+      padding: 0 22px;
+      border: 0;
+      border-radius: 999px;
+      background: #ffffff;
+      color: #18252d;
+      font-weight: bold;
+      font-size: 15px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .dialog {
+      position: fixed;
+      inset: 0 auto auto 0;
+      width: calc(100vw / var(--app-dpi));
+      height: calc(100dvh / var(--app-dpi));
+      zoom: var(--app-dpi);
+      max-width: none;
+      max-height: none;
+      margin: 0;
+      padding: clamp(24px, 5vh, 48px) clamp(20px, 6vw, 64px);
+      border: 0;
+      background: #343b41;
+      color: var(--text);
+    }
+    .dialog::backdrop { background: rgba(0,0,0,0.75); }
+    .dialog form {
+      width: 100%;
+      max-width: 800px;
+      min-height: 100%;
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .dialog header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 44px;
+      border-bottom: 1px solid var(--line);
+    }
+    .dialog h2 { margin: 0; font-size: 20px; font-weight: 500; }
+    .dialog-close {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 28px;
+    }
+    .dialog label {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 14px 0;
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .dialog input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      outline: 0;
+      background: #292f34;
+      color: var(--text);
+      font-size: 16px;
+    }
+    .dialog-actions {
+      margin-top: auto;
+      padding-top: 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .pill-button {
+      min-height: 44px;
+      padding: 9px 24px;
+      border: 0;
+      border-radius: 999px;
+      background: #f7f9fa;
+      color: #24313a;
+      font-weight: 600;
+    }
+    .pill-button.muted { background: #d8dfe2; color: #253139; }
+
+    .drop-zone {
+      margin: 16px 0;
+      padding: 32px;
+      border: 2px dashed var(--line);
+      border-radius: 8px;
+      text-align: center;
+      background: rgba(0,0,0,0.15);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .drop-zone.hover { border-color: var(--accent); background: rgba(0,229,236,0.08); }
+
+    .player-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      width: calc(100vw / var(--app-dpi));
+      height: calc(100dvh / var(--app-dpi));
+      zoom: var(--app-dpi);
+      background: linear-gradient(135deg, #0f3d5c 0%, #061d2d 100%);
+      padding: clamp(20px, 4vh, 36px) clamp(24px, 5vw, 56px);
+      color: #ffffff;
+      overflow: hidden;
+    }
+    .player-main-content {
+      display: flex;
+      flex: 1;
+      gap: clamp(20px, 4vw, 48px);
+      align-items: center;
+      min-height: 0;
+    }
+    .player-artwork-box {
+      width: clamp(140px, 28vw, 240px);
+      height: clamp(140px, 28vw, 240px);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+      flex-shrink: 0;
+      background: #182e3f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      color: rgba(255,255,255,0.4);
+    }
+    .player-artwork-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .player-info-box {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      flex: 1;
+      min-width: 0;
+      gap: 6px;
+    }
+    .player-info-header {
+      font-size: clamp(14px, 2vw, 18px);
+      color: #64b5f6;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .player-track-title {
+      font-size: clamp(24px, 4vw, 40px);
+      font-weight: 700;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+    .player-artist-name {
+      font-size: clamp(16px, 2.4vw, 22px);
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .player-album-name {
+      font-size: clamp(13px, 1.8vw, 17px);
+      color: rgba(255,255,255,0.55);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .player-top-device-btn {
+      position: absolute;
+      top: clamp(20px, 4vh, 36px);
+      right: clamp(24px, 5vw, 56px);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 0;
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .player-controls-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: auto;
+      padding-top: 12px;
+    }
+    .player-playback-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .player-btn-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 0;
+      background: transparent;
+      color: #ffffff;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .player-btn-circle.play-main {
+      width: 58px;
+      height: 58px;
+      background: rgba(255,255,255,0.22);
+      font-size: 26px;
+    }
+    .player-seekbar-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+    .player-time-display {
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .player-bottom-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+      margin-top: 4px;
+    }
+    .player-like-btn {
+      border: 0;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      font-size: 22px;
+      padding: 6px;
+    }
+    .player-like-btn.active { color: #00e5ec; }
+    .player-minimize-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 0;
+      background: rgba(255,255,255,0.22);
+      color: #ffffff;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 100;
+      bottom: 20px;
+      left: 50%;
+      max-width: calc(100vw - 30px);
+      overflow: hidden;
+      padding: 10px 18px;
+      transform: translateX(-50%);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #242b30;
+      color: var(--text);
+      font-size: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s;
+    }
+    .toast.visible { opacity: 1; }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 10px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .progress-bar-inner {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.1s linear;
+    }
+  </style>
+</head>
+<body>
+  <main id="home" class="screen">
+    <header class="home-header">
+      <div class="home-header-title">
+        <span>♫</span> Medi Player
+      </div>
+      <div class="home-header-actions">
+        <button class="header-action" id="open-send-btn">ファイルを送信</button>
+        <button class="header-action" id="open-settings-btn">設定</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div id="music-list" class="file-list"></div>
+      <div id="music-empty" class="empty-state hidden" style="padding: 30px 0; text-align: center; color: var(--subtext);">
+        <strong>音楽ファイルがありません</strong><br>
+        <small style="margin-top: 6px; display: block;">右下のボタンから追加、またはPeerJSで他の端末から受信できます。</small>
+      </div>
+    </div>
+
+    <!-- 白い長円のアップロードボタン -->
+    <button class="floating-upload-btn" id="upload-fab">
+      <span>＋</span> 追加
+    </button>
+  </main>
+
+  <section id="settings-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" data-home aria-label="戻る">‹</button>
+      <h1>設定</h1>
+    </header>
+    <div class="page-content settings-content">
+      <article class="setting-row">
+        <div>
+          <strong>MyDevice name</strong>
+          <small>この端末の表示名</small>
+        </div>
+        <input type="text" id="setting-device-name" placeholder="Echo Show">
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>My PeerCode (Peer ID)</strong>
+          <small>PeerJSでの受信ID（空欄で自動発行）</small>
+        </div>
+        <input type="text" id="setting-peercode" placeholder="自動生成ID">
+      </article>
+
+      <article class="setting-block">
+        <div class="setting-block-header">
+          <div>
+            <strong>App DPI スケール</strong>
+            <small style="display:block; color:var(--subtext); font-size:12px; margin-top:2px;">
+              画面の拡大・縮小倍率（IndexedDBに保存）
+            </small>
+          </div>
+          <span id="dpi-label" class="val-badge">100%</span>
+        </div>
+        <div class="slider-container">
+          <input type="range" id="app-dpi-slider" class="white-slider" min="75" max="150" step="5" value="100">
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="player-screen" class="player-screen hidden">
+    <button class="player-top-device-btn" id="player-device-icon" title="デバイス情報">📻</button>
+
+    <div class="player-main-content">
+      <div class="player-artwork-box" id="player-art-box">
+        <span id="player-art-icon">♫</span>
+        <img id="player-art-img" class="hidden" alt="Album Art">
+      </div>
+      <div class="player-info-box">
+        <div class="player-info-header" id="player-type-label">Music</div>
+        <h1 class="player-track-title" id="player-title">Track Title</h1>
+        <div class="player-artist-name" id="player-artist">Artist Name</div>
+        <div class="player-album-name" id="player-album">Album Name</div>
+      </div>
+    </div>
+
+    <div class="player-controls-area">
+      <div class="player-playback-row">
+        <button class="player-btn-circle" id="player-prev-btn" aria-label="前へ">|‹</button>
+        <button class="player-btn-circle play-main" id="player-play-btn" aria-label="再生/一時停止">►</button>
+        <button class="player-btn-circle" id="player-next-btn" aria-label="次へ">›|</button>
+
+        <div class="player-seekbar-box">
+          <input type="range" id="player-seekbar" class="white-slider" min="0" max="100" value="0">
+        </div>
+
+        <div class="player-time-display" id="player-time-text">00:00 / 00:00</div>
+      </div>
+
+      <div class="player-bottom-actions">
+        <button class="player-like-btn" id="player-dislike-btn" title="よくない">👎</button>
+        <button class="player-like-btn" id="player-like-btn" title="いいね">👍</button>
+        <button class="player-minimize-btn" id="player-close-btn" title="閉じる">︿</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ファイル追加ダイアログ（システムピッカー非使用） -->
+  <dialog id="upload-dialog" class="dialog">
+    <form method="dialog" id="upload-form">
+      <header>
+        <h2>ファイル追加</h2>
+        <button type="button" class="dialog-close" class="upload-close-btn">×</button>
+      </header>
+
+      <div class="drop-zone" id="drop-zone">
+        <span style="font-size:32px;">📁</span>
+        <strong>ここにファイルをドラッグ＆ドロップ</strong>
+        <small style="color:var(--subtext);">mp3, m4a, ogg, wav 対応</small>
+      </div>
+
+      <label>
+        Web URL から追加
+        <input type="url" id="upload-url-input" placeholder="https://example.com/audio.mp3">
+      </label>
+
+      <div class="dialog-actions">
+        <button type="button" class="pill-button muted" id="upload-cancel-btn">キャンセル</button>
+        <button type="button" class="pill-button" id="upload-url-btn">URLから読み込み</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- PeerJS ファイル送信ダイアログ -->
+  <dialog id="send-dialog" class="dialog">
+    <form method="dialog" id="send-form">
+      <header>
+        <h2>ファイルを送信 (PeerJS)</h2>
+        <button type="button" class="dialog-close" id="send-close-btn">×</button>
+      </header>
+
+      <label>
+        送信先 PeerCode (相手のID)
+        <input type="text" id="target-peercode-input" placeholder="送信先のPeerCodeを入力" required>
+      </label>
+
+      <label>
+        送信する音楽トラックを選択
+        <select id="send-track-select" style="width:100%; padding:12px; border:1px solid var(--line); background:#292f34; color:var(--text); border-radius:4px;"></select>
+      </label>
+
+      <div id="send-progress-container" class="hidden">
+        <div style="font-size:14px; margin-top:10px;" id="send-progress-status">送信中... 0%</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-inner" id="send-progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="pill-button muted" id="send-cancel-btn">キャンセル</button>
+        <button type="submit" class="pill-button" id="start-send-btn">送信開始</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- PeerJS ファイル受信プログレスダイアログ -->
+  <dialog id="receive-dialog" class="dialog">
+    <div>
+      <header>
+        <h2>ファイルを受信中</h2>
+      </header>
+      <div style="margin:20px 0;">
+        <strong id="receive-file-name" style="font-size:16px;">filename.mp3</strong>
+        <div style="font-size:14px; color:var(--subtext); margin-top:6px;" id="receive-progress-status">0% 受信済み (0 / 0 MB)</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-inner" id="receive-progress-bar"></div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+      const $ = (s) => document.querySelector(s);
+      const DB_NAME = 'MediMusicDB';
+      const DB_VERSION = 1;
+      const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB
+      const CHUNK_SIZE = 32 * 1024; // 32KB
+
+      let peer = null;
+      let toastTimer = 0;
+      let tracksList = [];
+      let currentTrackIndex = -1;
+      let audioPlayer = new Audio();
+      let isSeeking = false;
+      let receiveState = null;
+
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, DB_VERSION);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings');
+            }
+            if (!db.objectStoreNames.contains('tracks')) {
+              db.createObjectStore('tracks', { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function getSetting(key, fallback) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve) => {
+            const tx = db.transaction('settings', 'readonly');
+            const req = tx.objectStore('settings').get(key);
+            req.onsuccess = () => resolve(req.result !== undefined ? req.result : fallback);
+            req.onerror = () => resolve(fallback);
+          });
+        } catch { return fallback; }
+      }
+
+      async function setSetting(key, value) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction('settings', 'readwrite');
+            const req = tx.objectStore('settings').put(value, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        } catch (e) { console.error('Failed to set setting', e); }
+      }
+
+      async function getAllTracks() {
+        try {
+          const db = await openDB();
+          return new Promise((resolve) => {
+            const tx = db.transaction('tracks', 'readonly');
+            const req = tx.objectStore('tracks').getAll();
+            req.onsuccess = () => resolve(req.result.sort((a,b) => b.savedAt - a.savedAt));
+            req.onerror = () => resolve([]);
+          });
+        } catch { return []; }
+      }
+
+      async function saveTrack(track) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('tracks', 'readwrite');
+          const req = tx.objectStore('tracks').put(track);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function deleteTrack(id) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('tracks', 'readwrite');
+          const req = tx.objectStore('tracks').delete(id);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      function toast(msg) {
+        const el = $('#toast');
+        el.textContent = msg;
+        el.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('visible'), 2800);
+      }
+
+      function formatTime(sec) {
+        if (!sec || isNaN(sec)) return '00:00';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      }
+
+      async function extractMetadata(file) {
+        const title = file.name.replace(/\.[^/.]+$/, "");
+        let artist = "Unknown Artist";
+        let album = "Unknown Album";
+        let coverUrl = null;
+
+        try {
+          const buffer = await file.slice(0, 128 * 1024).arrayBuffer();
+          const view = new DataView(buffer);
+          
+          // ID3v2 Header Check
+          if (view.getUint8(0) === 0x49 && view.getUint8(1) === 0x44 && view.getUint8(2) === 0x33) {
+            let offset = 10;
+            const tagSize = ((view.getUint8(6) & 0x7F) << 21) |
+                            ((view.getUint8(7) & 0x7F) << 14) |
+                            ((view.getUint8(8) & 0x7F) << 7) |
+                            (view.getUint8(9) & 0x7F);
+
+            while (offset < tagSize && offset < buffer.byteLength - 10) {
+              const frameId = String.fromCharCode(view.getUint8(offset), view.getUint8(offset+1), view.getUint8(offset+2), view.getUint8(offset+3));
+              const frameSize = view.getUint32(offset + 4);
+              if (frameSize <= 0 || offset + 10 + frameSize > buffer.byteLength) break;
+
+              const frameData = new Uint8Array(buffer, offset + 10, frameSize);
+              if (frameId === 'TIT2') {
+                artist = new TextDecoder('utf-8').decode(frameData.subarray(1)).replace(/\0/g, '') || artist;
+              } else if (frameId === 'TPE1') {
+                artist = new TextDecoder('utf-8').decode(frameData.subarray(1)).replace(/\0/g, '') || artist;
+              } else if (frameId === 'TALB') {
+                album = new TextDecoder('utf-8').decode(frameData.subarray(1)).replace(/\0/g, '') || album;
+              } else if (frameId === 'APIC') {
+                // Extract APIC cover image mime & binary
+                let mimeEnd = 1;
+                while (mimeEnd < frameData.length && frameData[mimeEnd] !== 0) mimeEnd++;
+                const mime = new TextDecoder('ascii').decode(frameData.subarray(1, mimeEnd)) || 'image/jpeg';
+                const imgData = frameData.subarray(mimeEnd + 4);
+                const blob = new Blob([imgData], { type: mime });
+                coverUrl = URL.createObjectURL(blob);
+              }
+              offset += 10 + frameSize;
+            }
+          }
+        } catch (e) {
+          console.warn('ID3 parsing skipped/failed', e);
+        }
+
+        return { title, artist, album, coverUrl };
+      }
+
+      function showScreen(selector) {
+        $('#home').classList.add('hidden');
+        $('#settings-screen').classList.add('hidden');
+        $(selector).classList.remove('hidden');
+      }
+
+      function updateSliderTrack(slider) {
+        const min = Number(slider.min) || 75;
+        const max = Number(slider.max) || 150;
+        const val = Number(slider.value) || 100;
+        const progress = ((val - min) / (max - min)) * 100;
+        slider.style.setProperty('--slider-progress', `${progress}%`);
+      }
+
+      function applyAppDpi(dpiVal) {
+        document.documentElement.style.setProperty('--app-dpi', String(dpiVal / 100));
+        $('#dpi-label').textContent = `${dpiVal}%`;
+      }
+
+      async function renderTracksList() {
+        tracksList = await getAllTracks();
+        const container = $('#music-list');
+        container.replaceChildren();
+
+        if (tracksList.length === 0) {
+          $('#music-empty').classList.remove('hidden');
+          return;
+        }
+        $('#music-empty').classList.add('hidden');
+
+        tracksList.forEach((track, index) => {
+          const card = document.createElement('div');
+          card.className = 'file-card';
+          
+          let coverHtml = `<span>♫</span>`;
+          if (track.coverUrl) {
+            coverHtml = `<img src="${track.coverUrl}" alt="Cover">`;
+          }
+
+          card.innerHTML = `
+            <div class="file-cover-thumb">${coverHtml}</div>
+            <div class="card-copy">
+              <strong>${escapeHtml(track.title)}</strong>
+              <small>${escapeHtml(track.artist)} · ${escapeHtml(track.album)}</small>
+            </div>
+            <button class="card-action delete-btn" aria-label="削除">×</button>
+          `;
+
+          card.querySelector('.card-copy').addEventListener('click', () => playTrackIndex(index));
+          card.querySelector('.file-cover-thumb').addEventListener('click', () => playTrackIndex(index));
+          card.querySelector('.delete-btn').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await deleteTrack(track.id);
+            toast('曲を削除しました');
+            renderTracksList();
+          });
+
+          container.appendChild(card);
+        });
+      }
+
+      function escapeHtml(str) {
+        return String(str || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+      }
+
+      function playTrackIndex(index) {
+        if (index < 0 || index >= tracksList.length) return;
+        currentTrackIndex = index;
+        const track = tracksList[index];
+
+        const blob = track.blob instanceof Blob ? track.blob : new Blob([track.blob], { type: track.type || 'audio/mp3' });
+        const audioUrl = URL.createObjectURL(blob);
+
+        audioPlayer.src = audioUrl;
+        audioPlayer.play().catch(() => {});
+
+        $('#player-title').textContent = track.title;
+        $('#player-artist').textContent = track.artist;
+        $('#player-album').textContent = track.album;
+
+        if (track.coverUrl) {
+          $('#player-art-img').src = track.coverUrl;
+          $('#player-art-img').classList.remove('hidden');
+          $('#player-art-icon').classList.add('hidden');
+        } else {
+          $('#player-art-img').classList.add('hidden');
+          $('#player-art-icon').classList.remove('hidden');
+        }
+
+        $('#player-play-btn').textContent = '❚❚';
+        $('#player-screen').classList.remove('hidden');
+      }
+
+      function setupAudioPlayerEvents() {
+        audioPlayer.addEventListener('timeupdate', () => {
+          if (isSeeking) return;
+          const current = audioPlayer.currentTime || 0;
+          const duration = audioPlayer.duration || 0;
+          const pct = duration > 0 ? (current / duration) * 100 : 0;
+
+          const seeker = $('#player-seekbar');
+          seeker.value = pct;
+          updateSliderTrack(seeker);
+
+          $('#player-time-text').textContent = `${formatTime(current)} / ${formatTime(duration)}`;
+        });
+
+        audioPlayer.addEventListener('ended', () => {
+          if (currentTrackIndex + 1 < tracksList.length) {
+            playTrackIndex(currentTrackIndex + 1);
+          } else {
+            $('#player-play-btn').textContent = '►';
+          }
+        });
+
+        $('#player-play-btn').addEventListener('click', () => {
+          if (audioPlayer.paused) {
+            audioPlayer.play();
+            $('#player-play-btn').textContent = '❚❚';
+          } else {
+            audioPlayer.pause();
+            $('#player-play-btn').textContent = '►';
+          }
+        });
+
+        $('#player-prev-btn').addEventListener('click', () => {
+          if (currentTrackIndex > 0) playTrackIndex(currentTrackIndex - 1);
+        });
+
+        $('#player-next-btn').addEventListener('click', () => {
+          if (currentTrackIndex + 1 < tracksList.length) playTrackIndex(currentTrackIndex + 1);
+        });
+
+        const seeker = $('#player-seekbar');
+        seeker.addEventListener('input', (e) => {
+          isSeeking = true;
+          updateSliderTrack(e.target);
+        });
+
+        seeker.addEventListener('change', (e) => {
+          const pct = Number(e.target.value);
+          if (audioPlayer.duration) {
+            audioPlayer.currentTime = (pct / 100) * audioPlayer.duration;
+          }
+          isSeeking = false;
+        });
+
+        $('#player-close-btn').addEventListener('click', () => {
+          $('#player-screen').classList.add('hidden');
+        });
+
+        // Like / Dislike Toggle Buttons
+        $('#player-like-btn').addEventListener('click', function() {
+          this.classList.toggle('active');
+          $('#player-dislike-btn').classList.remove('active');
+        });
+        $('#player-dislike-btn').addEventListener('click', function() {
+          this.classList.toggle('active');
+          $('#player-like-btn').classList.remove('active');
+        });
+      }
+
+      function setupUploadHandlers() {
+        const dialog = $('#upload-dialog');
+        const dropZone = $('#drop-zone');
+
+        $('#upload-fab').addEventListener('click', () => dialog.showModal());
+        $('.upload-close-btn')?.addEventListener('click', () => dialog.close());
+        $('#upload-cancel-btn').addEventListener('click', () => dialog.close());
+
+        dropZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropZone.classList.add('hover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+        dropZone.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('hover');
+
+          const files = Array.from(e.dataTransfer.files).filter(f => /\.(mp3|m4a|ogg|wav)$/i.test(f.name));
+          if (files.length === 0) {
+            toast('対応している音声ファイル（mp3, m4a, ogg, wav）を入れてください');
+            return;
+          }
+
+          dialog.close();
+          for (const file of files) {
+            if (file.size > MAX_FILE_SIZE) {
+              toast(`${file.name} は40MBを超えているためスキップしました`);
+              continue;
+            }
+            await processAndAddFile(file);
+          }
+          renderTracksList();
+        });
+
+        $('#upload-url-btn').addEventListener('click', async () => {
+          const url = $('#upload-url-input').value.trim();
+          if (!url) return;
+
+          dialog.close();
+          toast('URLから音源をダウンロード中...');
+          try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const fileName = url.split('/').pop().split('?')[0] || 'audio.mp3';
+            const file = new File([blob], fileName, { type: blob.type || 'audio/mp3' });
+            await processAndAddFile(file);
+            renderTracksList();
+            toast('URLから追加完了しました');
+          } catch (e) {
+            toast('URLからの読み込みに失敗しました');
+          }
+        });
+      }
+
+      async function processAndAddFile(file) {
+        const meta = await extractMetadata(file);
+        const track = {
+          id: `track-${Date.now()}-${Math.random().toString(36).substr(2,9)}`,
+          title: meta.title,
+          artist: meta.artist,
+          album: meta.album,
+          coverUrl: meta.coverUrl,
+          blob: file,
+          type: file.type,
+          size: file.size,
+          savedAt: Date.now()
+        };
+        await saveTrack(track);
+        toast(`「${meta.title}」を追加しました`);
+      }
+
+      async function initPeerJS() {
+        const customCode = await getSetting('myPeerCode', '');
+        const myName = await getSetting('myDeviceName', 'Echo Show');
+
+        $('#setting-peercode').value = customCode;
+        $('#setting-device-name').value = myName;
+
+        try {
+          peer = customCode ? new Peer(customCode) : new Peer();
+
+          peer.on('open', (id) => {
+            console.log('PeerJS initialized with ID:', id);
+          });
+
+          peer.on('connection', (conn) => {
+            conn.on('data', async (data) => {
+              handleIncomingPeerData(conn, data);
+            });
+          });
+
+          peer.on('error', (err) => {
+            console.warn('PeerJS Error:', err);
+            toast(`PeerJS: ${err.type || 'エラーが発生しました'}`);
+          });
+        } catch (e) {
+          console.error('PeerJS init failed:', e);
+        }
+      }
+
+      async function handleIncomingPeerData(conn, data) {
+        if (data.type === 'file-meta') {
+          if (data.size > MAX_FILE_SIZE) {
+            conn.send({ type: 'error', message: '40MBを超えるファイルは受信できません' });
+            return;
+          }
+          receiveState = {
+            id: data.id,
+            name: data.name,
+            size: data.size,
+            totalChunks: data.totalChunks,
+            receivedChunks: [],
+            count: 0
+          };
+          $('#receive-file-name').textContent = data.name;
+          $('#receive-progress-status').textContent = `0% 受信済み (0 / ${(data.size/1024/1024).toFixed(1)} MB)`;
+          $('#receive-progress-bar').style.width = '0%';
+          $('#receive-dialog').showModal();
+        } else if (data.type === 'file-chunk') {
+          if (!receiveState || receiveState.id !== data.id) return;
+          
+          receiveState.receivedChunks[data.index] = new Uint8Array(data.chunk);
+          receiveState.count++;
+
+          const pct = Math.round((receiveState.count / receiveState.totalChunks) * 100);
+          $('#receive-progress-status').textContent = `${pct}% 受信済み (${( (receiveState.count * CHUNK_SIZE)/1024/1024 ).toFixed(1)} / ${(receiveState.size/1024/1024).toFixed(1)} MB)`;
+          $('#receive-progress-bar').style.width = `${pct}%`;
+
+          if (receiveState.count >= receiveState.totalChunks) {
+            const blob = new Blob(receiveState.receivedChunks, { type: 'audio/mp3' });
+            const file = new File([blob], receiveState.name, { type: 'audio/mp3' });
+            
+            await processAndAddFile(file);
+            $('#receive-dialog').close();
+            receiveState = null;
+            toast('ファイルの受信完了・保存を行いました');
+            renderTracksList();
+          }
+        }
+      }
+
+      function setupPeerSendDialog() {
+        const dialog = $('#send-dialog');
+        
+        $('#open-send-btn').addEventListener('click', async () => {
+          const select = $('#send-track-select');
+          select.replaceChildren();
+
+          if (tracksList.length === 0) {
+            toast('送信できるトラックがありません');
+            return;
+          }
+
+          tracksList.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = `${t.title} (${t.artist})`;
+            select.appendChild(opt);
+          });
+
+          $('#send-progress-container').classList.add('hidden');
+          dialog.showModal();
+        });
+
+        $('#send-close-btn').addEventListener('click', () => dialog.close());
+        $('#send-cancel-btn').addEventListener('click', () => dialog.close());
+
+        $('#send-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const targetCode = $('#target-peercode-input').value.trim();
+          const trackId = $('#send-track-select').value;
+          const track = tracksList.find(t => t.id === trackId);
+
+          if (!targetCode || !track) return;
+
+          const conn = peer.connect(targetCode);
+          conn.on('open', async () => {
+            const blob = track.blob;
+            const buffer = await blob.arrayBuffer();
+            const totalChunks = Math.ceil(buffer.byteLength / CHUNK_SIZE);
+            const fileId = `file-${Date.now()}`;
+
+            $('#send-progress-container').classList.remove('hidden');
+            $('#send-progress-status').textContent = `送信準備中... 0%`;
+            $('#send-progress-bar').style.width = '0%';
+
+            conn.send({
+              type: 'file-meta',
+              id: fileId,
+              name: track.title + '.mp3',
+              size: buffer.byteLength,
+              totalChunks: totalChunks
+            });
+
+            for (let i = 0; i < totalChunks; i++) {
+              const start = i * CHUNK_SIZE;
+              const end = Math.min(buffer.byteLength, start + CHUNK_SIZE);
+              const chunk = buffer.slice(start, end);
+
+              conn.send({
+                type: 'file-chunk',
+                id: fileId,
+                index: i,
+                chunk: chunk
+              });
+
+              const pct = Math.round(((i + 1) / totalChunks) * 100);
+              $('#send-progress-status').textContent = `送信中... ${pct}%`;
+              $('#send-progress-bar').style.width = `${pct}%`;
+
+              // 送信バッファ詰まり防止ウェイト
+              if (i % 10 === 0) await new Promise(r => setTimeout(r, 15));
+            }
+
+            toast('ファイルの送信完了しました');
+            setTimeout(() => dialog.close(), 1000);
+          });
+
+          conn.on('error', () => toast('接続エラーが発生しました'));
+        });
+      }
+
+      window.addEventListener('DOMContentLoaded', async () => {
+        // DPI Setting Setup
+        const slider = $('#app-dpi-slider');
+        const savedDpi = await getSetting('appDpi', 100);
+        slider.value = savedDpi;
+        updateSliderTrack(slider);
+        applyAppDpi(savedDpi);
+
+        slider.addEventListener('input', (e) => {
+          const val = Number(e.target.value);
+          updateSliderTrack(e.target);
+          applyAppDpi(val);
+        });
+
+        slider.addEventListener('change', async (e) => {
+          const val = Number(e.target.value);
+          await setSetting('appDpi', val);
+          toast(`DPIを ${val}% に保存しました`);
+        });
+
+        // Device name & PeerCode Setting Setup
+        $('#setting-device-name').addEventListener('change', async (e) => {
+          await setSetting('myDeviceName', e.target.value.trim());
+          toast('Device Nameを更新しました');
+        });
+        $('#setting-peercode').addEventListener('change', async (e) => {
+          await setSetting('myPeerCode', e.target.value.trim());
+          toast('PeerCode設定を更新しました。再起動後に反映されます。');
+        });
+
+        // Buttons & Navigation setup
+        $('#open-settings-btn').addEventListener('click', () => showScreen('#settings-screen'));
+        document.querySelectorAll('[data-home]').forEach(btn => {
+          btn.addEventListener('click', () => showScreen('#home'));
+        });
+
+        setupAudioPlayerEvents();
+        setupUploadHandlers();
+        setupPeerSendDialog();
+        await renderTracksList();
+        await initPeerJS();
+      });
+    })();
+  </script>
+</body>
+</html>
