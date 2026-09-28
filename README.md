@@ -11,3 +11,4 @@
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gallery.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/camera.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/firesetting.html
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/message.html
