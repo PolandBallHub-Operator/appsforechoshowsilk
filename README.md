@@ -18,3 +18,4 @@
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gpmusic.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gpbooks.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/setup.html
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/market.html
