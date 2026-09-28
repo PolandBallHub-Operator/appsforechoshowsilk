@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BooksPlayer</title>
+    <!-- Google Material Icons CDN -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- PeerJS CDN -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            color: #212121;
+        }
+
+        #app-root {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* --- App Bar (Android Material 1 Style) --- */
+        .app-bar {
+            height: 56px;
+            background-color: #00a2ed;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .app-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .app-bar-title {
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .app-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            outline: none;
+        }
+
+        .icon-btn:active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* --- Search Bar Input inside App Bar --- */
+        .search-bar-container {
+            display: none;
+            flex: 1;
+            align-items: center;
+            background-color: #ffffff;
+            height: 40px;
+            border-radius: 2px;
+            padding: 0 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            margin: 0 8px;
+        }
+
+        .search-bar-container input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 16px;
+            color: #212121;
+            margin-left: 8px;
+        }
+
+        /* --- Tab Navigation --- */
+        .tabs-header {
+            height: 48px;
+            background-color: #00a2ed;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            z-index: 9;
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex-shrink: 0;
+        }
+
+        .tabs-header::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-item {
+            flex: 1;
+            min-width: 110px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+            text-align: center;
+            padding: 0 8px;
+        }
+
+        .tab-item.active {
+            color: #ffffff;
+        }
+
+        .tab-item.active::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: #ffffff;
+        }
+
+        /* --- Main Content Body --- */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            background-color: #e5e5e5;
+            padding: 12px;
+        }
+
+        /* Books Grid (Android Material Card Layout) */
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            padding-bottom: 80px;
+        }
+
+        .book-card {
+            background: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+
+        .book-card:active {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .book-cover {
+            width: 100%;
+            aspect-ratio: 3 / 4;
+            background-color: #cfd8dc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .book-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .book-cover .placeholder-icon {
+            font-size: 48px;
+            color: #78909c;
+        }
+
+        .book-details {
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 52px;
+        }
+
+        .book-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #212121;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 18px;
+        }
+
+        .book-author {
+            font-size: 11px;
+            color: #757575;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .book-menu-btn {
+            position: absolute;
+            top: 4px;
+            right: 0px;
+            background: none;
+            border: none;
+            color: #757575;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .book-badge-downloaded {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #00a2ed;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+
+        /* Floating Action Button (FAB) */
+        .fab {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: #ff4081;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: none;
+            cursor: pointer;
+            z-index: 15;
+            outline: none;
+        }
+
+        .fab:active {
+            box-shadow: 0 8px 12px rgba(0,0,0,0.4);
+            background-color: #f50057;
+        }
+
+        /* --- Navigation Drawer (Side Menu) --- */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 100;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .drawer-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 101;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        .drawer.open {
+            transform: translateX(280px);
+        }
+
+        .drawer-header {
+            height: 150px;
+            background: linear-gradient(135deg, #0288d1 0%, #00a2ed 50%, #43a047 100%);
+            position: relative;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            color: #ffffff;
+        }
+
+        .drawer-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: #90caf9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .drawer-user-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .drawer-device-info {
+            font-size: 11px;
+            opacity: 0.85;
+        }
+
+        .drawer-menu {
+            padding: 8px 0;
+            flex: 1;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            height: 48px;
+            padding: 0 16px;
+            gap: 24px;
+            color: #424242;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .drawer-item:active {
+            background-color: #eeeeee;
+        }
+
+        .drawer-item .material-icons {
+            color: #616161;
+            font-size: 22px;
+        }
+
+        .drawer-item.active {
+            color: #00a2ed;
+            background-color: #e1f5fe;
+        }
+
+        .drawer-item.active .material-icons {
+            color: #00a2ed;
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 8px 0;
+        }
+
+        .drawer-toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 48px;
+            padding: 0 16px;
+            color: #424242;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Android 7.1 Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        /* --- PDF Reader Modal View --- */
+        .pdf-reader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #212121;
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+        }
+
+        .pdf-reader-overlay.active {
+            display: flex;
+        }
+
+        .pdf-toolbar {
+            height: 48px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .pdf-page-info {
+            font-size: 13px;
+            color: #bdbdbd;
+        }
+
+        .pdf-viewer-container {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 16px;
+            position: relative;
+            background-color: #303030;
+        }
+
+        #pdf-canvas {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            background-color: #ffffff;
+            display: block;
+            margin: auto;
+        }
+
+        .pdf-controls {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 24px;
+            padding: 4px 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            z-index: 20;
+        }
+
+        /* --- Dialog / Modals --- */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.6);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            width: 90%;
+            max-width: 360px;
+            border-radius: 3px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: #212121;
+        }
+
+        .modal-body {
+            font-size: 14px;
+            color: #616161;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdbdbd;
+            border-radius: 2px;
+            outline: none;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .modal-input:focus {
+            border-color: #00a2ed;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .btn-text {
+            background: none;
+            border: none;
+            color: #00a2ed;
+            font-weight: 500;
+            padding: 8px 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 13px;
+        }
+
+        /* Peer Transfer Progress Bar */
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background-color: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #00a2ed;
+            transition: width 0.1s linear;
+        }
+
+        /* Context Menu / Popup Menu */
+        .context-menu {
+            position: fixed;
+            background: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            z-index: 250;
+            display: none;
+            min-width: 160px;
+            padding: 6px 0;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            font-size: 14px;
+            color: #212121;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .context-menu-item:active {
+            background-color: #f5f5f5;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            color: #9e9e9e;
+            text-align: center;
+        }
+
+        .empty-state .material-icons {
+            font-size: 64px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-root">
+        <!-- Main App Bar -->
+        <header class="app-bar" id="app-bar">
+            <div class="app-bar-left">
+                <button class="icon-btn" id="menu-btn" title="Open Drawer">
+                    <span class="material-icons">menu</span>
+                </button>
+                <span class="app-bar-title" id="app-title">My Library</span>
+            </div>
+
+            <!-- Normal Action Icons -->
+            <div class="app-bar-actions" id="app-bar-actions">
+                <button class="icon-btn" id="search-btn" title="Search">
+                    <span class="material-icons">search</span>
+                </button>
+                <button class="icon-btn" id="overflow-btn" title="More Options">
+                    <span class="material-icons">more_vert</span>
+                </button>
+            </div>
+
+            <!-- Integrated Search Bar View -->
+            <div class="search-bar-container" id="search-bar-container">
+                <span class="material-icons" style="color:#757575;">search</span>
+                <input type="text" id="search-input" placeholder="ライブラリ内を検索...">
+                <button class="icon-btn" id="close-search-btn" style="color:#757575;">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Tabs Navigation Bar -->
+        <nav class="tabs-header" id="tabs-header">
+            <div class="tab-item active" data-tab="all">ALL BOOKS</div>
+            <div class="tab-item" data-tab="purchased">PURCHASED</div>
+            <div class="tab-item" data-tab="uploads">UPLOADS</div>
+            <div class="tab-item" data-tab="samples">SAMPLES</div>
+        </nav>
+
+        <!-- Main Content Grid View -->
+        <main class="content-area" id="content-area">
+            <div class="books-grid" id="books-grid">
+                <!-- Dynamically populated from IndexedDB -->
+            </div>
+            
+            <div class="empty-state" id="empty-state" style="display:none;">
+                <span class="material-icons">library_books</span>
+                <p>書籍がありません。<br>右下の＋ボタンからPDFを追加してください。</p>
+            </div>
+        </main>
+
+        <!-- Floating Action Button to pick local PDF -->
+        <button class="fab" id="add-file-fab" title="PDFを追加">
+            <span class="material-icons">add</span>
+        </button>
+        <input type="file" id="pdf-file-input" accept="application/pdf" style="display: none;" multiple>
+
+        <!-- Navigation Drawer Overlay & Content -->
+        <div class="drawer-overlay" id="drawer-overlay"></div>
+        <aside class="drawer" id="drawer">
+            <div class="drawer-header">
+                <div class="drawer-avatar">
+                    <span class="material-icons" style="font-size: 36px; color: #ffffff;">account_circle</span>
+                </div>
+                <div class="drawer-user-name">BooksPlayer Account</div>
+                <div class="drawer-device-info">Echo show 5 gen3</div>
+            </div>
+            <div class="drawer-menu">
+                <div class="drawer-item active">
+                    <span class="material-icons">class</span>
+                    <span>ライブラリ</span>
+                </div>
+                <div class="drawer-item">
+                    <span class="material-icons">history</span>
+                    <span>最近</span>
+                </div>
+                <div class="drawer-item">
+                    <span class="material-icons">star</span>
+                    <span>トップチャート</span>
+                </div>
+                <div class="drawer-item">
+                    <span class="material-icons">new_releases</span>
+                    <span>新作</span>
+                </div>
+                <div class="drawer-item">
+                    <span class="material-icons">store</span>
+                    <span>ストア</span>
+                </div>
+
+                <div class="drawer-divider"></div>
+
+                <!-- Android 7.1 Switch Item -->
+                <div class="drawer-toggle-item">
+                    <span style="color:#424242;">ダウンロード済みのみ</span>
+                    <label class="switch">
+                        <input type="checkbox" id="downloaded-only-switch">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="drawer-divider"></div>
+
+                <div class="drawer-item" id="peer-settings-btn">
+                    <span class="material-icons">phonelink</span>
+                    <span>端末間ファイル共有 (Peer)</span>
+                </div>
+                <div class="drawer-item">
+                    <span class="material-icons">settings</span>
+                    <span>設定</span>
+                </div>
+                <div class="drawer-item">
+                    <span class="material-icons">help</span>
+                    <span>ヘルプとフィードバック</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Context Menu for Book Item -->
+        <div class="context-menu" id="context-menu">
+            <div class="context-menu-item" id="ctx-read">
+                <span class="material-icons">chrome_reader_mode</span>
+                <span>読む</span>
+            </div>
+            <div class="context-menu-item" id="ctx-transfer">
+                <span class="material-icons">send</span>
+                <span>他の端末へ転送 (Peer)</span>
+            </div>
+            <div class="context-menu-item" id="ctx-delete" style="color: #d32f2f;">
+                <span class="material-icons" style="color: #d32f2f;">delete</span>
+                <span>削除</span>
+            </div>
+        </div>
+
+        <!-- Fullscreen High-Quality PDF Reader Modal -->
+        <div class="pdf-reader-overlay" id="pdf-reader-overlay">
+            <div class="pdf-toolbar">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button class="icon-btn" id="reader-close-btn">
+                        <span class="material-icons">arrow_back</span>
+                    </button>
+                    <span id="reader-book-title" style="font-size:15px; font-weight:500; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">PDF Title</span>
+                </div>
+                <div class="pdf-page-info">
+                    <span id="page-num">1</span> / <span id="page-count">--</span>
+                </div>
+            </div>
+
+            <div class="pdf-viewer-container" id="pdf-viewer-container">
+                <canvas id="pdf-canvas"></canvas>
+            </div>
+
+            <div class="pdf-controls">
+                <button class="icon-btn" id="prev-page-btn">
+                    <span class="material-icons">navigate_before</span>
+                </button>
+                <button class="icon-btn" id="zoom-out-btn">
+                    <span class="material-icons">remove</span>
+                </button>
+                <button class="icon-btn" id="zoom-in-btn">
+                    <span class="material-icons">add</span>
+                </button>
+                <button class="icon-btn" id="next-page-btn">
+                    <span class="material-icons">navigate_next</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- PeerJS Transfer Modal -->
+        <div class="modal" id="peer-modal">
+            <div class="modal-content">
+                <div class="modal-title">端末間ファイル共有</div>
+                <div class="modal-body">
+                    <p style="margin-bottom:8px;">デバイス名: <b>Echo show 5 gen3</b></p>
+                    <p>My Peer Code: <b id="my-peer-id" style="color:#00a2ed; font-family:monospace; font-size:15px;">生成中...</b></p>
+                    <hr style="margin:12px 0; border:none; border-top:1px solid #e0e0e0;">
+                    
+                    <div id="transfer-input-section">
+                        <p style="font-size:13px; color:#616161;">送信先の「My Peer Code」を入力してファイルを送信します:</p>
+                        <input type="text" id="target-peer-input" class="modal-input" placeholder="相手のPeer Codeを入力">
+                    </div>
+
+                    <!-- Progress Indicator -->
+                    <div id="transfer-progress-section" style="display:none; margin-top:12px;">
+                        <p id="transfer-status-text" style="font-size:13px; font-weight:500; color:#212121;">転送中...</p>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="transfer-progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-text" id="peer-modal-close-btn">閉じる</button>
+                    <button class="btn-text" id="peer-modal-send-btn">送信する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configure PDF.js Worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // IndexedDB Manager for local storage of real PDF files
+        const DB_NAME = 'BooksPlayerDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'my_library';
+        let db = null;
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const dbInstance = e.target.result;
+                    if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
+                        dbInstance.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = (e) => reject(e);
+            });
+        }
+
+        function saveBookToDB(bookObj) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.put(bookObj);
+                req.onsuccess = () => resolve();
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        function getAllBooksFromDB() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        function deleteBookFromDB(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.delete(id);
+                req.onsuccess = () => resolve();
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        // Safe Uint8Array copy helper to prevent ArrayBuffer detachment issues
+        function getSafeUint8Array(arrayBuffer) {
+            if (!arrayBuffer || arrayBuffer.byteLength === 0) return null;
+            const safeCopy = new Uint8Array(arrayBuffer.byteLength);
+            safeCopy.set(new Uint8Array(arrayBuffer));
+            return safeCopy;
+        }
+
+        // Render PDF First Page High Quality Thumbnail
+        async function generatePdfThumbnail(arrayBuffer) {
+            try {
+                const pdfData = getSafeUint8Array(arrayBuffer);
+                if (!pdfData) return null;
+
+                const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+                const pdf = await loadingTask.promise;
+                const page = await pdf.getPage(1);
+
+                const viewport = page.getViewport({ scale: 0.5 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                return canvas.toDataURL('image/jpeg', 0.8);
+            } catch (err) {
+                console.error("Thumbnail generation error:", err);
+                return null;
+            }
+        }
+
+        // PeerJS Integration
+        let peer = null;
+        let myPeerId = '';
+        let activeTransfer = null;
+        const CHUNK_SIZE = 16 * 1024; // Keep individual WebRTC messages small.
+        const MAX_TRANSFER_SIZE = 100 * 1024 * 1024;
+        const SEND_BUFFER_LIMIT = 512 * 1024;
+
+        window.addEventListener('unhandledrejection', (event) => {
+            if (event.reason && (event.reason.name === 'SecurityError' || String(event.reason).includes('WebSocket') || String(event.reason).includes('PeerJS'))) {
+                console.warn('WebSocket / PeerJS connection restricted by sandbox environment:', event.reason);
+                event.preventDefault();
+                const peerIdElem = document.getElementById('my-peer-id');
+                if (peerIdElem) {
+                    peerIdElem.textContent = 'オフライン (キャンバス環境の制限)';
+                    peerIdElem.style.color = '#e53935';
+                }
+            }
+        });
+
+        async function digestBuffer(buffer) {
+            if (globalThis.crypto?.subtle) {
+                const digest = await globalThis.crypto.subtle.digest('SHA-256', buffer);
+                return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+            }
+            // Fallback for non-secure file:// previews. This is a consistency check,
+            // not a security signature; HTTPS deployments use SHA-256 above.
+            const bytes = new Uint8Array(buffer);
+            let hash = 2166136261;
+            for (const byte of bytes) {
+                hash ^= byte;
+                hash = Math.imul(hash, 16777619);
+            }
+            return `fnv1a-${(hash >>> 0).toString(16).padStart(8, '0')}`;
+        }
+
+        function bytesFromPeerValue(value) {
+            if (value instanceof ArrayBuffer) return new Uint8Array(value);
+            if (ArrayBuffer.isView(value)) {
+                return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+            }
+            return new Uint8Array(value || []);
+        }
+
+        function waitForConnectionOpen(conn, timeoutMs = 30000) {
+            if (conn.open) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+                let timer;
+                const cleanup = () => {
+                    clearTimeout(timer);
+                    conn.off?.('open', onOpen);
+                    conn.off?.('error', onError);
+                    conn.off?.('close', onClose);
+                };
+                const finish = (error) => {
+                    cleanup();
+                    error ? reject(error) : resolve();
+                };
+                const onOpen = () => finish();
+                const onError = err => finish(err instanceof Error ? err : new Error('Peer接続に失敗しました'));
+                const onClose = () => finish(new Error('Peer接続が閉じられました'));
+                timer = setTimeout(() => finish(new Error('Peer接続がタイムアウトしました')), timeoutMs);
+                conn.on('open', onOpen);
+                conn.on('error', onError);
+                conn.on('close', onClose);
+            });
+        }
+
+        async function waitForSendBuffer(conn) {
+            const channel = conn.dataChannel;
+            if (!channel || typeof channel.bufferedAmount !== 'number') return;
+            while (channel.bufferedAmount > SEND_BUFFER_LIMIT) {
+                await new Promise(resolve => setTimeout(resolve, 20));
+                if (conn.closed || channel.readyState !== 'open') {
+                    throw new Error('送信中にPeer接続が閉じられました');
+                }
+            }
+        }
+
+        function initPeerJS() {
+            try {
+                if (peer) {
+                    try { peer.destroy(); } catch (e) { console.warn('Peer cleanup failed', e); }
+                }
+                const randomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+                myPeerId = `EchoShow5G3-${randomCode}`;
+                const peerIdElem = document.getElementById('my-peer-id');
+                if (peerIdElem) peerIdElem.textContent = myPeerId;
+
+                peer = new Peer(myPeerId, { debug: 0 });
+
+                peer.on('open', (id) => {
+                    console.log('My Peer ID:', id);
+                });
+
+                peer.on('connection', (conn) => {
+                    setupIncomingConnection(conn);
+                });
+
+                peer.on('error', (err) => {
+                    console.warn('PeerJS network error:', err);
+                    if (peerIdElem) {
+                        peerIdElem.textContent = 'オフライン (接続制限)';
+                        peerIdElem.style.color = '#e53935';
+                    }
+                });
+            } catch (e) {
+                console.warn('PeerJS initialization skipped:', e);
+                const peerIdElem = document.getElementById('my-peer-id');
+                if (peerIdElem) {
+                    peerIdElem.textContent = 'オフライン (接続制限)';
+                    peerIdElem.style.color = '#e53935';
+                }
+            }
+        }
+
+        function setupIncomingConnection(conn) {
+            let incoming = null;
+            conn.on('data', async (data) => {
+                if (!data || typeof data !== 'object') return;
+                if (data.type === 'START') {
+                    const meta = data.meta || {};
+                    const size = Number(meta.size);
+                    const totalChunks = Number(meta.totalChunks);
+                    if (!Number.isSafeInteger(size) || size <= 0 || size > MAX_TRANSFER_SIZE ||
+                        !Number.isSafeInteger(totalChunks) || totalChunks !== Math.ceil(size / CHUNK_SIZE)) {
+                        conn.send({ type: 'TRANSFER_ERROR', message: '不正または大きすぎるPDFです' });
+                        incoming = null;
+                        return;
+                    }
+                    incoming = {
+                        meta,
+                        size,
+                        totalChunks,
+                        chunks: new Array(totalChunks),
+                        receivedChunks: 0,
+                        receivedBytes: 0
+                    };
+                    showProgressModal(`「${meta.title || meta.fileName || 'PDF'}」を受信中...`);
+                    updateProgress(0);
+                    return;
+                }
+                if (data.type === 'CHUNK') {
+                    if (!incoming || !Number.isSafeInteger(data.index) || data.index < 0 ||
+                        data.index >= incoming.totalChunks || incoming.chunks[data.index]) return;
+                    const chunk = bytesFromPeerValue(data.chunk);
+                    const expectedLength = data.index === incoming.totalChunks - 1
+                        ? incoming.size - (data.index * CHUNK_SIZE)
+                        : CHUNK_SIZE;
+                    if (chunk.byteLength !== expectedLength) {
+                        conn.send({ type: 'TRANSFER_ERROR', message: 'チャンクサイズが一致しません' });
+                        incoming = null;
+                        hideProgressModal();
+                        return;
+                    }
+                    incoming.chunks[data.index] = chunk;
+                    incoming.receivedChunks++;
+                    incoming.receivedBytes += chunk.byteLength;
+                    updateProgress(Math.round((incoming.receivedBytes / incoming.size) * 100));
+                    return;
+                }
+                if (data.type === 'END') {
+                    if (!incoming || incoming.receivedChunks !== incoming.totalChunks || incoming.receivedBytes !== incoming.size) {
+                        conn.send({ type: 'TRANSFER_ERROR', message: 'PDFの全チャンクを受信できませんでした' });
+                        incoming = null;
+                        hideProgressModal();
+                        return;
+                    }
+                    const transfer = incoming;
+                    incoming = null;
+                    try {
+                        const fullBuffer = new Uint8Array(transfer.size);
+                        let offset = 0;
+                        for (const chunk of transfer.chunks) {
+                            fullBuffer.set(chunk, offset);
+                            offset += chunk.byteLength;
+                        }
+                        const arrayBuffer = fullBuffer.buffer;
+                        const actualHash = await digestBuffer(arrayBuffer);
+                        if (actualHash !== transfer.meta.sha256) {
+                            throw new Error('SHA-256チェックサムが一致しません。転送データが破損しています');
+                        }
+                        const thumbnail = await generatePdfThumbnail(arrayBuffer);
+                        const bookObj = {
+                            id: transfer.meta.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                            title: transfer.meta.title || transfer.meta.fileName || 'Received PDF',
+                            author: transfer.meta.author || 'Received File',
+                            fileName: transfer.meta.fileName || 'received.pdf',
+                            mimeType: transfer.meta.mimeType || 'application/pdf',
+                            sha256: actualHash,
+                            arrayBuffer,
+                            thumbnail,
+                            addedAt: Date.now()
+                        };
+                        await saveBookToDB(bookObj);
+                        await loadAndRenderLibrary();
+                        hideProgressModal();
+                        conn.send({ type: 'TRANSFER_COMPLETE', sha256: actualHash });
+                        alert(`「${bookObj.title}」を受信・整合性確認・保存しました！`);
+                    } catch (err) {
+                        console.error('PDF receive validation/save failed:', err);
+                        hideProgressModal();
+                        conn.send({ type: 'TRANSFER_ERROR', message: err.message || 'PDFの検証または保存に失敗しました' });
+                        alert('受信PDFを保存できませんでした: ' + (err.message || err));
+                    }
+                }
+            });
+            conn.on('error', (err) => {
+                incoming = null;
+                hideProgressModal();
+                console.error('Incoming transfer error:', err);
+            });
+        }
+
+        async function sendFileToPeer(targetPeerId, bookObj) {
+            if (!targetPeerId) {
+                alert('送信先のPeer Codeを入力してください。');
+                return;
+            }
+
+            if (activeTransfer) return;
+            activeTransfer = (async () => {
+                if (!peer || peer.destroyed) throw new Error('PeerJSが初期化されていません');
+                if (!bookObj?.arrayBuffer || bookObj.arrayBuffer.byteLength === 0) throw new Error('PDFデータが空です');
+                const buffer = bookObj.arrayBuffer.slice(0);
+                const totalSize = buffer.byteLength;
+                if (totalSize > MAX_TRANSFER_SIZE) throw new Error('PDFが大きすぎます');
+                if (!peer.open) await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => reject(new Error('PeerJS接続がタイムアウトしました')), 20000);
+                    const onOpen = () => { clearTimeout(timer); peer.off?.('open', onOpen); peer.off?.('error', onError); resolve(); };
+                    const onError = err => { clearTimeout(timer); peer.off?.('open', onOpen); peer.off?.('error', onError); reject(err instanceof Error ? err : new Error('PeerJS接続に失敗しました')); };
+                    peer.on('open', onOpen);
+                    peer.on('error', onError);
+                });
+                const conn = peer.connect(targetPeerId, { reliable: true, serialization: 'binary' });
+                await waitForConnectionOpen(conn);
+                showProgressModal(`「${bookObj.title}」を送信中...`);
+                const sha256 = await digestBuffer(buffer);
+                const totalChunks = Math.ceil(totalSize / CHUNK_SIZE);
+                conn.send({
+                    type: 'START',
+                    meta: {
+                        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                        title: bookObj.title,
+                        author: bookObj.author || '',
+                        fileName: bookObj.fileName || `${bookObj.title || 'book'}.pdf`,
+                        mimeType: bookObj.mimeType || 'application/pdf',
+                        size: totalSize,
+                        totalChunks,
+                        sha256
+                    }
+                });
+                for (let index = 0; index < totalChunks; index++) {
+                    const start = index * CHUNK_SIZE;
+                    const chunk = buffer.slice(start, Math.min(start + CHUNK_SIZE, totalSize));
+                    conn.send({ type: 'CHUNK', index, chunk });
+                    updateProgress(Math.round(((start + chunk.byteLength) / totalSize) * 100));
+                    await waitForSendBuffer(conn);
+                }
+                await waitForSendBuffer(conn);
+                const result = new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => { cleanup(); reject(new Error('受信側の整合性確認がタイムアウトしました')); }, 180000);
+                    const cleanup = () => { clearTimeout(timer); conn.off?.('data', onData); conn.off?.('error', onError); conn.off?.('close', onClose); };
+                    const onData = response => {
+                        if (response?.type === 'TRANSFER_COMPLETE' && response.sha256 === sha256) { cleanup(); resolve(); }
+                        else if (response?.type === 'TRANSFER_ERROR') { cleanup(); reject(new Error(response.message || '受信側で検証に失敗しました')); }
+                    };
+                    const onError = err => { cleanup(); reject(err instanceof Error ? err : new Error('Peer接続エラー')); };
+                    const onClose = () => { cleanup(); reject(new Error('Peer接続が閉じられました')); };
+                    conn.on('data', onData);
+                    conn.on('error', onError);
+                    conn.on('close', onClose);
+                });
+                conn.send({ type: 'END' });
+                await result;
+                hideProgressModal();
+                alert('ファイルの転送・整合性確認・保存が完了しました！');
+            })().catch(err => {
+                console.error('PDF transfer failed:', err);
+                hideProgressModal();
+                alert('転送エラーが発生しました: ' + (err.message || err));
+            }).finally(() => { activeTransfer = null; });
+        }
+
+        function showProgressModal(statusText) {
+            document.getElementById('peer-modal').classList.add('active');
+            document.getElementById('transfer-input-section').style.display = 'none';
+            document.getElementById('transfer-progress-section').style.display = 'block';
+            document.getElementById('transfer-status-text').textContent = statusText;
+            document.getElementById('transfer-progress-fill').style.width = '0%';
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('transfer-progress-fill').style.width = percent + '%';
+        }
+
+        function hideProgressModal() {
+            document.getElementById('peer-modal').classList.remove('active');
+            document.getElementById('transfer-input-section').style.display = 'block';
+            document.getElementById('transfer-progress-section').style.display = 'none';
+        }
+
+        // UI & State Management
+        let allBooks = [];
+        let selectedBookForContext = null;
+
+        async function loadAndRenderLibrary(filterQuery = '') {
+            allBooks = await getAllBooksFromDB();
+            const grid = document.getElementById('books-grid');
+            const emptyState = document.getElementById('empty-state');
+            grid.innerHTML = '';
+
+            let filtered = allBooks;
+            if (filterQuery.trim() !== '') {
+                filtered = allBooks.filter(b => b.title.toLowerCase().includes(filterQuery.toLowerCase()));
+            }
+
+            if (filtered.length === 0) {
+                emptyState.style.display = 'flex';
+                return;
+            } else {
+                emptyState.style.display = 'none';
+            }
+
+            filtered.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                
+                const coverHtml = book.thumbnail 
+                    ? `<img src="${book.thumbnail}" alt="Cover">`
+                    : `<span class="material-icons placeholder-icon">picture_as_pdf</span>`;
+
+                card.innerHTML = `
+                    <div class="book-cover">${coverHtml}</div>
+                    <div class="book-details">
+                        <div class="book-title" title="${book.title}">${book.title}</div>
+                        <div class="book-author">PDF ドキュメント</div>
+                        <button class="book-menu-btn" data-id="${book.id}">
+                            <span class="material-icons" style="font-size:18px;">more_vert</span>
+                        </button>
+                        <div class="book-badge-downloaded">
+                            <span class="material-icons" style="font-size:11px;">check</span>
+                        </div>
+                    </div>
+                `;
+
+                // Click to open reader
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.book-menu-btn')) return;
+                    openPdfReader(book);
+                });
+
+                // Context menu button click
+                const menuBtn = card.querySelector('.book-menu-btn');
+                menuBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectedBookForContext = book;
+                    showContextMenu(e.clientX, e.clientY);
+                });
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Handle Context Menu
+        const contextMenu = document.getElementById('context-menu');
+        function showContextMenu(x, y) {
+            contextMenu.style.left = `${Math.min(x, window.innerWidth - 170)}px`;
+            contextMenu.style.top = `${Math.min(y, window.innerHeight - 120)}px`;
+            contextMenu.style.display = 'block';
+        }
+
+        document.addEventListener('click', () => {
+            contextMenu.style.display = 'none';
+        });
+
+        document.getElementById('ctx-read').addEventListener('click', () => {
+            if (selectedBookForContext) openPdfReader(selectedBookForContext);
+        });
+
+        document.getElementById('ctx-transfer').addEventListener('click', () => {
+            if (selectedBookForContext) {
+                document.getElementById('peer-modal').classList.add('active');
+            }
+        });
+
+        document.getElementById('ctx-delete').addEventListener('click', async () => {
+            if (selectedBookForContext) {
+                if (confirm(`「${selectedBookForContext.title}」をライブラリから削除しますか？`)) {
+                    await deleteBookFromDB(selectedBookForContext.id);
+                    await loadAndRenderLibrary();
+                }
+            }
+        });
+
+        // PDF Reader Implementation
+        let currentPdfDoc = null;
+        let currentPageNum = 1;
+        let pdfScale = 1.0;
+        let isRendering = false;
+
+        async function openPdfReader(book) {
+            try {
+                if (!book || !book.arrayBuffer) {
+                    alert("PDFデータが存在しません。ファイルを追加し直してください。");
+                    return;
+                }
+
+                const pdfData = getSafeUint8Array(book.arrayBuffer);
+                if (!pdfData) {
+                    alert("PDFデータが破損しているか空です。ファイルを追加し直してください。");
+                    return;
+                }
+
+                document.getElementById('reader-book-title').textContent = book.title;
+                document.getElementById('pdf-reader-overlay').classList.add('active');
+
+                const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+                currentPdfDoc = await loadingTask.promise;
+                document.getElementById('page-count').textContent = currentPdfDoc.numPages;
+
+                currentPageNum = 1;
+                pdfScale = 1.0;
+                renderPdfPage(currentPageNum);
+            } catch (err) {
+                console.error("PDF Open Error:", err);
+                alert("PDFの読み込みに失敗しました: " + (err.message || err));
+            }
+        }
+
+        async function renderPdfPage(num) {
+            if (!currentPdfDoc || isRendering) return;
+            isRendering = true;
+
+            try {
+                const page = await currentPdfDoc.getPage(num);
+                const dpr = window.devicePixelRatio || 1;
+                const viewport = page.getViewport({ scale: pdfScale * dpr });
+
+                const canvas = document.getElementById('pdf-canvas');
+                const ctx = canvas.getContext('2d');
+
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                
+                // Display scale adjusted for DPR
+                canvas.style.width = `${viewport.width / dpr}px`;
+                canvas.style.height = `${viewport.height / dpr}px`;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                await page.render(renderContext).promise;
+                document.getElementById('page-num').textContent = num;
+            } catch (err) {
+                console.error("Page Render Error:", err);
+            } finally {
+                isRendering = false;
+            }
+        }
+
+        // PDF Navigation Handlers
+        document.getElementById('prev-page-btn').addEventListener('click', () => {
+            if (currentPageNum > 1 && !isRendering) {
+                currentPageNum--;
+                renderPdfPage(currentPageNum);
+            }
+        });
+
+        document.getElementById('next-page-btn').addEventListener('click', () => {
+            if (currentPdfDoc && currentPageNum < currentPdfDoc.numPages && !isRendering) {
+                currentPageNum++;
+                renderPdfPage(currentPageNum);
+            }
+        });
+
+        document.getElementById('zoom-in-btn').addEventListener('click', () => {
+            if (!isRendering && pdfScale < 3.0) {
+                pdfScale += 0.2;
+                renderPdfPage(currentPageNum);
+            }
+        });
+
+        document.getElementById('zoom-out-btn').addEventListener('click', () => {
+            if (!isRendering && pdfScale > 0.5) {
+                pdfScale -= 0.2;
+                renderPdfPage(currentPageNum);
+            }
+        });
+
+        document.getElementById('reader-close-btn').addEventListener('click', () => {
+            document.getElementById('pdf-reader-overlay').classList.remove('active');
+            currentPdfDoc = null;
+        });
+
+        // File Pick & Import Handler
+        const fab = document.getElementById('add-file-fab');
+        const fileInput = document.getElementById('pdf-file-input');
+
+        fab.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', async (e) => {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            for (let file of files) {
+                if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) continue;
+
+                const arrayBuffer = await file.arrayBuffer();
+                const thumbnail = await generatePdfThumbnail(arrayBuffer);
+
+                const bookObj = {
+                    id: Date.now().toString() + "_" + Math.random().toString(36).substr(2, 4),
+                    title: file.name.replace(/\.[^/.]+$/, ""),
+                    arrayBuffer: arrayBuffer,
+                    thumbnail: thumbnail,
+                    addedAt: Date.now()
+                };
+
+                await saveBookToDB(bookObj);
+            }
+
+            fileInput.value = '';
+            await loadAndRenderLibrary();
+        });
+
+        // Drawer Menu Logic
+        const menuBtn = document.getElementById('menu-btn');
+        const drawer = document.getElementById('drawer');
+        const drawerOverlay = document.getElementById('drawer-overlay');
+
+        function openDrawer() {
+            drawer.classList.add('open');
+            drawerOverlay.classList.add('active');
+        }
+
+        function closeDrawer() {
+            drawer.classList.remove('open');
+            drawerOverlay.classList.remove('active');
+        }
+
+        menuBtn.addEventListener('click', openDrawer);
+        drawerOverlay.addEventListener('click', closeDrawer);
+
+        // Search Bar Toggle & Input Logic
+        const searchBtn = document.getElementById('search-btn');
+        const searchBarContainer = document.getElementById('search-bar-container');
+        const closeSearchBtn = document.getElementById('close-search-btn');
+        const searchInput = document.getElementById('search-input');
+        const appBarActions = document.getElementById('app-bar-actions');
+        const appTitle = document.getElementById('app-title');
+
+        searchBtn.addEventListener('click', () => {
+            searchBarContainer.style.display = 'flex';
+            appBarActions.style.display = 'none';
+            appTitle.style.display = 'none';
+            searchInput.focus();
+        });
+
+        closeSearchBtn.addEventListener('click', () => {
+            searchBarContainer.style.display = 'none';
+            appBarActions.style.display = 'flex';
+            appTitle.style.display = 'block';
+            searchInput.value = '';
+            loadAndRenderLibrary();
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            loadAndRenderLibrary(e.target.value);
+        });
+
+        // Tabs Toggle Logic
+        const tabs = document.querySelectorAll('.tab-item');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
+        });
+
+        // PeerJS Modal Handlers
+        document.getElementById('peer-settings-btn').addEventListener('click', () => {
+            closeDrawer();
+            document.getElementById('peer-modal').classList.add('active');
+        });
+
+        document.getElementById('peer-modal-close-btn').addEventListener('click', () => {
+            hideProgressModal();
+        });
+
+        document.getElementById('peer-modal-send-btn').addEventListener('click', () => {
+            const targetId = document.getElementById('target-peer-input').value.trim();
+            if (selectedBookForContext) {
+                sendFileToPeer(targetId, selectedBookForContext);
+            } else if (allBooks.length > 0) {
+                sendFileToPeer(targetId, allBooks[0]);
+            } else {
+                alert('送信できるPDFがライブラリにありません。');
+            }
+        });
+
+        // App Initialization Sequence
+        window.addEventListener('load', async () => {
+            await initDB();
+            await loadAndRenderLibrary();
+            initPeerJS();
+        });
+    </script>
+</body>
+</html>
