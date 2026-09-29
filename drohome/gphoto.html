@@ -30,7 +30,7 @@
             color: #212121;
         }
 
-        /* Screen Container Management (Android Activity Stack Simulation) */
+        /* Activity Stack Container */
         .activity-stack {
             position: relative;
             width: 100%;
@@ -56,9 +56,7 @@
             z-index: 2;
         }
 
-        /* ----------------------------------
-           1. Welcome / Onboarding Activity
-           ---------------------------------- */
+        /* 1. Welcome Activity */
         #activity-welcome {
             background-color: #2196f3;
             color: #ffffff;
@@ -85,7 +83,6 @@
             color: rgba(255, 255, 255, 0.95);
         }
 
-        /* Vector Graphic Simulation matching screenshot 1 */
         .illustration-container {
             position: relative;
             width: 280px;
@@ -220,9 +217,7 @@
             text-decoration: underline;
         }
 
-        /* ----------------------------------
-           2. Main Photos Activity (Gallery)
-           ---------------------------------- */
+        /* 2. Main Gallery Activity */
         .app-bar {
             height: 56px;
             background-color: #ffffff;
@@ -271,7 +266,7 @@
             background-color: #ffffff;
         }
 
-        /* Empty state (Screenshot 2) */
+        /* Empty State */
         .empty-state {
             display: flex;
             flex-direction: column;
@@ -323,13 +318,22 @@
         .photo-card {
             position: relative;
             width: 100%;
-            padding-top: 100%; /* 1:1 Aspect ratio */
+            padding-top: 100%;
             background-color: #eeeeee;
             overflow: hidden;
             cursor: pointer;
         }
 
         .photo-card img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-card video {
             position: absolute;
             top: 0;
             left: 0;
@@ -352,6 +356,23 @@
             gap: 2px;
         }
 
+        .photo-card .badge-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.55);
+            color: #ffffff;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+
         /* Floating Action Button (FAB) */
         .fab {
             position: absolute;
@@ -360,161 +381,30 @@
             width: 56px;
             height: 56px;
             border-radius: 50%;
-            background-color: #2196f3;
+            background-color: #ff4081;
             color: #ffffff;
+            border: none;
+            outline: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             cursor: pointer;
-            border: none;
             z-index: 15;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .fab:active {
             transform: scale(0.95);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.4);
         }
 
-        /* ----------------------------------
-           3. Navigation Drawer (Screenshot 3)
-           ---------------------------------- */
-        .drawer-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 100;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .drawer-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .drawer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 280px;
-            height: 100%;
-            background-color: #ffffff;
-            z-index: 101;
-            transform: translateX(-100%);
-            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 12px rgba(0,0,0,0.25);
-        }
-
-        .drawer-overlay.active .drawer {
-            transform: translateX(0);
-        }
-
-        .drawer-header {
-            height: 56px;
-            background-color: #2196f3;
-            display: flex;
-            align-items: center;
-            padding: 0 16px;
-            gap: 16px;
-            color: #ffffff;
-        }
-
-        .drawer-header .account-icon {
-            font-size: 32px;
-        }
-
-        .drawer-header .signin-text {
-            font-size: 14px;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-
-        .drawer-menu {
-            padding: 8px 0;
-            flex: 1;
-        }
-
-        .drawer-item {
-            display: flex;
-            align-items: center;
-            gap: 32px;
-            padding: 12px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #212121;
-            cursor: pointer;
-        }
-
-        .drawer-item:active, .drawer-item.active {
-            background-color: #e0e0e0;
-        }
-
-        .drawer-item .material-symbols-outlined {
-            color: #616161;
-            font-size: 22px;
-        }
-
-        /* ----------------------------------
-           4. Settings Activity (Screenshot 4)
-           ---------------------------------- */
-        .settings-list {
-            padding: 8px 0;
-            background-color: #ffffff;
-        }
-
-        .settings-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
-            cursor: pointer;
-        }
-
-        .settings-item:active {
-            background-color: #f5f5f5;
-        }
-
-        .settings-text-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex: 1;
-            padding-right: 16px;
-        }
-
-        .settings-title {
-            font-size: 15px;
-            color: #212121;
-        }
-
-        .settings-subtitle {
-            font-size: 13px;
-            color: #757575;
-            line-height: 1.3;
-        }
-
-        .settings-section-header {
-            padding: 16px 20px 8px 20px;
-            font-size: 13px;
-            font-weight: 500;
-            color: #2196f3;
-        }
-
-        /* User-provided Android 7.1 Switch Component Rules */
+        /* Android 7.1 (Nougat) Switch Component */
         .switch {
             position: relative;
             display: inline-block;
             width: 36px;
             height: 14px;
-            flex-shrink: 0;
         }
 
         .switch input {
@@ -557,9 +447,126 @@
             background-color: #009688;
         }
 
-        /* ----------------------------------
-           5. Image Viewer & Mini Editor
-           ---------------------------------- */
+        /* Settings Sub-Activity Styles */
+        .settings-list {
+            padding: 16px 0;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            cursor: pointer;
+        }
+
+        .settings-item:active {
+            background-color: #f0f0f0;
+        }
+
+        .settings-text-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            padding-right: 16px;
+        }
+
+        .settings-title {
+            font-size: 15px;
+            color: #212121;
+        }
+
+        .settings-subtitle {
+            font-size: 13px;
+            color: #757575;
+            line-height: 1.3;
+        }
+
+        .settings-section-header {
+            padding: 16px 20px 8px 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #009688;
+            text-transform: uppercase;
+        }
+
+        /* Navigation Drawer Overlay */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .drawer-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .drawer {
+            width: 280px;
+            height: 100%;
+            background-color: #ffffff;
+            box-shadow: 4px 0 12px rgba(0,0,0,0.25);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer-header {
+            height: 140px;
+            background-color: #2196f3;
+            color: #ffffff;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .account-icon {
+            font-size: 48px;
+        }
+
+        .signin-text {
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .drawer-menu {
+            padding: 8px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 14px 20px;
+            color: #333333;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .drawer-item.active {
+            color: #2196f3;
+            background-color: #e3f2fd;
+        }
+
+        .drawer-item:active {
+            background-color: #eee;
+        }
+
+        /* Image Viewer & Editor */
         #activity-viewer {
             background-color: #000000;
             color: #ffffff;
@@ -596,7 +603,14 @@
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
-            transition: transform 0.1s ease;
+            transition: transform 0.15s ease;
+        }
+
+        .viewer-video {
+            max-width: 100%;
+            max-height: 100%;
+            outline: none;
+            background: #000;
         }
 
         .editor-controls {
@@ -645,9 +659,7 @@
             cursor: pointer;
         }
 
-        /* ----------------------------------
-           6. PeerJS FileDrop Modal & UI
-           ---------------------------------- */
+        /* PeerJS Transfer Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -758,7 +770,7 @@
             padding: 8px 12px;
             border-radius: 4px;
             font-family: monospace;
-            font-size: 15px;
+            font-size: 14px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -770,9 +782,7 @@
     <!-- Activity Stack Container -->
     <div class="activity-stack">
 
-        <!-- =====================================
-             1. WELCOME ACTIVITY (Screenshot 1)
-             ===================================== -->
+        <!-- 1. WELCOME ACTIVITY -->
         <div id="activity-welcome" class="activity active">
             <div class="welcome-content">
                 <div class="welcome-title">All your photos</div>
@@ -807,9 +817,7 @@
             </div>
         </div>
 
-        <!-- =====================================
-             2. MAIN PHOTOS ACTIVITY (Screenshot 2)
-             ===================================== -->
+        <!-- 2. MAIN PHOTOS ACTIVITY -->
         <div id="activity-main" class="activity">
             <!-- App Bar -->
             <div class="app-bar">
@@ -828,7 +836,7 @@
 
             <!-- Body Area -->
             <div class="main-body" id="main-body-container">
-                <!-- Empty State View (matching Screenshot 2) -->
+                <!-- Empty State View -->
                 <div id="empty-state" class="empty-state">
                     <div class="empty-icon-container">
                         <svg class="empty-folder-svg" viewBox="0 0 24 24">
@@ -843,16 +851,14 @@
                 <div id="photo-grid" class="photo-grid" style="display: none;"></div>
             </div>
 
-            <!-- Floating Action Button for Adding Photos -->
+            <!-- Floating Action Button for Adding Photos & Videos -->
             <button class="fab" onclick="document.getElementById('file-input').click()">
                 <span class="material-symbols-outlined">add_a_photo</span>
             </button>
-            <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+            <input type="file" id="file-input" accept="image/*,video/*" style="display: none;" onchange="handleFileSelect(event)">
         </div>
 
-        <!-- =====================================
-             3. SETTINGS ACTIVITY (Screenshot 4)
-             ===================================== -->
+        <!-- 3. SETTINGS ACTIVITY -->
         <div id="activity-settings" class="activity">
             <div class="app-bar">
                 <div class="app-bar-left">
@@ -865,13 +871,12 @@
 
             <div class="main-body">
                 <div class="settings-list">
-                    <!-- Switch 1: Camera shortcut (matching screenshot 4) -->
+                    <!-- Switch 1: Camera shortcut -->
                     <div class="settings-item">
                         <div class="settings-text-group">
                             <div class="settings-title">Camera shortcut</div>
                             <div class="settings-subtitle">Add a shortcut on your Camera app that jumps to Foss Photos</div>
                         </div>
-                        <!-- Inserted exact user-provided toggle HTML/CSS -->
                         <label class="switch">
                             <input type="checkbox" id="toggle-camera-shortcut">
                             <span class="slider"></span>
@@ -904,7 +909,7 @@
 
                     <div style="height: 1px; background-color: #e0e0e0; margin: 8px 0;"></div>
 
-                    <!-- About section (matching screenshot 4 without Google text) -->
+                    <!-- About section -->
                     <div class="settings-section-header">About</div>
                     <div class="settings-item" onclick="alert('Foss Photos v7.1.0\nDevice: Echo show 5 gen3\nLocal-first & PeerJS Powered')">
                         <div class="settings-text-group">
@@ -915,16 +920,14 @@
             </div>
         </div>
 
-        <!-- =====================================
-             4. IMAGE VIEWER & MINI EDITOR ACTIVITY
-             ===================================== -->
+        <!-- 4. IMAGE VIEWER & MINI EDITOR ACTIVITY -->
         <div id="activity-viewer" class="activity">
             <div class="viewer-appbar">
                 <button class="icon-btn" onclick="closeViewer()">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
                 <div style="display: flex; gap: 8px;">
-                    <button class="icon-btn" onclick="toggleEditor()">
+                    <button class="icon-btn" id="btn-viewer-edit" onclick="toggleEditor()">
                         <span class="material-symbols-outlined">edit</span>
                     </button>
                     <button class="icon-btn" onclick="sharePhotoPeer()">
@@ -936,8 +939,9 @@
                 </div>
             </div>
 
-            <div class="viewer-main">
+            <div class="viewer-main" id="viewer-main-container">
                 <img id="viewer-image" class="viewer-img" src="" alt="Photo View">
+                <video id="viewer-video" class="viewer-video" controls style="display: none;"></video>
             </div>
 
             <!-- Mini Editor Panel -->
@@ -967,9 +971,7 @@
             </div>
         </div>
 
-        <!-- =====================================
-             5. NAVIGATION DRAWER OVERLAY (Screenshot 3)
-             ===================================== -->
+        <!-- 5. NAVIGATION DRAWER OVERLAY -->
         <div id="drawer-overlay" class="drawer-overlay" onclick="toggleDrawer(false)">
             <div class="drawer" onclick="event.stopPropagation()">
                 <div class="drawer-header">
@@ -999,12 +1001,10 @@
 
     </div>
 
-    <!-- =====================================
-         FILE DROP P2P TRANSFER MODAL
-         ===================================== -->
+    <!-- FILE DROP P2P TRANSFER MODAL -->
     <div id="filedrop-modal" class="modal-overlay">
         <div class="modal-card">
-            <div class="modal-title">FiæDrop Photo Transfer</div>
+            <div class="modal-title">FileDrop Photo Transfer</div>
             <div class="status-text" id="p2p-status-desc">Connect with peer ID to send current selected or uploaded photo.</div>
             
             <div class="peer-input-group">
@@ -1018,12 +1018,11 @@
 
             <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                 <button class="btn-flat" onclick="closeFileDropModal()">Close</button>
-                <button class="btn-raised" id="btn-p2p-send" onclick="startPeerTransfer()">Send Photo</button>
+                <button class="btn-raised" id="btn-p2p-send" onclick="startPeerTransfer()">Send File</button>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript Application Logic -->
     <script>
         const CHUNK_SIZE = 16 * 1024; // 16KB ArrayBuffer chunks
         let db = null;
@@ -1032,11 +1031,43 @@
         let peer = null;
         let myPeerId = '';
         let currentRotation = 0;
+        let activeObjectUrls = [];
 
-        // Initialize IndexedDB
+        // Screen Navigation Function
+        function navigateTo(activityId) {
+            const activities = document.querySelectorAll('.activity');
+            activities.forEach(act => act.classList.remove('active'));
+            
+            const target = document.getElementById(activityId);
+            if (target) {
+                target.classList.add('active');
+            }
+
+            if (activityId === 'activity-main') {
+                renderPhotoGrid();
+            }
+        }
+
+        // Navigation Drawer Handler
+        function toggleDrawer(show) {
+            const overlay = document.getElementById('drawer-overlay');
+            if (show) {
+                overlay.classList.add('active');
+            } else {
+                overlay.classList.remove('active');
+            }
+        }
+
+        // Object URL Cleanup
+        function revokeObjectURLs() {
+            activeObjectUrls.forEach(url => URL.revokeObjectURL(url));
+            activeObjectUrls = [];
+        }
+
+        // IndexedDB Initialization
         function initDB() {
             return new Promise((resolve, reject) => {
-                const request = indexedDB.open("FossPhotosDB", 1);
+                const request = indexedDB.open("FossPhotosDB", 2);
                 request.onupgradeneeded = (e) => {
                     const database = e.target.result;
                     if (!database.objectStoreNames.contains("photos")) {
@@ -1052,23 +1083,29 @@
         }
 
         function loadPhotosFromDB() {
-            return new Promise((resolve) => {
-                const tx = db.transaction("photos", "readonly");
-                const store = tx.objectStore("photos");
+            return new Promise((resolve, reject) => {
+                if (!db) return resolve();
+                const transaction = db.transaction(["photos"], "readonly");
+                const store = transaction.objectStore("photos");
                 const request = store.getAll();
+
                 request.onsuccess = () => {
                     photosList = request.result || [];
+                    photosList.sort((a, b) => b.timestamp - a.timestamp);
                     renderPhotoGrid();
                     resolve();
                 };
+                request.onerror = (e) => reject(e);
             });
         }
 
-        function savePhotoToDB(photoObj) {
+        function savePhotoToDB(item) {
             return new Promise((resolve, reject) => {
-                const tx = db.transaction("photos", "readwrite");
-                const store = tx.objectStore("photos");
-                const request = store.put(photoObj);
+                if (!db) return resolve();
+                const transaction = db.transaction(["photos"], "readwrite");
+                const store = transaction.objectStore("photos");
+                const request = store.put(item);
+
                 request.onsuccess = () => {
                     loadPhotosFromDB().then(resolve);
                 };
@@ -1077,38 +1114,23 @@
         }
 
         function deletePhotoFromDB(id) {
-            return new Promise((resolve) => {
-                const tx = db.transaction("photos", "readwrite");
-                const store = tx.objectStore("photos");
+            return new Promise((resolve, reject) => {
+                if (!db) return resolve();
+                const transaction = db.transaction(["photos"], "readwrite");
+                const store = transaction.objectStore("photos");
                 const request = store.delete(id);
+
                 request.onsuccess = () => {
                     loadPhotosFromDB().then(resolve);
                 };
+                request.onerror = (e) => reject(e);
             });
-        }
-
-        function navigateTo(activityId) {
-            document.querySelectorAll('.activity').forEach(act => {
-                act.classList.remove('active');
-            });
-            const target = document.getElementById(activityId);
-            if (target) {
-                target.classList.add('active');
-            }
-        }
-
-        function toggleDrawer(open) {
-            const drawer = document.getElementById('drawer-overlay');
-            if (open) {
-                drawer.classList.add('active');
-            } else {
-                drawer.classList.remove('active');
-            }
         }
 
         function renderPhotoGrid() {
             const emptyState = document.getElementById('empty-state');
             const grid = document.getElementById('photo-grid');
+            revokeObjectURLs();
 
             if (!photosList || photosList.length === 0) {
                 emptyState.style.display = 'flex';
@@ -1118,17 +1140,35 @@
                 grid.style.display = 'grid';
                 grid.innerHTML = '';
 
-                photosList.forEach(photo => {
+                photosList.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'photo-card';
-                    card.onclick = () => openViewer(photo);
+                    card.onclick = () => openViewer(item);
 
-                    const img = document.createElement('img');
-                    img.src = photo.dataUrl;
+                    let mediaSrc = item.dataUrl;
+                    if (item.blob) {
+                        mediaSrc = URL.createObjectURL(item.blob);
+                        activeObjectUrls.push(mediaSrc);
+                    }
 
-                    card.appendChild(img);
+                    if (item.isVideo) {
+                        const video = document.createElement('video');
+                        video.src = mediaSrc;
+                        video.muted = true;
+                        video.preload = 'metadata';
+                        card.appendChild(video);
 
-                    if (photo.isP2P) {
+                        const videoBadge = document.createElement('div');
+                        videoBadge.className = 'badge-video';
+                        videoBadge.innerHTML = `<span class="material-symbols-outlined">play_arrow</span>`;
+                        card.appendChild(videoBadge);
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = mediaSrc;
+                        card.appendChild(img);
+                    }
+
+                    if (item.isP2P) {
                         const badge = document.createElement('div');
                         badge.className = 'badge-p2p';
                         badge.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px;">swap_horiz</span> P2P`;
@@ -1144,29 +1184,52 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const dataUrl = e.target.result;
-                const newPhoto = {
-                    id: 'photo_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-                    name: file.name,
-                    type: file.type,
-                    dataUrl: dataUrl,
-                    timestamp: Date.now(),
-                    isP2P: false
-                };
-                await savePhotoToDB(newPhoto);
+            const isVideo = file.type.startsWith('video/');
+            const newMedia = {
+                id: 'media_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+                name: file.name,
+                type: file.type,
+                blob: file,
+                timestamp: Date.now(),
+                isP2P: false,
+                isVideo: isVideo
             };
-            reader.readAsDataURL(file);
+
+            savePhotoToDB(newMedia).then(() => {
+                event.target.value = '';
+            });
         }
 
-        function openViewer(photo) {
-            currentPhoto = photo;
+        function openViewer(item) {
+            currentPhoto = item;
             currentRotation = 0;
+
             const img = document.getElementById('viewer-image');
-            img.src = photo.dataUrl;
-            img.style.transform = `rotate(0deg)`;
-            img.style.filter = `none`;
+            const video = document.getElementById('viewer-video');
+            const editBtn = document.getElementById('btn-viewer-edit');
+
+            let srcUrl = item.dataUrl;
+            if (item.blob) {
+                srcUrl = URL.createObjectURL(item.blob);
+                activeObjectUrls.push(srcUrl);
+            }
+
+            if (item.isVideo) {
+                img.style.display = 'none';
+                video.style.display = 'block';
+                video.src = srcUrl;
+                video.play().catch(() => {});
+                editBtn.style.display = 'none';
+            } else {
+                video.style.display = 'none';
+                video.pause();
+                video.src = '';
+                img.style.display = 'block';
+                img.src = srcUrl;
+                img.style.transform = `rotate(0deg)`;
+                img.style.filter = `none`;
+                editBtn.style.display = 'flex';
+            }
 
             document.getElementById('edit-brightness').value = 100;
             document.getElementById('edit-contrast').value = 100;
@@ -1176,7 +1239,19 @@
         }
 
         function closeViewer() {
+            const video = document.getElementById('viewer-video');
+            video.pause();
+            video.src = '';
             navigateTo('activity-main');
+        }
+
+        function deleteCurrentPhoto() {
+            if (!currentPhoto) return;
+            if (confirm("Delete this file?")) {
+                deletePhotoFromDB(currentPhoto.id).then(() => {
+                    closeViewer();
+                });
+            }
         }
 
         function toggleEditor() {
@@ -1198,59 +1273,61 @@
         }
 
         function resetImageFilters() {
+            currentRotation = 0;
             document.getElementById('edit-brightness').value = 100;
             document.getElementById('edit-contrast').value = 100;
-            currentRotation = 0;
             const img = document.getElementById('viewer-image');
-            img.style.filter = `none`;
             img.style.transform = `rotate(0deg)`;
+            img.style.filter = `none`;
         }
 
-        async function saveEditedImage() {
-            if (!currentPhoto) return;
+        function saveEditedImage() {
+            if (!currentPhoto || currentPhoto.isVideo) return;
 
             const img = document.getElementById('viewer-image');
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
-            const tempImg = new Image();
-            tempImg.src = currentPhoto.dataUrl;
-            await new Promise(r => tempImg.onload = r);
+            const brightness = document.getElementById('edit-brightness').value;
+            const contrast = document.getElementById('edit-contrast').value;
+
+            const naturalWidth = img.naturalWidth || 800;
+            const naturalHeight = img.naturalHeight || 600;
 
             if (currentRotation % 180 === 90) {
-                canvas.width = tempImg.height;
-                canvas.height = tempImg.width;
+                canvas.width = naturalHeight;
+                canvas.height = naturalWidth;
             } else {
-                canvas.width = tempImg.width;
-                canvas.height = tempImg.height;
+                canvas.width = naturalWidth;
+                canvas.height = naturalHeight;
             }
 
-            ctx.filter = img.style.filter;
+            ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
             ctx.translate(canvas.width / 2, canvas.height / 2);
             ctx.rotate((currentRotation * Math.PI) / 180);
-            ctx.drawImage(tempImg, -tempImg.width / 2, -tempImg.height / 2);
+            ctx.drawImage(img, -naturalWidth / 2, -naturalHeight / 2);
 
-            const editedDataUrl = canvas.toDataURL(currentPhoto.type || 'image/jpeg');
-            currentPhoto.dataUrl = editedDataUrl;
-            await savePhotoToDB(currentPhoto);
-            alert('Edited photo saved to Foss Photos');
-            toggleEditor();
-        }
-
-        async function deleteCurrentPhoto() {
-            if (!currentPhoto) return;
-            if (confirm("Delete this photo from device?")) {
-                await deletePhotoFromDB(currentPhoto.id);
-                closeViewer();
-            }
+            canvas.toBlob((blob) => {
+                const editedMedia = {
+                    id: 'edited_' + Date.now(),
+                    name: 'edited_' + (currentPhoto.name || 'photo.jpg'),
+                    type: 'image/jpeg',
+                    blob: blob,
+                    timestamp: Date.now(),
+                    isP2P: false,
+                    isVideo: false
+                };
+                savePhotoToDB(editedMedia).then(() => {
+                    alert("Edited image saved!");
+                    toggleEditor();
+                    closeViewer();
+                });
+            }, 'image/jpeg', 0.9);
         }
 
         function initPeerJS() {
-            // Generate distinct Peer ID for Echo Show 5
-            const randomId = 'echoshow5-' + Math.floor(1000 + Math.random() * 9000);
-            peer = new Peer(randomId, {
-                debug: 1
-            });
+            const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
+            peer = new Peer('foss-' + randomCode);
 
             peer.on('open', (id) => {
                 myPeerId = id;
@@ -1263,22 +1340,22 @@
 
             peer.on('error', (err) => {
                 console.error("PeerJS Error:", err);
-                document.getElementById('p2p-status-desc').innerText = "Peer error: " + err.type;
             });
         }
 
         function copyPeerId() {
             if (!myPeerId) return;
-            navigator.clipboard.writeText(myPeerId).then(() => {
-                alert("Peer Code copied to clipboard!");
-            }).catch(() => {
-                document.execCommand('copy');
-            });
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = myPeerId;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+            alert("Peer Code copied to clipboard: " + myPeerId);
         }
 
         function openFileDropModal() {
             document.getElementById('filedrop-modal').classList.add('active');
-            updateP2PProgress(0, "Ready to send or receive.");
         }
 
         function closeFileDropModal() {
@@ -1293,26 +1370,19 @@
             }
         }
 
-        // SHA-256 Helper
         async function calculateSHA256(arrayBuffer) {
             const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // Helper: DataURL to ArrayBuffer
-        function dataURLToArrayBuffer(dataURL) {
-            const base64 = dataURL.split(',')[1];
-            const binaryString = window.atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+        async function mediaItemToArrayBuffer(item) {
+            if (item.blob) {
+                return await item.blob.arrayBuffer();
             }
-            return bytes.buffer;
+            throw new Error("No media payload available");
         }
 
-        // Send logic with backpressure buffering and chunking
         async function startPeerTransfer() {
             const targetId = document.getElementById('target-peer-id').value.trim();
             if (!targetId) {
@@ -1321,7 +1391,7 @@
             }
 
             if (!currentPhoto && photosList.length === 0) {
-                alert("No photo available to send. Add a photo first.");
+                alert("No photo/video available to send. Add a file first.");
                 return;
             }
 
@@ -1331,54 +1401,56 @@
             updateP2PProgress(0, "Connecting to " + targetId + "...");
 
             conn.on('open', async () => {
-                updateP2PProgress(5, "Connected! Preparing photo payload...");
+                updateP2PProgress(5, "Connected! Preparing file payload...");
 
-                const arrayBuffer = dataURLToArrayBuffer(photoToSend.dataUrl);
-                const totalBytes = arrayBuffer.byteLength;
-                const sha256 = await calculateSHA256(arrayBuffer);
-                const totalChunks = Math.ceil(totalBytes / CHUNK_SIZE);
+                try {
+                    const arrayBuffer = await mediaItemToArrayBuffer(photoToSend);
+                    const totalBytes = arrayBuffer.byteLength;
+                    const sha256 = await calculateSHA256(arrayBuffer);
+                    const totalChunks = Math.ceil(totalBytes / CHUNK_SIZE);
 
-                // Send Metadata header
-                conn.send({
-                    type: 'meta',
-                    name: photoToSend.name || 'received_photo.jpg',
-                    mime: photoToSend.type || 'image/jpeg',
-                    totalBytes: totalBytes,
-                    totalChunks: totalChunks,
-                    sha256: sha256
-                });
+                    conn.send({
+                        type: 'meta',
+                        name: photoToSend.name || (photoToSend.isVideo ? 'video.mp4' : 'photo.jpg'),
+                        mime: photoToSend.type || (photoToSend.isVideo ? 'video/mp4' : 'image/jpeg'),
+                        isVideo: !!photoToSend.isVideo,
+                        totalBytes: totalBytes,
+                        totalChunks: totalChunks,
+                        sha256: sha256
+                    });
 
-                // Send Chunks with flow control
-                let chunkIndex = 0;
-                
-                const sendNextChunk = () => {
-                    while (chunkIndex < totalChunks) {
-                        const start = chunkIndex * CHUNK_SIZE;
-                        const end = Math.min(start + CHUNK_SIZE, totalBytes);
-                        const chunkData = arrayBuffer.slice(start, end);
+                    let chunkIndex = 0;
+                    
+                    const sendNextChunk = () => {
+                        while (chunkIndex < totalChunks) {
+                            const start = chunkIndex * CHUNK_SIZE;
+                            const end = Math.min(start + CHUNK_SIZE, totalBytes);
+                            const chunkData = arrayBuffer.slice(start, end);
 
-                        conn.send({
-                            type: 'chunk',
-                            index: chunkIndex,
-                            data: chunkData
-                        });
+                            conn.send({
+                                type: 'chunk',
+                                index: chunkIndex,
+                                data: chunkData
+                            });
 
-                        chunkIndex++;
-                        const progress = (chunkIndex / totalChunks) * 100;
-                        updateP2PProgress(progress, `Sending chunk ${chunkIndex}/${totalChunks}...`);
+                            chunkIndex++;
+                            const progress = (chunkIndex / totalChunks) * 100;
+                            updateP2PProgress(progress, `Sending chunk ${chunkIndex}/${totalChunks}...`);
 
-                        // Buffer flow control
-                        if (conn.dataChannel && conn.dataChannel.bufferedAmount > 64 * 1024) {
-                            setTimeout(sendNextChunk, 50);
-                            return;
+                            if (conn.dataChannel && conn.dataChannel.bufferedAmount > 64 * 1024) {
+                                setTimeout(sendNextChunk, 50);
+                                return;
+                            }
                         }
-                    }
 
-                    conn.send({ type: 'end' });
-                    updateP2PProgress(100, "Transfer complete! Awaiting peer verification...");
-                };
+                        conn.send({ type: 'end' });
+                        updateP2PProgress(100, "Transfer complete! Awaiting peer verification...");
+                    };
 
-                sendNextChunk();
+                    sendNextChunk();
+                } catch (err) {
+                    updateP2PProgress(0, "Error processing payload: " + err.message);
+                }
             });
 
             conn.on('error', (err) => {
@@ -1386,7 +1458,6 @@
             });
         }
 
-        // Receiver logic with chunk ordering & SHA-256 validation
         function setupIncomingConnection(conn) {
             openFileDropModal();
             updateP2PProgress(0, "Incoming connection accepted...");
@@ -1410,7 +1481,6 @@
                 } else if (data.type === 'end') {
                     updateP2PProgress(95, "Reassembling chunks & verifying SHA-256...");
 
-                    // Combine ArrayBuffers
                     const combinedBuffer = new Uint8Array(meta.totalBytes);
                     let offset = 0;
                     for (let i = 0; i < meta.totalChunks; i++) {
@@ -1423,34 +1493,25 @@
                         offset += chunkBytes.length;
                     }
 
-                    // Compute SHA-256 and verify
                     const computedHash = await calculateSHA256(combinedBuffer.buffer);
                     if (computedHash === meta.sha256) {
-                        // Hash matched! Convert to blob/dataURL and save to IndexedDB
                         const blob = new Blob([combinedBuffer], { type: meta.mime });
-                        const reader = new FileReader();
-                        reader.onload = async (e) => {
-                            const newPhoto = {
-                                id: 'p2p_' + Date.now(),
-                                name: meta.name,
-                                type: meta.mime,
-                                dataUrl: e.target.result,
-                                timestamp: Date.now(),
-                                isP2P: true
-                            };
-                            await savePhotoToDB(newPhoto);
-                            updateP2PProgress(100, "SHA-256 Verified! Saved to Foss Photos.");
-                            setTimeout(closeFileDropModal, 1500);
+                        const newMedia = {
+                            id: 'p2p_' + Date.now(),
+                            name: meta.name,
+                            type: meta.mime,
+                            blob: blob,
+                            timestamp: Date.now(),
+                            isP2P: true,
+                            isVideo: !!meta.isVideo
                         };
-                        reader.readAsDataURL(blob);
+                        await savePhotoToDB(newMedia);
+                        updateP2PProgress(100, "SHA-256 Verified! Saved to Foss Photos.");
+                        setTimeout(closeFileDropModal, 1500);
                     } else {
                         updateP2PProgress(0, "Integrity Error: SHA-256 hash mismatch!");
                     }
                 }
-            });
-
-            conn.on('close', () => {
-                console.log("Peer connection closed");
             });
         }
 
