@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Android Browser - Android 7.1 Nougat</title>
+    <!-- Google Material Symbols CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #212121;
+            color: #212121;
+        }
+
+        /* Echo Show 5 Gen 3 Fullscreen Viewport (No border, no nav frame) */
+        #android-browser-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            position: relative;
+        }
+
+        /* Android 7.1 Top Toolbar / Address Bar */
+        .browser-toolbar {
+            height: 52px;
+            background-color: #37474f;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.28);
+            z-index: 100;
+            flex-shrink: 0;
+            gap: 2px;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            outline: none;
+            flex-shrink: 0;
+        }
+
+        .icon-btn:active {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .icon-btn[disabled] {
+            opacity: 0.38;
+            cursor: default;
+        }
+
+        /* URL Search Input Box */
+        .url-box {
+            flex: 1;
+            height: 38px;
+            background-color: #263238;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            border: 1px solid #455a64;
+            gap: 6px;
+            overflow: hidden;
+        }
+
+        .url-box .lock-icon {
+            font-size: 18px;
+            color: #80cbd2;
+        }
+
+        .url-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+            user-select: text;
+        }
+
+        .url-input::placeholder {
+            color: #b0bec5;
+        }
+
+        .tab-badge-btn {
+            width: 32px;
+            height: 32px;
+            border: 2px solid #ffffff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+            color: #ffffff;
+            background: transparent;
+            cursor: pointer;
+            margin: 0 4px;
+        }
+
+        .tab-badge-btn:active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            height: 3px;
+            width: 100%;
+            background: transparent;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #009688;
+            transition: width 0.3s ease;
+        }
+
+        /* Main Viewport Content */
+        .viewport-area {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #fafafa;
+        }
+
+        .browser-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: #ffffff;
+        }
+
+        /* Android Speed Dial / Home Start Screen */
+        .speed-dial-view {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #f5f5f5;
+            padding: 20px 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .speed-dial-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 24px;
+            color: #37474f;
+        }
+
+        .speed-dial-header .material-symbols-outlined {
+            font-size: 36px;
+            color: #009688;
+        }
+
+        .speed-dial-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .speed-dial-card {
+            background: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            padding: 12px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            border: 1px solid #e0e0e0;
+        }
+
+        .speed-dial-card:active {
+            background-color: #eee;
+        }
+
+        .speed-dial-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0f2f1;
+            color: #00796b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .speed-dial-title {
+            font-size: 12px;
+            color: #333;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* Android 7.1 Native Overflow Menu */
+        .android-menu {
+            position: absolute;
+            top: 52px;
+            right: 8px;
+            background: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 8px 10px 1px rgba(0,0,0,0.14), 0 3px 14px 2px rgba(0,0,0,0.12);
+            width: 200px;
+            z-index: 500;
+            display: none;
+            padding: 8px 0;
+        }
+
+        .menu-item {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #212121;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+        }
+
+        .menu-item:active {
+            background-color: #eee;
+        }
+
+        .menu-item .material-symbols-outlined {
+            color: #757575;
+            font-size: 20px;
+        }
+
+        /* Sub Activity Modal Layouts (Tabs, Bookmarks, Settings) */
+        .sub-activity {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #ffffff;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .sub-activity-header {
+            height: 48px;
+            background-color: #00796b;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.24);
+        }
+
+        .sub-activity-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-left: 12px;
+            flex: 1;
+        }
+
+        .sub-activity-body {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #f5f5f5;
+        }
+
+        /* Tabs Manager Activity */
+        .tabs-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .tab-card {
+            background: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 160px;
+            position: relative;
+            border: 2px solid transparent;
+        }
+
+        .tab-card.active-tab {
+            border-color: #00796b;
+        }
+
+        .tab-card-header {
+            height: 32px;
+            background: #37474f;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            font-size: 12px;
+        }
+
+        .tab-card-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+
+        .tab-card-preview {
+            flex: 1;
+            background: #eceff1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #78909c;
+        }
+
+        /* Material List Item (Settings/Bookmarks) */
+        .list-item {
+            min-height: 52px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+            background: #ffffff;
+            cursor: pointer;
+            gap: 16px;
+        }
+
+        .list-item:active {
+            background-color: #eeeeee;
+        }
+
+        .list-item-text {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .list-item-primary {
+            font-size: 15px;
+            color: #212121;
+        }
+
+        .list-item-secondary {
+            font-size: 13px;
+            color: #757575;
+            margin-top: 2px;
+        }
+
+        /* Android Native Dialog Overlay */
+        .android-dialog-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .android-dialog {
+            background: #ededed;
+            width: 86%;
+            max-width: 360px;
+            border-radius: 2px;
+            padding: 24px 24px 16px 24px;
+            box-shadow: 0 11px 15px -7px rgba(0,0,0,0.2), 0 24px 38px 3px rgba(0,0,0,0.14);
+        }
+
+        .android-dialog-title {
+            font-size: 20px;
+            font-weight: 500;
+            color: #212121;
+            margin-bottom: 16px;
+        }
+
+        .android-dialog-body {
+            font-size: 15px;
+            color: #333333;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .android-dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .android-dialog-btn {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #00796b;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.8px;
+            padding: 8px 12px;
+            border-radius: 2px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        /* Android Switch Toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px; width: 20px;
+            left: -2px; bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider { background-color: #80cbd2; }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #00796b;
+        }
+
+        /* X-Frame-Options Warning Banner */
+        .frame-warning-banner {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background-color: #323232;
+            color: white;
+            padding: 10px 16px;
+            font-size: 12px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 200;
+        }
+
+        .frame-warning-banner button {
+            background: #00796b;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 2px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="android-browser-container">
+        <!-- Top Android 7.1 Action / Address Bar Toolbar -->
+        <header class="browser-toolbar">
+            <button class="icon-btn" id="btn-back" title="Back" disabled>
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <button class="icon-btn" id="btn-forward" title="Forward" disabled>
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </button>
+            <button class="icon-btn" id="btn-home" title="Home">
+                <span class="material-symbols-outlined">home</span>
+            </button>
+
+            <!-- URL Entry Bar -->
+            <form id="url-form" class="url-box" action="javascript:void(0);">
+                <span class="material-symbols-outlined lock-icon" id="url-security-icon">lock</span>
+                <input type="url" id="url-input" class="url-input" placeholder="Search or type URL" autocomplete="off">
+                <button type="button" class="icon-btn" id="btn-reload" style="width:28px; height:28px;">
+                    <span class="material-symbols-outlined" style="font-size:18px;">refresh</span>
+                </button>
+            </form>
+
+            <button class="tab-badge-btn" id="btn-tabs-switch">1</button>
+            <button class="icon-btn" id="btn-menu" title="Menu">
+                <span class="material-symbols-outlined">more_vert</span>
+            </button>
+
+            <!-- Loading Progress Bar -->
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-bar"></div>
+            </div>
+        </header>
+
+        <!-- Overflow Options Menu -->
+        <div class="android-menu" id="overflow-menu">
+            <div class="menu-item" id="menu-new-tab">
+                <span class="material-symbols-outlined">add</span>
+                <span>New tab</span>
+            </div>
+            <div class="menu-item" id="menu-bookmarks">
+                <span class="material-symbols-outlined">bookmark</span>
+                <span>Bookmarks</span>
+            </div>
+            <div class="menu-item" id="menu-history">
+                <span class="material-symbols-outlined">history</span>
+                <span>History</span>
+            </div>
+            <div class="menu-item" id="menu-add-bookmark">
+                <span class="material-symbols-outlined">star</span>
+                <span>Add bookmark</span>
+            </div>
+            <div class="menu-item" id="menu-desktop-site">
+                <span class="material-symbols-outlined">desktop_windows</span>
+                <span>Desktop site</span>
+            </div>
+            <div class="menu-item" id="menu-settings">
+                <span class="material-symbols-outlined">settings</span>
+                <span>Settings</span>
+            </div>
+        </div>
+
+        <!-- Main Viewport (iFrame & Speed Dial) -->
+        <main class="viewport-area">
+            <!-- Speed Dial Grid (Home View) -->
+            <div class="speed-dial-view" id="speed-dial-view">
+                <div class="speed-dial-header">
+                    <span class="material-symbols-outlined">public</span>
+                    <h2 style="font-weight: 400; font-size: 22px;">Android WebKit Browser</h2>
+                </div>
+
+                <div class="speed-dial-grid">
+                    <div class="speed-dial-card" data-url="https://www.wikipedia.org">
+                        <div class="speed-dial-icon"><span class="material-symbols-outlined">menu_book</span></div>
+                        <span class="speed-dial-title">Wikipedia</span>
+                    </div>
+                    <div class="speed-dial-card" data-url="https://archive.org">
+                        <div class="speed-dial-icon"><span class="material-symbols-outlined">inventory_2</span></div>
+                        <span class="speed-dial-title">Internet Archive</span>
+                    </div>
+                    <div class="speed-dial-card" data-url="https://news.ycombinator.com">
+                        <div class="speed-dial-icon"><span class="material-symbols-outlined">newspaper</span></div>
+                        <span class="speed-dial-title">Hacker News</span>
+                    </div>
+                    <div class="speed-dial-card" data-url="https://html5test.com">
+                        <div class="speed-dial-icon"><span class="material-symbols-outlined">code</span></div>
+                        <span class="speed-dial-title">HTML5 Test</span>
+                    </div>
+                    <div class="speed-dial-card" data-url="https://example.com">
+                        <div class="speed-dial-icon"><span class="material-symbols-outlined">language</span></div>
+                        <span class="speed-dial-title">Example Domain</span>
+                    </div>
+                    <div class="speed-dial-card" data-url="https://www.bing.com">
+                        <div class="speed-dial-icon"><span class="material-symbols-outlined">search</span></div>
+                        <span class="speed-dial-title">Bing Search</span>
+                    </div>
+                    <div class="speed-dial-card" id="btn-speed-apidemos">
+                        <div class="speed-dial-icon" style="background:#e8f5e9; color:#2e7d32;"><span class="material-symbols-outlined">android</span></div>
+                        <span class="speed-dial-title">API Demos Web</span>
+                    </div>
+                    <div class="speed-dial-card" id="btn-speed-add">
+                        <div class="speed-dial-icon" style="background:#eee; color:#666;"><span class="material-symbols-outlined">add</span></div>
+                        <span class="speed-dial-title">Add Link</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Interactive Web iFrame -->
+            <iframe class="browser-iframe" id="browser-iframe" src="about:blank" style="display:none;" title="Android Web View"></iframe>
+
+            <!-- Frame Restriction Banner -->
+            <div class="frame-warning-banner" id="frame-warning">
+                <span>Site refused iframe connection (X-Frame-Options constraint).</span>
+                <button id="btn-open-external">Open External</button>
+            </div>
+        </main>
+
+        <!-- Sub Activity: Tabs Switcher -->
+        <div class="sub-activity" id="activity-tabs">
+            <div class="sub-activity-header">
+                <button class="icon-btn" id="btn-close-tabs-activity"><span class="material-symbols-outlined">arrow_back</span></button>
+                <span class="sub-activity-title">Tabs</span>
+                <button class="icon-btn" id="btn-add-new-tab"><span class="material-symbols-outlined">add</span></button>
+            </div>
+            <div class="sub-activity-body">
+                <div class="tabs-grid" id="tabs-container">
+                    <!-- Tab Cards injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Sub Activity: Bookmarks & History -->
+        <div class="sub-activity" id="activity-bookmarks">
+            <div class="sub-activity-header">
+                <button class="icon-btn" id="btn-close-bm-activity"><span class="material-symbols-outlined">arrow_back</span></button>
+                <span class="sub-activity-title" id="bm-activity-title">Bookmarks</span>
+            </div>
+            <div class="sub-activity-body" id="bookmarks-list">
+                <!-- Bookmarks/History list injected here -->
+            </div>
+        </div>
+
+        <!-- Sub Activity: Settings -->
+        <div class="sub-activity" id="activity-settings">
+            <div class="sub-activity-header">
+                <button class="icon-btn" id="btn-close-settings-activity"><span class="material-symbols-outlined">arrow_back</span></button>
+                <span class="sub-activity-title">Settings</span>
+            </div>
+            <div class="sub-activity-body">
+                <div class="list-item">
+                    <div class="list-item-text">
+                        <span class="list-item-primary">Search engine</span>
+                        <span class="list-item-secondary">Google / DuckDuckGo</span>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <div class="list-item-text">
+                        <span class="list-item-primary">JavaScript Engine</span>
+                        <span class="list-item-secondary">V8 WebKit Execution Enabled</span>
+                    </div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="list-item" id="item-clear-history">
+                    <div class="list-item-text">
+                        <span class="list-item-primary">Clear browsing data</span>
+                        <span class="list-item-secondary">Clear history, cache, and cookies</span>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <div class="list-item-text">
+                        <span class="list-item-primary">About Android Browser</span>
+                        <span class="list-item-secondary">Version 7.1.2 Nougat (Echo Show 5 Gen 3)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab State Manager
+        let tabs = [
+            { id: 1, title: 'Speed Dial', url: 'about:blank', history: ['about:blank'], historyIdx: 0 }
+        ];
+        let activeTabId = 1;
+
+        // Bookmarks & History Storage
+        let bookmarks = [
+            { title: "Wikipedia", url: "https://www.wikipedia.org" },
+            { title: "Internet Archive", url: "https://archive.org" },
+            { title: "Hacker News", url: "https://news.ycombinator.com" }
+        ];
+        let browsingHistory = [];
+
+        // Element References
+        const iframe = document.getElementById("browser-iframe");
+        const speedDial = document.getElementById("speed-dial-view");
+        const urlInput = document.getElementById("url-input");
+        const urlForm = document.getElementById("url-form");
+        const progressBar = document.getElementById("progress-bar");
+        const tabBadgeBtn = document.getElementById("btn-tabs-switch");
+        const btnBack = document.getElementById("btn-back");
+        const btnForward = document.getElementById("btn-forward");
+        const btnHome = document.getElementById("btn-home");
+        const btnReload = document.getElementById("btn-reload");
+        const btnMenu = document.getElementById("btn-menu");
+        const overflowMenu = document.getElementById("overflow-menu");
+        const frameWarning = document.getElementById("frame-warning");
+
+        // Sub Activities
+        const actTabs = document.getElementById("activity-tabs");
+        const actBookmarks = document.getElementById("activity-bookmarks");
+        const actSettings = document.getElementById("activity-settings");
+
+        // Core Browser Navigation Engine
+        function loadUrlInActiveTab(targetUrl) {
+            let formattedUrl = targetUrl.trim();
+            if (formattedUrl !== "about:blank") {
+                if (!/^https?:\/\//i.test(formattedUrl)) {
+                    if (formattedUrl.includes('.') && !formattedUrl.includes(' ')) {
+                        formattedUrl = 'https://' + formattedUrl;
+                    } else {
+                        formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(formattedUrl);
+                    }
+                }
+            }
+
+            const currentTab = getCurrentTab();
+            if (currentTab) {
+                currentTab.url = formattedUrl;
+                if (currentTab.history[currentTab.historyIdx] !== formattedUrl) {
+                    currentTab.history = currentTab.history.slice(0, currentTab.historyIdx + 1);
+                    currentTab.history.push(formattedUrl);
+                    currentTab.historyIdx = currentTab.history.length - 1;
+                }
+            }
+
+            renderCurrentTab();
+            
+            if (formattedUrl !== "about:blank") {
+                browsingHistory.unshift({ title: formattedUrl, url: formattedUrl, time: new Date().toLocaleTimeString() });
+            }
+        }
+
+        function getCurrentTab() {
+            return tabs.find(t => t.id === activeTabId) || tabs[0];
+        }
+
+        function renderCurrentTab() {
+            const tab = getCurrentTab();
+            if (!tab) return;
+
+            // Update Header Inputs and Badges
+            tabBadgeBtn.textContent = tabs.length;
+            btnBack.disabled = tab.historyIdx <= 0;
+            btnForward.disabled = tab.historyIdx >= tab.history.length - 1;
+
+            if (tab.url === 'about:blank') {
+                urlInput.value = '';
+                iframe.style.display = 'none';
+                speedDial.style.display = 'flex';
+                frameWarning.style.display = 'none';
+            } else {
+                urlInput.value = tab.url;
+                speedDial.style.display = 'none';
+                iframe.style.display = 'block';
+                
+                // Trigger Visual Progress Bar Loading Simulation
+                triggerProgressAnimation();
+
+                try {
+                    iframe.src = tab.url;
+                } catch (e) {
+                    showFrameWarning();
+                }
+            }
+        }
+
+        function triggerProgressAnimation() {
+            progressBar.style.width = '20%';
+            setTimeout(() => progressBar.style.width = '70%', 200);
+            setTimeout(() => {
+                progressBar.style.width = '100%';
+                setTimeout(() => progressBar.style.width = '0%', 300);
+            }, 600);
+        }
+
+        function showFrameWarning() {
+            frameWarning.style.display = 'flex';
+        }
+
+        // Sub Activity: Tabs Manager Logic
+        function renderTabsActivity() {
+            const container = document.getElementById("tabs-container");
+            container.innerHTML = "";
+
+            tabs.forEach(tab => {
+                const card = document.createElement("div");
+                card.className = `tab-card ${tab.id === activeTabId ? 'active-tab' : ''}`;
+                card.innerHTML = `
+                    <div class="tab-card-header">
+                        <span class="tab-card-title">${tab.url === 'about:blank' ? 'Speed Dial' : tab.url}</span>
+                        <span class="material-symbols-outlined close-tab-btn" style="font-size:16px; cursor:pointer;">close</span>
+                    </div>
+                    <div class="tab-card-preview">
+                        ${tab.url === 'about:blank' ? 'Home Grid' : 'Web Page'}
+                    </div>
+                `;
+
+                card.onclick = (e) => {
+                    if (e.target.classList.contains("close-tab-btn")) {
+                        e.stopPropagation();
+                        closeTab(tab.id);
+                    } else {
+                        activeTabId = tab.id;
+                        actTabs.style.display = "none";
+                        renderCurrentTab();
+                    }
+                };
+
+                container.appendChild(card);
+            });
+        }
+
+        function closeTab(id) {
+            if (tabs.length === 1) {
+                tabs[0] = { id: 1, title: 'Speed Dial', url: 'about:blank', history: ['about:blank'], historyIdx: 0 };
+            } else {
+                tabs = tabs.filter(t => t.id !== id);
+                if (activeTabId === id) activeTabId = tabs[0].id;
+            }
+            renderTabsActivity();
+            renderCurrentTab();
+        }
+
+        function createNewTab(url = 'about:blank') {
+            const newId = Date.now();
+            tabs.push({ id: newId, title: 'New Tab', url: url, history: [url], historyIdx: 0 });
+            activeTabId = newId;
+            renderCurrentTab();
+        }
+
+        // Event Listeners Initialization
+        urlForm.onsubmit = () => {
+            loadUrlInActiveTab(urlInput.value);
+            urlInput.blur();
+        };
+
+        btnBack.onclick = () => {
+            const tab = getCurrentTab();
+            if (tab && tab.historyIdx > 0) {
+                tab.historyIdx--;
+                tab.url = tab.history[tab.historyIdx];
+                renderCurrentTab();
+            }
+        };
+
+        btnForward.onclick = () => {
+            const tab = getCurrentTab();
+            if (tab && tab.historyIdx < tab.history.length - 1) {
+                tab.historyIdx++;
+                tab.url = tab.history[tab.historyIdx];
+                renderCurrentTab();
+            }
+        };
+
+        btnHome.onclick = () => loadUrlInActiveTab('about:blank');
+        btnReload.onclick = () => {
+            const tab = getCurrentTab();
+            if (tab.url !== 'about:blank') loadUrlInActiveTab(tab.url);
+        };
+
+        // Overflow Menu Actions
+        btnMenu.onclick = () => {
+            overflowMenu.style.display = overflowMenu.style.display === 'block' ? 'none' : 'block';
+        };
+
+        document.addEventListener("click", (e) => {
+            if (!btnMenu.contains(e.target) && !overflowMenu.contains(e.target)) {
+                overflowMenu.style.display = 'none';
+            }
+        });
+
+        document.getElementById("menu-new-tab").onclick = () => {
+            overflowMenu.style.display = 'none';
+            createNewTab();
+        };
+
+        document.getElementById("menu-bookmarks").onclick = () => {
+            overflowMenu.style.display = 'none';
+            showBookmarksActivity("Bookmarks", bookmarks);
+        };
+
+        document.getElementById("menu-history").onclick = () => {
+            overflowMenu.style.display = 'none';
+            showBookmarksActivity("History", browsingHistory);
+        };
+
+        document.getElementById("menu-add-bookmark").onclick = () => {
+            overflowMenu.style.display = 'none';
+            const tab = getCurrentTab();
+            if (tab.url !== 'about:blank') {
+                bookmarks.push({ title: tab.url, url: tab.url });
+                showAndroidDialog("Bookmark Added", `Saved "${tab.url}" to Bookmarks.`);
+            }
+        };
+
+        document.getElementById("menu-settings").onclick = () => {
+            overflowMenu.style.display = 'none';
+            actSettings.style.display = 'flex';
+        };
+
+        // Tabs Switcher Sub Activity Controls
+        tabBadgeBtn.onclick = () => {
+            renderTabsActivity();
+            actTabs.style.display = 'flex';
+        };
+
+        document.getElementById("btn-close-tabs-activity").onclick = () => actTabs.style.display = 'none';
+        document.getElementById("btn-add-new-tab").onclick = () => {
+            createNewTab();
+            actTabs.style.display = 'none';
+        };
+
+        // Bookmarks & History Render
+        function showBookmarksActivity(title, items) {
+            document.getElementById("bm-activity-title").textContent = title;
+            const list = document.getElementById("bookmarks-list");
+            list.innerHTML = "";
+
+            if (items.length === 0) {
+                list.innerHTML = `<div style="padding:20px; text-align:center; color:#757575;">No ${title} entries found.</div>`;
+            } else {
+                items.forEach(item => {
+                    const row = document.createElement("div");
+                    row.className = "list-item";
+                    row.innerHTML = `
+                        <span class="material-symbols-outlined" style="color:#757575;">${title === 'Bookmarks' ? 'bookmark' : 'history'}</span>
+                        <div class="list-item-text">
+                            <span class="list-item-primary">${item.title}</span>
+                            <span class="list-item-secondary">${item.url}</span>
+                        </div>
+                    `;
+                    row.onclick = () => {
+                        loadUrlInActiveTab(item.url);
+                        actBookmarks.style.display = 'none';
+                    };
+                    list.appendChild(row);
+                });
+            }
+            actBookmarks.style.display = 'flex';
+        }
+
+        document.getElementById("btn-close-bm-activity").onclick = () => actBookmarks.style.display = 'none';
+        document.getElementById("btn-close-settings-activity").onclick = () => actSettings.style.display = 'none';
+
+        document.getElementById("item-clear-history").onclick = () => {
+            browsingHistory = [];
+            showAndroidDialog("Clear Data", "Browsing history and local cache cleared.");
+        };
+
+        // Speed Dial Cards Click Events
+        document.querySelectorAll(".speed-dial-card[data-url]").forEach(card => {
+            card.onclick = () => loadUrlInActiveTab(card.getAttribute("data-url"));
+        });
+
+        document.getElementById("btn-speed-apidemos").onclick = () => {
+            loadUrlInActiveTab("android_7_1_api_demos.html");
+        };
+
+        document.getElementById("btn-speed-add").onclick = () => {
+            showAndroidDialog("Add Shortcut", "Shortcut manager is ready.");
+        };
+
+        document.getElementById("btn-open-external").onclick = () => {
+            const tab = getCurrentTab();
+            if (tab && tab.url !== 'about:blank') {
+                window.open(tab.url, '_blank');
+            }
+        };
+
+        // Native Android Modal Dialog Helper
+        function showAndroidDialog(title, message) {
+            const overlay = document.createElement("div");
+            overlay.className = "android-dialog-overlay";
+            overlay.innerHTML = `
+                <div class="android-dialog">
+                    <div class="android-dialog-title">${title}</div>
+                    <div class="android-dialog-body">${message}</div>
+                    <div class="android-dialog-actions">
+                        <button class="android-dialog-btn" id="dlg-ok">OK</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            document.getElementById("dlg-ok").onclick = () => overlay.remove();
+        }
+
+        // Initialize Window
+        window.onload = () => {
+            renderCurrentTab();
+        };
+    </script>
+</body>
+</html>
