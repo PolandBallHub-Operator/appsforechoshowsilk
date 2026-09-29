@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FossSearch</title>
+    
+    <!-- Google Material Symbols CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Roboto', sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f2f2f2;
+            color: #212121;
+        }
+
+        /* Root App Container */
+        #app {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f2f2f2;
+        }
+
+        /* Views management */
+        .view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            background-color: #f2f2f2;
+            z-index: 1;
+        }
+
+        .view.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Android 7.1 (Nougat) Switch Component */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        /* Hide HTML default checkbox */
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* Switch Track (OFF State) */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        /* Switch Thumb / Knob (OFF State) */
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Switch Track (ON State) */
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        /* Switch Thumb / Knob (ON State) */
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        /* Header Navigation Styles (Android 7.1 Action Bars) */
+        .action-bar {
+            height: 56px;
+            background-color: #1e88e5;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.26);
+            z-index: 10;
+        }
+
+        .action-bar .btn-icon {
+            background: none;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+        }
+
+        .action-bar .title {
+            font-size: 20px;
+            font-weight: 500;
+            flex-grow: 1;
+        }
+
+        /* Logo Component (Styled "Search" Text like Google Font Logo) */
+        .search-logo {
+            font-size: 52px;
+            font-weight: 500;
+            letter-spacing: -1.5px;
+            text-align: center;
+            margin-bottom: 24px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .logo-s { color: #4285f4; }
+        .logo-e { color: #ea4335; }
+        .logo-a { color: #fbbc05; }
+        .logo-r { color: #4285f4; }
+        .logo-c { color: #34a853; }
+        .logo-h { color: #ea4335; }
+
+        /* Home View Layout */
+        #view-home {
+            position: relative;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .home-top-bar {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            height: 48px;
+        }
+
+        .menu-trigger {
+            background: none;
+            border: none;
+            color: #757575;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .home-center-content {
+            width: 100%;
+            max-width: 540px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 40px;
+        }
+
+        .search-box-fake {
+            width: 100%;
+            height: 48px;
+            background-color: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.16), 0 2px 10px rgba(0,0,0,0.12);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            cursor: pointer;
+        }
+
+        .search-box-fake .placeholder {
+            flex-grow: 1;
+            color: #757575;
+            font-size: 16px;
+        }
+
+        .mic-icon {
+            color: #4285f4;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Bottom Now Card */
+        .now-card {
+            width: 100%;
+            max-width: 540px;
+            background-color: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .now-card-body {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .now-card-text h3 {
+            font-size: 16px;
+            font-weight: 500;
+            color: #212121;
+            margin-bottom: 6px;
+        }
+
+        .now-card-text p {
+            font-size: 13px;
+            color: #757575;
+            line-height: 1.4;
+        }
+
+        .now-card-graphic {
+            width: 64px;
+            height: 64px;
+            background-color: #4285f4;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-left: 12px;
+            flex-shrink: 0;
+        }
+
+        .now-card-graphic .bar-top { height: 20%; background-color: #fbbc05; }
+        .now-card-graphic .bar-mid { height: 40%; background-color: #ffffff; }
+        .now-card-graphic .bar-bot { height: 40%; background-color: #34a853; }
+
+        .now-card-action {
+            align-self: flex-end;
+            margin-top: 12px;
+        }
+
+        .btn-flat {
+            background: none;
+            border: none;
+            color: #616161;
+            font-weight: 500;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Search Suggestions Overlay View */
+        #view-search-input {
+            background-color: #ffffff;
+        }
+
+        .search-input-header {
+            height: 56px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .search-input-header .logo-g {
+            font-size: 24px;
+            font-weight: 700;
+            color: #4285f4;
+            margin-right: 12px;
+            padding-left: 4px;
+        }
+
+        .search-input-field {
+            flex-grow: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            color: #212121;
+            height: 100%;
+        }
+
+        .suggestion-list {
+            list-style: none;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid #f5f5f5;
+            cursor: pointer;
+        }
+
+        .suggestion-item .icon {
+            color: #9e9e9e;
+            margin-right: 20px;
+            font-size: 20px;
+        }
+
+        .suggestion-item .text {
+            font-size: 15px;
+            color: #212121;
+        }
+
+        /* Drawer Navigation Menu (Android Material Drawer) */
+        .drawer-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        .drawer-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .drawer {
+            position: absolute;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 101;
+            transition: transform 0.25s ease;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer.open {
+            transform: translateX(280px);
+        }
+
+        .drawer-header {
+            height: 56px;
+            background-color: #212121;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .drawer-menu {
+            list-style: none;
+            padding: 8px 0;
+            flex-grow: 1;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #212121;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .drawer-item.disabled {
+            color: #bdbdbd;
+            cursor: default;
+        }
+
+        .drawer-item .icon {
+            margin-right: 24px;
+            color: #757575;
+            font-size: 22px;
+        }
+
+        .drawer-item.disabled .icon {
+            color: #bdbdbd;
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 8px 0;
+        }
+
+        /* Settings Activity View */
+        .settings-list {
+            list-style: none;
+            background-color: #ffffff;
+        }
+
+        .settings-group-title {
+            padding: 16px 16px 8px 16px;
+            color: #1e88e5;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid #f5f5f5;
+            cursor: pointer;
+        }
+
+        .settings-item-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-item-text .main {
+            font-size: 16px;
+            color: #212121;
+        }
+
+        .settings-item-text .sub {
+            font-size: 13px;
+            color: #757575;
+            margin-top: 2px;
+        }
+
+        /* Onboarding View (Welcome / Google Now Promo Screen) */
+        #view-onboarding {
+            background-color: #ffffff;
+            justify-content: space-between;
+            padding: 24px 16px 16px 16px;
+            text-align: center;
+        }
+
+        .onboarding-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .onboarding-graphic {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .onboarding-graphic .center-circle {
+            width: 80px;
+            height: 80px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: #4285f4;
+            z-index: 2;
+        }
+
+        .onboarding-graphic .orbit-icon {
+            position: absolute;
+            color: #b0bec5;
+            font-size: 20px;
+        }
+
+        .onboarding-title {
+            font-size: 18px;
+            font-weight: 400;
+            color: #616161;
+            margin-bottom: 12px;
+            max-width: 300px;
+            line-height: 1.3;
+        }
+
+        .onboarding-sub {
+            font-size: 13px;
+            color: #757575;
+            max-width: 320px;
+            line-height: 1.4;
+            margin-bottom: 12px;
+        }
+
+        .onboarding-link {
+            color: #1e88e5;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .onboarding-footer {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 12px;
+        }
+
+        .onboarding-footer button {
+            color: #616161;
+            font-weight: 500;
+            font-size: 14px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px 16px;
+        }
+
+        .onboarding-footer button.primary {
+            color: #1e88e5;
+        }
+
+        /* Search Results Frame View */
+        #view-results {
+            background-color: #ffffff;
+        }
+
+        .results-header {
+            height: 56px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 5;
+        }
+
+        .results-search-box {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            padding: 6px 12px;
+            margin-left: 8px;
+        }
+
+        .results-search-box input {
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 15px;
+            width: 100%;
+            color: #212121;
+        }
+
+        .iframe-container {
+            flex-grow: 1;
+            width: 100%;
+            height: calc(100% - 56px);
+            border: none;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <!-- View 1: Main Home Search Screen (Screenshot 2) -->
+        <div id="view-home" class="view active">
+            <div class="home-top-bar">
+                <button class="menu-trigger" id="btn-open-drawer">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+            </div>
+
+            <div class="home-center-content">
+                <!-- Search Logo (Google Replica styled with "Search") -->
+                <div class="search-logo">
+                    <span class="logo-s">S</span><span class="logo-e">e</span><span class="logo-a">a</span><span class="logo-r">r</span><span class="logo-c">c</span><span class="logo-h">h</span>
+                </div>
+
+                <!-- Fake Search Input Bar -->
+                <div class="search-box-fake" id="trigger-search">
+                    <span class="placeholder"></span>
+                    <div class="mic-icon">
+                        <span class="material-symbols-outlined" style="color:#4285f4;">mic</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Google Now Card Replica -->
+            <div class="now-card" id="trigger-onboarding">
+                <div class="now-card-body">
+                    <div class="now-card-text">
+                        <h3>Want answers before you ask?</h3>
+                        <p>See weather, traffic, and other info when you need it on Search Now</p>
+                    </div>
+                    <div class="now-card-graphic">
+                        <div class="bar-top"></div>
+                        <div class="bar-mid"></div>
+                        <div class="bar-bot"></div>
+                    </div>
+                </div>
+                <div class="now-card-action">
+                    <button class="btn-flat">GET STARTED</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- View 2: Search Input & Suggestions (Screenshot 3) -->
+        <div id="view-search-input" class="view">
+            <div class="search-input-header">
+                <span class="logo-g">S</span>
+                <input type="text" class="search-input-field" id="search-field" placeholder="Search, or say &quot;Ok Search&quot;" autofocus autocomplete="off">
+                <button class="btn-icon" id="btn-clear-search" style="background:none; border:none; color:#757575; cursor:pointer;">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+                <span class="material-symbols-outlined" style="color:#4285f4; margin-left:8px;">mic</span>
+            </div>
+
+            <ul class="suggestion-list" id="suggestion-list">
+                <li class="suggestion-item" data-query="mtv vmas 2026">
+                    <span class="material-symbols-outlined icon">trending_up</span>
+                    <span class="text">mtv vmas 2026</span>
+                </li>
+                <li class="suggestion-item" data-query="raul rosas jr">
+                    <span class="material-symbols-outlined icon">trending_up</span>
+                    <span class="text">raul rosas jr</span>
+                </li>
+                <li class="suggestion-item" data-query="mcdonalds drive thru">
+                    <span class="material-symbols-outlined icon">trending_up</span>
+                    <span class="text">mcdonalds drive thru</span>
+                </li>
+                <li class="suggestion-item" data-query="nyt strands hints">
+                    <span class="material-symbols-outlined icon">trending_up</span>
+                    <span class="text">nyt strands hints</span>
+                </li>
+                <li class="suggestion-item" data-query="dan wilson mariners">
+                    <span class="material-symbols-outlined icon">trending_up</span>
+                    <span class="text">dan wilson mariners</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- View 3: Search Results Iframe View (Screenshot 6) -->
+        <div id="view-results" class="view">
+            <div class="results-header">
+                <button class="btn-icon" id="btn-back-from-results" style="background:none; border:none; color:#757575; cursor:pointer;">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div class="results-search-box">
+                    <input type="text" id="results-input-field" readonly>
+                    <span class="material-symbols-outlined" id="btn-clear-results" style="color:#757575; cursor:pointer; font-size:18px;">close</span>
+                </div>
+            </div>
+            <div class="iframe-container">
+                <iframe id="search-iframe" src="about:blank" title="Search Results"></iframe>
+            </div>
+        </div>
+
+        <!-- View 4: Sub Activity Settings (Screenshot 5) -->
+        <div id="view-settings" class="view">
+            <div class="action-bar">
+                <button class="btn-icon" id="btn-back-settings">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div class="title">Settings</div>
+                <span class="material-symbols-outlined" style="cursor:pointer;">help_outline</span>
+            </div>
+
+            <div class="settings-list">
+                <div class="settings-group-title">Search &amp; Now</div>
+
+                <!-- Engine Selector with Android 7.1 Switch Toggle -->
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span class="main">Use Default Engine</span>
+                        <span class="sub" id="engine-status-text">Google Search (&amp;igu=1)</span>
+                    </div>
+                    <div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-search-engine" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span class="main">Accounts &amp; privacy</span>
+                    </div>
+                </div>
+
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span class="main">Search language</span>
+                    </div>
+                </div>
+
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span class="main">Voice</span>
+                    </div>
+                </div>
+
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span class="main">Phone search</span>
+                    </div>
+                </div>
+
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span class="main">Now cards</span>
+                    </div>
+                </div>
+
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span class="main">Now on Tap</span>
+                    </div>
+                </div>
+
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span class="main">About</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View 5: Onboarding / Search Now Welcome (Screenshot 1) -->
+        <div id="view-onboarding" class="view">
+            <div class="search-logo" style="margin-top: 10px;">
+                <span class="logo-s">S</span><span class="logo-e">e</span><span class="logo-a">a</span><span class="logo-r">r</span><span class="logo-c">c</span><span class="logo-h">h</span>
+            </div>
+
+            <div class="onboarding-content">
+                <div class="onboarding-graphic">
+                    <div class="center-circle">S</div>
+                    <span class="material-symbols-outlined orbit-icon" style="top: 10px; left: 10px;">flight</span>
+                    <span class="material-symbols-outlined orbit-icon" style="top: 10px; right: 10px;">search</span>
+                    <span class="material-symbols-outlined orbit-icon" style="bottom: 10px; left: 20px;">directions_car</span>
+                    <span class="material-symbols-outlined orbit-icon" style="bottom: 20px; right: 20px;">favorite</span>
+                    <span class="material-symbols-outlined orbit-icon" style="top: 90px; left: -10px;">work</span>
+                    <span class="material-symbols-outlined orbit-icon" style="top: 90px; right: -10px;">event</span>
+                </div>
+
+                <div class="onboarding-title">
+                    Let Search help you throughout the day with Search Now
+                </div>
+
+                <div class="onboarding-sub">
+                    Search Now anticipates the information you need, and shows answers that are just for you
+                </div>
+
+                <a href="#" class="onboarding-link">Learn more</a>
+            </div>
+
+            <div class="onboarding-footer">
+                <button id="btn-onboarding-no">NO THANKS</button>
+                <button class="primary" id="btn-onboarding-signin">SIGN IN</button>
+            </div>
+        </div>
+
+        <!-- Navigation Drawer Overlay & Content (Screenshot 4) -->
+        <div class="drawer-overlay" id="drawer-overlay"></div>
+        <div class="drawer" id="drawer">
+            <div class="drawer-header">
+                <span>Sign in</span>
+                <span class="material-symbols-outlined" style="cursor:pointer;">arrow_drop_down</span>
+            </div>
+            <ul class="drawer-menu">
+                <li class="drawer-item disabled">
+                    <span class="material-symbols-outlined icon">touch_app</span>
+                    <span>Reminders</span>
+                </li>
+                <li class="drawer-item disabled">
+                    <span class="material-symbols-outlined icon">build</span>
+                    <span>Customize</span>
+                </li>
+                <div class="drawer-divider"></div>
+                <li class="drawer-item" id="drawer-settings">
+                    <span class="material-symbols-outlined icon">settings</span>
+                    <span>Settings</span>
+                </li>
+                <li class="drawer-item">
+                    <span class="material-symbols-outlined icon">edit</span>
+                    <span>Send feedback</span>
+                </li>
+                <li class="drawer-item">
+                    <span class="material-symbols-outlined icon">help</span>
+                    <span>Help</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            /* State Management */
+            let useDefaultEngine = true; // true = Google (igu=1), false = Bing
+
+            /* Views */
+            const viewHome = document.getElementById('view-home');
+            const viewSearchInput = document.getElementById('view-search-input');
+            const viewResults = document.getElementById('view-results');
+            const viewSettings = document.getElementById('view-settings');
+            const viewOnboarding = document.getElementById('view-onboarding');
+
+            /* Drawer Elements */
+            const drawer = document.getElementById('drawer');
+            const drawerOverlay = document.getElementById('drawer-overlay');
+
+            /* Search Inputs */
+            const searchField = document.getElementById('search-field');
+            const resultsInputField = document.getElementById('results-input-field');
+            const searchIframe = document.getElementById('search-iframe');
+
+            /* Switch Elements */
+            const toggleEngine = document.getElementById('toggle-search-engine');
+            const engineStatusText = document.getElementById('engine-status-text');
+
+            /* View Switcher Helper */
+            function switchView(targetView) {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                targetView.classList.add('active');
+            }
+
+            /* Drawer Controller */
+            function openDrawer() {
+                drawer.classList.add('open');
+                drawerOverlay.classList.add('open');
+            }
+
+            function closeDrawer() {
+                drawer.classList.remove('open');
+                drawerOverlay.classList.remove('open');
+            }
+
+            document.getElementById('btn-open-drawer').addEventListener('click', openDrawer);
+            drawerOverlay.addEventListener('click', closeDrawer);
+
+            /* Drawer Navigation */
+            document.getElementById('drawer-settings').addEventListener('click', function() {
+                closeDrawer();
+                switchView(viewSettings);
+            });
+
+            /* Back from Settings */
+            document.getElementById('btn-back-settings').addEventListener('click', function() {
+                switchView(viewHome);
+            });
+
+            /* Toggle Search Engine Switch Handling */
+            toggleEngine.addEventListener('change', function() {
+                useDefaultEngine = this.checked;
+                if (useDefaultEngine) {
+                    engineStatusText.textContent = 'Google Search (&igu=1)';
+                } else {
+                    engineStatusText.textContent = 'Bing Search';
+                }
+            });
+
+            /* Trigger Search Input Focus */
+            document.getElementById('trigger-search').addEventListener('click', function() {
+                switchView(viewSearchInput);
+                searchField.value = '';
+                searchField.focus();
+            });
+
+            /* Clear Search Input */
+            document.getElementById('btn-clear-search').addEventListener('click', function() {
+                searchField.value = '';
+                searchField.focus();
+            });
+
+            /* Execute Search Function */
+            function performSearch(query) {
+                if (!query || query.trim() === '') return;
+                
+                let targetUrl = '';
+                if (useDefaultEngine) {
+                    targetUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&igu=1`;
+                } else {
+                    targetUrl = `https://bing.com/search?q=${encodeURIComponent(query)}`;
+                }
+
+                resultsInputField.value = query;
+                searchIframe.src = targetUrl;
+                switchView(viewResults);
+            }
+
+            /* Search Input Enter Handler */
+            searchField.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch(this.value);
+                }
+            });
+
+            /* Suggestion Click Handler */
+            document.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const query = this.getAttribute('data-query');
+                    performSearch(query);
+                });
+            });
+
+            /* Back from Results to Home */
+            document.getElementById('btn-back-from-results').addEventListener('click', function() {
+                searchIframe.src = 'about:blank';
+                switchView(viewHome);
+            });
+
+            document.getElementById('btn-clear-results').addEventListener('click', function() {
+                searchIframe.src = 'about:blank';
+                switchView(viewSearchInput);
+                searchField.value = '';
+                searchField.focus();
+            });
+
+            /* Trigger Onboarding View */
+            document.getElementById('trigger-onboarding').addEventListener('click', function() {
+                switchView(viewOnboarding);
+            });
+
+            document.getElementById('btn-onboarding-no').addEventListener('click', function() {
+                switchView(viewHome);
+            });
+
+            document.getElementById('btn-onboarding-signin').addEventListener('click', function() {
+                switchView(viewHome);
+            });
+        });
+    </script>
+</body>
+</html>
