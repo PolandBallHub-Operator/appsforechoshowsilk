@@ -2,6 +2,8 @@
 Android™7.0のMaterialアプリを完全再現。FOSS
 <br>Androidの歴史的遺産を保存し、伝承するという目的でやっています。これはOSSプロジェクトであり、無収益です。
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsui/
+- EchoShowを縦画面でWeb見よう
+- https://polandballhub-operator.github.io/appsforechoshowsilk/kiosk2phone/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/bookmark/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/memo/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsuifixed/
