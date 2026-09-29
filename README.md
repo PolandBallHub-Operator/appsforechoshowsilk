@@ -1,5 +1,6 @@
 # Echo Showを楽しむためのwebapp
-- Android7.0のMaterialアプリを完全再現。FOSS
+Android™7.0のMaterialアプリを完全再現。FOSS
+<br>Androidの歴史的遺産を保存し、伝承するという目的でやっています。これはOSSプロジェクトであり、無収益です。
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsui/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/bookmark/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/memo/
