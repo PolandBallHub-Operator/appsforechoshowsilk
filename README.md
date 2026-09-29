@@ -21,3 +21,4 @@ Android™7.0のMaterialアプリを完全再現。FOSS
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gpbooks.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/setup.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/market.html
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/calc.html
