@@ -1,29 +1,52 @@
 # Echo Showを楽しむためのwebapp
 Android™7.0のMaterialアプリを完全再現。FOSS
 <br>Androidの歴史的遺産を保存し、伝承するという目的でやっています。これはOSSプロジェクトであり、無収益です。
+
+-EchoShowでローカルファイルを使おう
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsui/
 - EchoShowを縦画面でWeb見よう
 - https://polandballhub-operator.github.io/appsforechoshowsilk/kiosk2phone/
+- EchoShow向けWebリンクブックマーク
 - https://polandballhub-operator.github.io/appsforechoshowsilk/bookmark/
+-EchoのUIに最適なメモ帳
 - https://polandballhub-operator.github.io/appsforechoshowsilk/memo/
+- Documentsのバグ修整版
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsuifixed/
+- メディアプレーヤー
 - https://polandballhub-operator.github.io/appsforechoshowsilk/medip/
-- - https://polandballhub-operator.github.io/appsforechoshowsilk/aospbrowser # beta
-- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome
+- ベータ　iFrameブラウザ
+- https://polandballhub-operator.github.io/appsforechoshowsilk/aospbrowser
+- Android7設定 モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/setting.html
+- Android7連絡帳 モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/contact.html
+- Android7AOSPDevTool モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/devtool.html
+- Android7AOSPgallery モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gallery.html
+- Android7AOSPcamera モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/camera.html
+- Fire OS 6 設定 モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/firesetting.html
+- Android7AOSPmessage モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/message.html
+- Android7AOSPclock モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/clock.html
+- Android7AOSPAPIDemoapp モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/apidemo.html
+- Android7MusicPlay 実用性有り
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gpmusic.html
+- Android7PDFPlayer 実用性有り
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gpbooks.html
+- Android7SetupWizard モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/setup.html
+- Android7Market 実用性半有り
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/market.html
+- Android7AOSPCalculator 実用性有り
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/calc.html
+- Android7GQSB 実用性有り
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/searchbox.html
+- Android7gallery 実用性有り
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gphoto.html
+- Android7Launcher3
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/launcher3.html
