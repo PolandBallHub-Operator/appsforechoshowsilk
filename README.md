@@ -5,6 +5,7 @@
 - https://polandballhub-operator.github.io/appsforechoshowsilk/memo/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsuifixed/
 - https://polandballhub-operator.github.io/appsforechoshowsilk/medip/
+- - https://polandballhub-operator.github.io/appsforechoshowsilk/aospbrowser # beta
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/setting.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/contact.html
