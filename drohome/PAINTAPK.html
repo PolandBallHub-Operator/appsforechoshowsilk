@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Android 9 Pie - Paint (Easter Egg)</title>
+    <!-- Google Material Symbols CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        /* Echo Show 5 Gen 3 Fullscreen Container */
+        #app-viewport {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background-color: #ffffff;
+        }
+
+        /* Android 9 Paint Action Bar Header (Exact replica of screenshot) */
+        .paint-header {
+            height: 52px;
+            background-color: #dcdcdc;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 16px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .header-btn {
+            background: none;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: #000000;
+            transition: background-color 0.2s ease;
+        }
+
+        .header-btn:active, .header-btn.active {
+            background-color: rgba(0, 0, 0, 0.12);
+        }
+
+        .header-btn .material-symbols-outlined {
+            font-size: 26px;
+            font-weight: 500;
+        }
+
+        /* Color Preview Circle Button */
+        .color-circle-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background-color: #000000;
+            border: 2px solid rgba(0,0,0,0.2);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            transition: transform 0.1s ease;
+        }
+
+        .color-circle-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* Drawing Canvas Region */
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 52px);
+            background-color: #ffffff;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Brush Size / Style Popover Overlay */
+        .brush-popover {
+            position: absolute;
+            top: 58px;
+            left: 16px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            padding: 16px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 100;
+            min-width: 200px;
+        }
+
+        .brush-popover.active {
+            display: flex;
+        }
+
+        .popover-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .brush-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brush-slider {
+            flex-grow: 1;
+            accent-color: #212121;
+        }
+
+        /* Eyedropper HUD Indicator */
+        .eyedropper-hud {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .eyedropper-hud.active {
+            display: flex;
+        }
+
+        .hud-swatch {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid #ffffff;
+        }
+
+        /* Material Color Picker Modal Styles */
+        .picker-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .picker-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .picker-card {
+            width: 310px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.9);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .picker-backdrop.active .picker-card {
+            transform: scale(1);
+        }
+
+        .sv-container {
+            position: relative;
+            width: 100%;
+            height: 180px;
+            cursor: crosshair;
+            touch-action: none;
+            overflow: hidden;
+        }
+
+        .sv-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .sv-handle {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border: 2.5px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.6), inset 0 0 2px rgba(0,0,0,0.6);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            top: 0%;
+            left: 0%;
+        }
+
+        .controls-bar {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 12px;
+        }
+
+        .eyedropper-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            transition: background 0.2s;
+            color: #5f6368;
+            flex-shrink: 0;
+        }
+
+        .eyedropper-btn:hover {
+            background: #f1f3f4;
+        }
+
+        .eyedropper-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .color-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            background-color: #000000;
+            flex-shrink: 0;
+            box-shadow: inset 0 0 2px rgba(0,0,0,0.2);
+        }
+
+        .hue-slider-container {
+            position: relative;
+            flex-grow: 1;
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(to right, 
+                #ff0000 0%, #ff00ff 17%, #0000ff 33%, 
+                #00ffff 50%, #00ff00 67%, #ffff00 83%, #ff0000 100%);
+            cursor: pointer;
+            touch-action: none;
+        }
+
+        .hue-handle {
+            position: absolute;
+            top: 50%;
+            left: 0%;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #ff0000;
+            border: 3px solid #000000;
+            box-shadow: inset 0 0 0 2px #ffffff, 0 1px 4px rgba(0,0,0,0.3);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .inputs-container {
+            padding: 0 16px 16px 16px;
+        }
+
+        .inputs-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .hex-row {
+            display: flex;
+            margin-bottom: 4px;
+        }
+
+        .input-box {
+            width: 100%;
+            height: 42px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 16px;
+            text-align: center;
+            color: #202124;
+            outline: none;
+            transition: border-color 0.2s;
+            -moz-appearance: textfield;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        .input-box::-webkit-outer-spin-button,
+        .input-box::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .input-box:focus {
+            border-color: #1a73e8;
+            border-width: 2px;
+        }
+
+        .labels-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+
+        .hex-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 8px;
+        }
+
+        .label-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: #5f6368;
+        }
+
+        .format-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #5f6368;
+            border-radius: 4px;
+        }
+
+        .format-toggle:hover {
+            background-color: #f1f3f4;
+        }
+
+        .format-toggle svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .footer-bar {
+            border-top: 1px solid #f1f3f4;
+            padding: 6px 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-done {
+            background: transparent;
+            border: none;
+            color: #1a73e8;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-done:hover {
+            background: rgba(26, 115, 232, 0.04);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-viewport">
+        <!-- Top Action Bar (Screenshot Replica) -->
+        <header class="paint-header">
+            <!-- 1. Brush Settings / Smoothness Switcher -->
+            <button class="header-btn" id="btn-brush-style" title="Brush Settings">
+                <span class="material-symbols-outlined">adjust</span>
+            </button>
+
+            <!-- 2. Color Swatch & Picker Trigger -->
+            <div class="color-circle-btn" id="btn-color-picker" title="Color Picker"></div>
+
+            <!-- 3. Eyedropper Tool -->
+            <button class="header-btn" id="btn-eyedropper" title="Eyedropper Tool">
+                <span class="material-symbols-outlined">colorize</span>
+            </button>
+
+            <!-- 4. Hourglass (Clear / Smooth Revert Animation) -->
+            <button class="header-btn" id="btn-hourglass" title="Fade Canvas / Undo">
+                <span class="material-symbols-outlined">hourglass_empty</span>
+            </button>
+
+            <!-- 5. Close / Reset -->
+            <button class="header-btn" id="btn-close" title="Clear Canvas">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </header>
+
+        <!-- Main Paint Canvas Container -->
+        <main class="canvas-container" id="canvas-container">
+            <canvas id="paint-canvas"></canvas>
+            
+            <!-- Brush Settings Popover -->
+            <div class="brush-popover" id="brush-popover">
+                <div class="popover-title">Brush Thickness</div>
+                <div class="brush-slider-row">
+                    <span class="material-symbols-outlined" style="font-size:16px;">circle</span>
+                    <input type="range" class="brush-slider" id="brush-size-input" min="2" max="60" value="12">
+                    <span class="material-symbols-outlined" style="font-size:28px;">circle</span>
+                </div>
+                <div class="popover-title" style="margin-top: 4px;">Pressure Dynamic</div>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:13px; color:#444;">Enable Pressure</span>
+                    <input type="checkbox" id="chk-pressure" checked style="accent-color:#212121; width:18px; height:18px;">
+                </div>
+            </div>
+
+            <!-- Eyedropper Mode HUD Indicator -->
+            <div class="eyedropper-hud" id="eyedropper-hud">
+                <div class="hud-swatch" id="hud-swatch"></div>
+                <span>Tap canvas to sample color</span>
+            </div>
+        </main>
+    </div>
+
+    <!-- Material Color Picker Dialog Backdrop -->
+    <div class="picker-backdrop" id="backdrop">
+        <div class="picker-card" id="pickerCard">
+            <!-- 1. Color Palette Canvas (Saturation / Value) -->
+            <div class="sv-container" id="svContainer">
+                <canvas class="sv-canvas" id="svCanvas"></canvas>
+                <div class="sv-handle" id="svHandle"></div>
+            </div>
+
+            <!-- 2. Middle Controls Bar -->
+            <div class="controls-bar">
+                <button class="eyedropper-btn" id="modalEyedropperBtn" title="Pick color from screen">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M17.5 3c-.4 0-.8.1-1.1.4l-1.9 1.9 1.8 1.8 1.9-1.9c.6-.6.6-1.5 0-2.1-.3-.3-.7-.1-1-.1zm-4.1 3.4l-8.6 8.6c-.2.2-.3.4-.3.7v3.3h3.3c.3 0 .5-.1.7-.3l8.6-8.6-3.7-3.7zm-7.6 11.6v-1.9l7.2-7.2 1.9 1.9-7.2 7.2h-1.9z"/>
+                    </svg>
+                </button>
+
+                <div class="color-preview" id="colorPreview"></div>
+
+                <div class="hue-slider-container" id="hueContainer">
+                    <div class="hue-handle" id="hueHandle"></div>
+                </div>
+            </div>
+
+            <!-- 3. Dynamic Mode Values Input Area -->
+            <div class="inputs-container">
+                <!-- RGB Mode Inputs -->
+                <div id="rgbInputs">
+                    <div class="inputs-row">
+                        <input type="number" class="input-box" id="rVal" min="0" max="255" value="0">
+                        <input type="number" class="input-box" id="gVal" min="0" max="255" value="0">
+                        <input type="number" class="input-box" id="bVal" min="0" max="255" value="0">
+                    </div>
+                    <div class="labels-row">
+                        <span class="label-text">R</span>
+                        <span class="label-text">G</span>
+                        <div style="display: flex; justify-content: space-around; align-items: center;">
+                            <span class="label-text">B</span>
+                            <button class="format-toggle" id="toggleFormatBtnBtn" title="Switch format">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HEX Mode Inputs -->
+                <div id="hexInputs" style="display: none;">
+                    <div class="hex-row">
+                        <input type="text" class="input-box" id="hexVal" value="000000" maxlength="7">
+                    </div>
+                    <div class="hex-label-row">
+                        <span class="label-text" style="flex-grow: 1; text-align: center;">HEX</span>
+                        <button class="format-toggle" id="toggleFormatBtnHex" title="Switch format">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- HSL Mode Inputs -->
+                <div id="hslInputs" style="display: none;">
+                    <div class="inputs-row">
+                        <input type="number" class="input-box" id="hVal" min="0" max="360" value="0">
+                        <input type="number" class="input-box" id="sVal" min="0" max="100" value="0">
+                        <input type="number" class="input-box" id="lVal" min="0" max="100" value="0">
+                    </div>
+                    <div class="labels-row">
+                        <span class="label-text">H</span>
+                        <span class="label-text">S%</span>
+                        <div style="display: flex; justify-content: space-around; align-items: center;">
+                            <span class="label-text">L%</span>
+                            <button class="format-toggle" id="toggleFormatBtnHsl" title="Switch format">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bar">
+                <button class="btn-done" id="closeBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Color State Management ---
+        const pickerState = {
+            h: 0,        // Hue (0 - 360)
+            s: 0,        // Saturation (0 - 1)
+            v: 0,        // Value (0 - 1)
+            formatIndex: 0, // 0: RGB, 1: HEX, 2: HSL
+            currentColorHex: '#000000'
+        };
+
+        // --- App Main Brush Settings ---
+        const brushState = {
+            size: 12,
+            usePressure: true,
+            isEyedropperMode: false,
+            color: '#000000'
+        };
+
+        // --- DOM Elements ---
+        const canvasContainer = document.getElementById('canvas-container');
+        const canvas = document.getElementById('paint-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        const btnBrushStyle = document.getElementById('btn-brush-style');
+        const btnColorPicker = document.getElementById('btn-color-picker');
+        const btnEyedropper = document.getElementById('btn-eyedropper');
+        const btnHourglass = document.getElementById('btn-hourglass');
+        const btnClose = document.getElementById('btn-close');
+
+        const brushPopover = document.getElementById('brush-popover');
+        const brushSizeInput = document.getElementById('brush-size-input');
+        const chkPressure = document.getElementById('chk-pressure');
+        const eyedropperHud = document.getElementById('eyedropper-hud');
+        const hudSwatch = document.getElementById('hud-swatch');
+
+        // Color Picker Modal DOM Elements
+        const backdrop = document.getElementById('backdrop');
+        const closeBtn = document.getElementById('closeBtn');
+        const svContainer = document.getElementById('svContainer');
+        const svCanvas = document.getElementById('svCanvas');
+        const svHandle = document.getElementById('svHandle');
+        const hueContainer = document.getElementById('hueContainer');
+        const hueHandle = document.getElementById('hueHandle');
+        const colorPreview = document.getElementById('colorPreview');
+        const modalEyedropperBtn = document.getElementById('modalEyedropperBtn');
+
+        const rgbInputs = document.getElementById('rgbInputs');
+        const hexInputs = document.getElementById('hexInputs');
+        const hslInputs = document.getElementById('hslInputs');
+        const rVal = document.getElementById('rVal');
+        const gVal = document.getElementById('gVal');
+        const bVal = document.getElementById('bVal');
+        const hexVal = document.getElementById('hexVal');
+        const hVal = document.getElementById('hVal');
+        const sVal = document.getElementById('sVal');
+        const lVal = document.getElementById('lVal');
+
+        function hsvToRgb(h, s, v) {
+            let r, g, b;
+            let i = Math.floor((h / 60) % 6);
+            let f = (h / 60) - i;
+            let p = v * (1 - s);
+            let q = v * (1 - f * s);
+            let t = v * (1 - (1 - f) * s);
+
+            switch (i) {
+                case 0: r = v; g = t; b = p; break;
+                case 1: r = q; g = v; b = p; break;
+                case 2: r = p; g = v; b = t; break;
+                case 3: r = p; g = q; b = v; break;
+                case 4: r = t; g = p; b = v; break;
+                case 5: r = v; g = p; b = q; break;
+            }
+            return {
+                r: Math.round(r * 255),
+                g: Math.round(g * 255),
+                b: Math.round(b * 255)
+            };
+        }
+
+        function rgbToHsv(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, v = max;
+            let d = max - min;
+            s = max === 0 ? 0 : d / max;
+
+            if (max === min) {
+                h = 0;
+            } else {
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h: h * 360, s: s, v: v };
+        }
+
+        function rgbToHex(r, g, b) {
+            return ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
+
+        function hexToRgb(hex) {
+            hex = hex.replace(/^#/, '');
+            if (hex.length === 3) {
+                hex = hex.split('').map(c => c + c).join('');
+            }
+            if (hex.length !== 6) return null;
+            let num = parseInt(hex, 16);
+            if (isNaN(num)) return null;
+            return {
+                r: (num >> 16) & 255,
+                g: (num >> 8) & 255,
+                b: num & 255
+            };
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0;
+            } else {
+                let d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return {
+                h: Math.round(h * 360),
+                s: Math.round(s * 100),
+                l: Math.round(l * 100)
+            };
+        }
+
+        function hslToRgb(h, s, l) {
+            h /= 360; s /= 100; l /= 100;
+            let r, g, b;
+
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+
+                let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                let p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return {
+                r: Math.round(r * 255),
+                g: Math.round(g * 255),
+                b: Math.round(b * 255)
+            };
+        }
+
+        function drawSvCanvas() {
+            const ctx = svCanvas.getContext('2d');
+            const width = svCanvas.width;
+            const height = svCanvas.height;
+
+            const hueRgb = hsvToRgb(pickerState.h, 1, 1);
+            ctx.fillStyle = `rgb(${hueRgb.r}, ${hueRgb.g}, ${hueRgb.b})`;
+            ctx.fillRect(0, 0, width, height);
+
+            const whiteGrad = ctx.createLinearGradient(0, 0, width, 0);
+            whiteGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            whiteGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = whiteGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            const blackGrad = ctx.createLinearGradient(0, 0, 0, height);
+            blackGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            blackGrad.addColorStop(1, 'rgba(0, 0, 0, 1)');
+            ctx.fillStyle = blackGrad;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        function resizePickerCanvas() {
+            const rect = svContainer.getBoundingClientRect();
+            svCanvas.width = rect.width || 310;
+            svCanvas.height = rect.height || 180;
+            drawSvCanvas();
+        }
+
+        function updatePickerUI(skipInputs = false) {
+            drawSvCanvas();
+
+            const rgb = hsvToRgb(pickerState.h, pickerState.s, pickerState.v);
+            const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+            const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+            const svRect = svContainer.getBoundingClientRect();
+            const handleX = pickerState.s * svRect.width;
+            const handleY = (1 - pickerState.v) * svRect.height;
+            svHandle.style.left = `${handleX}px`;
+            svHandle.style.top = `${handleY}px`;
+
+            const hueRect = hueContainer.getBoundingClientRect();
+            const hueX = (pickerState.h / 360) * hueRect.width;
+            hueHandle.style.left = `${hueX}px`;
+            const pureHueRgb = hsvToRgb(pickerState.h, 1, 1);
+            hueHandle.style.backgroundColor = `rgb(${pureHueRgb.r}, ${pureHueRgb.g}, ${pureHueRgb.b})`;
+
+            const cssColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+            colorPreview.style.backgroundColor = cssColor;
+            btnColorPicker.style.backgroundColor = cssColor;
+            hudSwatch.style.backgroundColor = cssColor;
+            
+            brushState.color = `#${hex}`;
+            pickerState.currentColorHex = `#${hex}`;
+
+            if (!skipInputs) {
+                rVal.value = rgb.r;
+                gVal.value = rgb.g;
+                bVal.value = rgb.b;
+                hexVal.value = hex;
+                hVal.value = hsl.h;
+                sVal.value = hsl.s;
+                lVal.value = hsl.l;
+            }
+        }
+
+        let isDraggingSV = false;
+        let isDraggingHue = false;
+
+        function handleSVMove(e) {
+            const rect = svContainer.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            let x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+            let y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+
+            pickerState.s = x / rect.width;
+            pickerState.v = 1 - (y / rect.height);
+
+            updatePickerUI();
+        }
+
+        function handleHueMove(e) {
+            const rect = hueContainer.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+
+            let x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+            pickerState.h = (x / rect.width) * 360;
+            if (pickerState.h >= 360) pickerState.h = 359.9;
+
+            updatePickerUI();
+        }
+
+        svContainer.addEventListener('mousedown', (e) => { isDraggingSV = true; handleSVMove(e); });
+        svContainer.addEventListener('touchstart', (e) => { isDraggingSV = true; handleSVMove(e); }, { passive: true });
+
+        hueContainer.addEventListener('mousedown', (e) => { isDraggingHue = true; handleHueMove(e); });
+        hueContainer.addEventListener('touchstart', (e) => { isDraggingHue = true; handleHueMove(e); }, { passive: true });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDraggingSV) handleSVMove(e);
+            if (isDraggingHue) handleHueMove(e);
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (isDraggingSV) handleSVMove(e);
+            if (isDraggingHue) handleHueMove(e);
+        }, { passive: true });
+
+        window.addEventListener('mouseup', () => { isDraggingSV = false; isDraggingHue = false; });
+        window.addEventListener('touchend', () => { isDraggingSV = false; isDraggingHue = false; });
+
+        [rVal, gVal, bVal].forEach(input => {
+            input.addEventListener('input', () => {
+                let r = Math.min(255, Math.max(0, parseInt(rVal.value) || 0));
+                let g = Math.min(255, Math.max(0, parseInt(gVal.value) || 0));
+                let b = Math.min(255, Math.max(0, parseInt(bVal.value) || 0));
+
+                const hsv = rgbToHsv(r, g, b);
+                pickerState.h = hsv.h;
+                pickerState.s = hsv.s;
+                pickerState.v = hsv.v;
+
+                updatePickerUI(true);
+            });
+        });
+
+        hexVal.addEventListener('input', () => {
+            let rgb = hexToRgb(hexVal.value);
+            if (rgb) {
+                const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+                pickerState.h = hsv.h;
+                pickerState.s = hsv.s;
+                pickerState.v = hsv.v;
+                updatePickerUI(true);
+            }
+        });
+
+        [hVal, sVal, lVal].forEach(input => {
+            input.addEventListener('input', () => {
+                let h = Math.min(360, Math.max(0, parseInt(hVal.value) || 0));
+                let s = Math.min(100, Math.max(0, parseInt(sVal.value) || 0));
+                let l = Math.min(100, Math.max(0, parseInt(lVal.value) || 0));
+
+                let rgb = hslToRgb(h, s, l);
+                let hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+                pickerState.h = hsv.h;
+                pickerState.s = hsv.s;
+                pickerState.v = hsv.v;
+
+                updatePickerUI(true);
+            });
+        });
+
+        function toggleFormat() {
+            pickerState.formatIndex = (pickerState.formatIndex + 1) % 3;
+            rgbInputs.style.display = pickerState.formatIndex === 0 ? 'block' : 'none';
+            hexInputs.style.display = pickerState.formatIndex === 1 ? 'block' : 'none';
+            hslInputs.style.display = pickerState.formatIndex === 2 ? 'block' : 'none';
+            updatePickerUI();
+        }
+
+        document.getElementById('toggleFormatBtnBtn').addEventListener('click', toggleFormat);
+        document.getElementById('toggleFormatBtnHex').addEventListener('click', toggleFormat);
+        document.getElementById('toggleFormatBtnHsl').addEventListener('click', toggleFormat);
+
+        if ('EyeDropper' in window) {
+            modalEyedropperBtn.addEventListener('click', async () => {
+                try {
+                    const eyeDropper = new EyeDropper();
+                    const result = await eyeDropper.open();
+                    const rgb = hexToRgb(result.sRGBHex);
+                    if (rgb) {
+                        const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+                        pickerState.h = hsv.h;
+                        pickerState.s = hsv.s;
+                        pickerState.v = hsv.v;
+                        updatePickerUI();
+                    }
+                } catch (e) {}
+            });
+        } else {
+            modalEyedropperBtn.style.opacity = '0.4';
+        }
+
+        function openPicker() {
+            backdrop.classList.add('active');
+            resizePickerCanvas();
+            updatePickerUI();
+        }
+
+        function closePicker() {
+            backdrop.classList.remove('active');
+        }
+
+        btnColorPicker.addEventListener('click', openPicker);
+        closeBtn.addEventListener('click', closePicker);
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) closePicker();
+        });
+
+        function setupCanvasSize() {
+            const rect = canvasContainer.getBoundingClientRect();
+            
+            // Retain existing drawing data across resizes
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0);
+
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+            // Fill white background on fresh canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (tempCanvas.width > 0) {
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+        }
+
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        function getCanvasPoint(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+                pressure: (e.pressure && e.pressure > 0) ? e.pressure : 0.5
+            };
+        }
+
+        function sampleCanvasColor(x, y) {
+            const pixel = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data;
+            const hsv = rgbToHsv(pixel[0], pixel[1], pixel[2]);
+            pickerState.h = hsv.h;
+            pickerState.s = hsv.s;
+            pickerState.v = hsv.v;
+            updatePickerUI();
+        }
+
+        function handlePointerDown(e) {
+            const pt = getCanvasPoint(e);
+
+            if (brushState.isEyedropperMode) {
+                sampleCanvasColor(pt.x, pt.y);
+                setEyedropperMode(false);
+                return;
+            }
+
+            isDrawing = true;
+            lastX = pt.x;
+            lastY = pt.y;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = brushState.color;
+
+            let currentWidth = brushState.size;
+            if (brushState.usePressure && e.pointerType === 'pen') {
+                currentWidth = brushState.size * (pt.pressure * 1.8);
+            }
+            ctx.lineWidth = currentWidth;
+        }
+
+        function handlePointerMove(e) {
+            if (!isDrawing || brushState.isEyedropperMode) return;
+
+            const pt = getCanvasPoint(e);
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+
+            // Midpoint quadratic curve for fluid strokes
+            const midX = (lastX + pt.x) / 2;
+            const midY = (lastY + pt.y) / 2;
+            ctx.quadraticCurveTo(lastX, lastY, midX, midY);
+
+            let currentWidth = brushState.size;
+            if (brushState.usePressure && e.pointerType === 'pen') {
+                currentWidth = brushState.size * (pt.pressure * 1.8);
+            }
+            ctx.lineWidth = Math.max(1, currentWidth);
+            ctx.stroke();
+
+            lastX = pt.x;
+            lastY = pt.y;
+        }
+
+        function handlePointerUp() {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('pointerdown', handlePointerDown);
+        canvas.addEventListener('pointermove', handlePointerMove);
+        canvas.addEventListener('pointerup', handlePointerUp);
+        canvas.addEventListener('pointercancel', handlePointerUp);
+
+        // 1. Brush Style / Thickness Popover
+        btnBrushStyle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            brushPopover.classList.toggle('active');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!brushPopover.contains(e.target) && e.target !== btnBrushStyle) {
+                brushPopover.classList.remove('active');
+            }
+        });
+
+        brushSizeInput.addEventListener('input', (e) => {
+            brushState.size = parseInt(e.target.value, 10);
+        });
+
+        chkPressure.addEventListener('change', (e) => {
+            brushState.usePressure = e.target.checked;
+        });
+
+        // 3. Eyedropper Toggle
+        function setEyedropperMode(active) {
+            brushState.isEyedropperMode = active;
+            if (active) {
+                btnEyedropper.classList.add('active');
+                eyedropperHud.classList.add('active');
+            } else {
+                btnEyedropper.classList.remove('active');
+                eyedropperHud.classList.remove('active');
+            }
+        }
+
+        btnEyedropper.addEventListener('click', () => {
+            setEyedropperMode(!brushState.isEyedropperMode);
+        });
+
+        // 4. Hourglass (Fade Canvas / Smooth Revert Effect)
+        btnHourglass.addEventListener('click', () => {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // 5. Close Button (Clear Canvas Completely)
+        btnClose.addEventListener('click', () => {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
+        window.addEventListener('load', () => {
+            setupCanvasSize();
+
+            // Default Color Black (#000000)
+            const hsv = rgbToHsv(0, 0, 0);
+            pickerState.h = hsv.h;
+            pickerState.s = hsv.s;
+            pickerState.v = hsv.v;
+            updatePickerUI();
+        });
+
+        window.addEventListener('resize', () => {
+            setupCanvasSize();
+            if (backdrop.classList.contains('active')) {
+                resizePickerCanvas();
+                updatePickerUI();
+            }
+        });
+    </script>
+</body>
+</html>
