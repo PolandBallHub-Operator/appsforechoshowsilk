@@ -1,4 +1,4 @@
-# Echo Showを楽しむためのwebapp
+# Echo Showを楽しむためのwebapp&Android7Apphtml
 Android™7.0のMaterialアプリを完全再現。FOSS
 <br>Androidの歴史的遺産を保存し、伝承するという目的でやっています。これはOSSプロジェクトであり、無収益です。
 <br>Echo ShowはEcho OSのまま使いましょう
