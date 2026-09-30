@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#333a40">
+  <title>Echo Show Weather</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #333a40;
+      --line: rgba(235, 241, 245, .20);
+      --text: #f5f7f8;
+      --subtext: #d3d9dd;
+      --accent: #00e5ec;
+      --app-dpi: 1;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    button:active { opacity: .72; }
+    .hidden { display: none !important; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .screen {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: calc(100vw / var(--app-dpi));
+      height: calc(100dvh / var(--app-dpi));
+      zoom: var(--app-dpi);
+      overflow: auto;
+      padding: clamp(18px, 5vh, 42px) clamp(20px, 6vw, 64px);
+      background: var(--bg);
+    }
+    .home-header {
+      display: flex;
+      align-items: center;
+      height: 40px;
+      flex: 0 0 40px;
+      border-bottom: 1px solid var(--line);
+      color: #e0e7f0;
+      font-size: 15px;
+    }
+    .main-menu {
+      display: flex;
+      flex-direction: column;
+      margin-top: 8px;
+    }
+    .menu-row {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      min-height: 76px;
+      padding: 13px 0;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      text-align: left;
+    }
+    .row-copy {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .row-copy strong {
+      font-size: clamp(18px, 2.7vw, 23px);
+      font-weight: 500;
+    }
+    .row-copy small {
+      color: var(--subtext);
+      font-size: clamp(12px, 1.7vw, 14px);
+    }
+
+    .sub-screen { padding-top: clamp(18px, 4vh, 34px); }
+    .sub-header {
+      display: flex;
+      min-height: 46px;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .sub-header h1 {
+      margin: 0;
+      font-size: 19px;
+      font-weight: 500;
+    }
+    .back-button, .header-action {
+      flex: 0 0 auto;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+    .back-button {
+      width: 26px;
+      color: var(--text);
+      font-size: 32px;
+      font-weight: 300;
+      line-height: 1;
+      text-align: left;
+    }
+    .header-action {
+      min-width: 48px;
+      height: 36px;
+      margin-left: auto;
+      border-radius: 999px;
+      background: #f7f9fa;
+      color: #18252d;
+      font-size: 23px;
+    }
+    .page-content { flex: 1; overflow: auto; padding-top: 4px; }
+    .settings-content { padding-top: 2px; }
+
+    .setting-row {
+      display: flex;
+      min-height: 72px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 13px 2px;
+      border-bottom: 1px solid var(--line);
+    }
+    .setting-row > div:first-child {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .setting-row strong {
+      font-size: clamp(15px, 2.2vw, 18px);
+      font-weight: 500;
+    }
+    .setting-row small {
+      color: var(--subtext);
+      font-size: 12px;
+    }
+
+    .setting-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px 2px;
+      border-bottom: 1px solid var(--line);
+      width: 100%;
+    }
+    .setting-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-block-header strong {
+      font-size: clamp(15px, 2.2vw, 18px);
+      font-weight: 500;
+    }
+    .setting-block-header .val-badge {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .slider-container {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .white-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      outline: none;
+      margin: 0;
+      background: linear-gradient(
+        to right,
+        #ffffff 0%,
+        #ffffff var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) var(--slider-progress, 33.3%),
+        rgba(255, 255, 255, 0.22) 100%
+      );
+      cursor: pointer;
+    }
+    .white-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .white-slider::-webkit-slider-thumb:active {
+      transform: scale(1.18);
+    }
+    .white-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      cursor: pointer;
+    }
+
+    .switch {
+      position: relative;
+      flex: 0 0 50px;
+      width: 50px;
+      height: 27px;
+    }
+    .switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .switch span {
+      position: absolute;
+      inset: 0;
+      border: 1px solid #d9e0e4;
+      border-radius: 16px;
+      background: #d9e0e4;
+    }
+    .switch span::before {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      background: #15202a;
+      content: "";
+      transition: transform .16s;
+    }
+    .switch input:checked + span {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+    .switch input:checked + span::before {
+      transform: translateX(23px);
+      background: #08212b;
+    }
+
+    .dialog {
+      position: fixed;
+      inset: 0 auto auto 0;
+      width: calc(100vw / var(--app-dpi));
+      height: calc(100dvh / var(--app-dpi));
+      zoom: var(--app-dpi);
+      max-width: none;
+      max-height: none;
+      margin: 0;
+      padding: clamp(28px, 7vh, 62px) clamp(22px, 7vw, 82px);
+      border: 0;
+      background: #343b41;
+      color: var(--text);
+    }
+    .dialog::backdrop { background: #343b41; }
+    .dialog form {
+      width: 100%;
+      max-width: 940px;
+      min-height: 100%;
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .dialog header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 16px;
+      min-height: 44px;
+      border-bottom: 1px solid var(--line);
+    }
+    .dialog h2 { margin: 0; font-size: 18px; font-weight: 500; }
+    .dialog-close {
+      order: -1;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 30px;
+    }
+    .dialog label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 14px 0;
+      color: var(--text);
+      font-size: clamp(16px, 2.2vw, 22px);
+      font-weight: 600;
+    }
+    .dialog input {
+      width: 100%;
+      padding: 13px 0;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: clamp(22px, 3vw, 34px);
+    }
+    .dialog input::placeholder { color: #b8c1c6; }
+    .dialog-actions {
+      margin-top: auto;
+      padding-top: 24px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .pill-button {
+      min-height: 44px;
+      padding: 9px 24px;
+      border: 0;
+      border-radius: 999px;
+      background: #f7f9fa;
+      color: #24313a;
+      font-weight: 600;
+    }
+    .pill-button.muted { background: #d8dfe2; color: #253139; }
+
+    .toast {
+      position: fixed;
+      z-index: 10;
+      bottom: 16px;
+      left: 50%;
+      max-width: calc(100vw - 30px);
+      overflow: hidden;
+      padding: 9px 14px;
+      transform: translateX(-50%);
+      border: 1px solid var(--line);
+      background: #343b41;
+      color: var(--text);
+      font-size: 13px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s;
+    }
+    .toast.visible { opacity: 1; }
+
+    .city-card {
+      display: flex;
+      min-height: 64px;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 2px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      text-align: left;
+      width: 100%;
+    }
+    .city-card:hover { background: rgba(255,255,255,.025); }
+    .card-copy {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .card-copy strong {
+      overflow: hidden;
+      font-size: 15px;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card-copy small {
+      overflow: hidden;
+      color: var(--subtext);
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .delete-action {
+      padding: 8px;
+      border: 0;
+      background: transparent;
+      color: #d7a2a2;
+      font-size: 19px;
+    }
+
+    @media (max-width: 600px) {
+      .screen { padding-right: 22px; padding-left: 22px; }
+      .setting-row { gap: 8px; }
+    }
+    @media (max-height: 430px) {
+      .screen { padding-top: 12px; padding-bottom: 12px; }
+      .menu-row { min-height: 60px; padding: 8px 0; }
+      .setting-row { min-height: 58px; padding: 8px 2px; }
+    }
+  </style>
+</head>
+<body>
+  <main id="home" class="screen">
+    <header class="home-header">OpenMeteo Weather</header>
+    <nav class="main-menu" aria-label="メニュー">
+      <button class="menu-row" id="open-weather">
+        <span class="row-copy">
+          <strong>Weather Forecast</strong>
+          <small id="current-city-sub">現在の選択: 東京都 (Tokyo)</small>
+        </span>
+      </button>
+      <button class="menu-row" id="open-cities">
+        <span class="row-copy">
+          <strong>Select City</strong>
+          <small id="cities-count-sub">登録済み都市: 5都市</small>
+        </span>
+      </button>
+      <button class="menu-row" id="open-settings">
+        <span class="row-copy">
+          <strong>Settings</strong>
+          <small>DPIスケール・単位設定・画面制御</small>
+        </span>
+      </button>
+    </nav>
+  </main>
+
+  <section id="weather-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" data-home aria-label="戻る">‹</button>
+      <h1 id="weather-title">東京都の天気</h1>
+      <button class="header-action" id="refresh-weather" aria-label="更新">↻</button>
+    </header>
+    <div class="page-content">
+      <article class="setting-row">
+        <div>
+          <strong id="current-temp">--°C</strong>
+          <small id="current-condition">読み込み中...</small>
+        </div>
+        <div style="text-align: right;">
+          <strong id="current-icon" style="font-size: 28px;">🌤</strong>
+        </div>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>体感温度</strong>
+          <small>Apparent Temperature</small>
+        </div>
+        <span id="apparent-temp" style="font-size: 16px; font-weight: 500;">--°C</span>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>湿度 / 風速</strong>
+          <small>Humidity & Wind</small>
+        </div>
+        <span id="humidity-wind" style="font-size: 15px; color: var(--subtext);">--% / -- m/s</span>
+      </article>
+
+      <div class="setting-block">
+        <div class="setting-block-header">
+          <strong>週間予報 (7 Days)</strong>
+        </div>
+        <div id="daily-forecast-list" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+          <!-- Daily items populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cities-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" data-home aria-label="戻る">‹</button>
+      <h1>Select City</h1>
+      <button class="header-action" id="open-add-city" aria-label="都市を追加">＋</button>
+    </header>
+    <div class="page-content">
+      <div id="city-list" style="display: flex; flex-direction: column;"></div>
+    </div>
+  </section>
+
+  <section id="settings-screen" class="screen sub-screen hidden">
+    <header class="sub-header">
+      <button class="back-button" data-home aria-label="戻る">‹</button>
+      <h1>Settings</h1>
+    </header>
+    <div class="page-content settings-content">
+      <article class="setting-block">
+        <div class="setting-block-header">
+          <div>
+            <strong>App DPI スケール</strong>
+            <small style="display:block; color:var(--subtext); font-size:12px; margin-top:2px;">
+              このアプリの表示倍率（IndexedDBに保存）
+            </small>
+          </div>
+          <span id="dpi-value-label" class="val-badge">100%</span>
+        </div>
+        <div class="slider-container">
+          <input type="range" id="app-dpi-slider" class="white-slider" min="75" max="150" step="5" value="100" aria-label="App DPI スケール">
+        </div>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>Echo Showに合わせる</strong>
+          <small>画面フィット自動最適化</small>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="fit-screen" checked>
+          <span></span>
+        </label>
+      </article>
+
+      <article class="setting-row">
+        <div>
+          <strong>画面スリープを防止</strong>
+          <small>常時点灯モード (Wake Lock)</small>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="keep-awake">
+          <span></span>
+        </label>
+      </article>
+    </div>
+  </section>
+
+  <dialog id="add-city-dialog" class="dialog">
+    <form method="dialog" id="add-city-form">
+      <header>
+        <h2>Add City</h2>
+        <button type="button" class="dialog-close" id="close-city-dialog" aria-label="閉じる">×</button>
+      </header>
+      <label>
+        都市名 (日本語・英語)
+        <input id="city-search-input" maxlength="60" autocomplete="off" placeholder="例: 大阪, Tokyo" required>
+      </label>
+      <div id="search-results" style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto; margin-top:10px;"></div>
+      <div class="dialog-actions">
+        <button type="button" class="pill-button muted" id="cancel-city-dialog">キャンセル</button>
+        <button type="button" class="pill-button" id="search-city-btn">検索</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+      const $ = (s) => document.querySelector(s);
+      const screens = ['#home', '#weather-screen', '#cities-screen', '#settings-screen'];
+      const DB_NAME = 'EchoShowWeatherDB';
+      const DB_VERSION = 1;
+      let toastTimer = 0;
+      let wakeLock = null;
+
+      const defaultCities = [
+        { id: 'tokyo', name: '東京都', lat: 35.6895, lon: 139.6917 },
+        { id: 'osaka', name: '大阪府', lat: 34.6937, lon: 135.5023 },
+        { id: 'nagoya', name: '名古屋市', lat: 35.1815, lon: 136.9066 },
+        { id: 'fukuoka', name: '福岡市', lat: 33.5904, lon: 130.4017 },
+        { id: 'sapporo', name: '札幌市', lat: 43.0621, lon: 141.3544 }
+      ];
+
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings');
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function getSetting(key, fallback) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve) => {
+            const tx = db.transaction('settings', 'readonly');
+            const store = tx.objectStore('settings');
+            const req = store.get(key);
+            req.onsuccess = () => resolve(req.result !== undefined ? req.result : fallback);
+            req.onerror = () => resolve(fallback);
+          });
+        } catch {
+          return fallback;
+        }
+      }
+
+      async function setSetting(key, value) {
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction('settings', 'readwrite');
+            const store = tx.objectStore('settings');
+            const req = store.put(value, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        } catch (e) {
+          console.error('Failed to write IndexedDB setting', e);
+        }
+      }
+
+      function toast(message) {
+        const el = $('#toast');
+        el.textContent = message;
+        el.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('visible'), 2800);
+      }
+
+      function hideScreens() {
+        screens.forEach(s => $(s).classList.add('hidden'));
+      }
+
+      function showScreen(selector) {
+        hideScreens();
+        $(selector).classList.remove('hidden');
+      }
+
+      function updateSliderTrack(slider) {
+        const min = Number(slider.min) || 75;
+        const max = Number(slider.max) || 150;
+        const val = Number(slider.value) || 100;
+        const progress = ((val - min) / (max - min)) * 100;
+        slider.style.setProperty('--slider-progress', `${progress}%`);
+      }
+
+      function applyAppDpi(dpiVal) {
+        document.documentElement.style.setProperty('--app-dpi', String(dpiVal / 100));
+        $('#dpi-value-label').textContent = `${dpiVal}%`;
+      }
+
+      function getWeatherInfo(code) {
+        const codes = {
+          0: { desc: '快晴', icon: '☀️' },
+          1: { desc: '晴れ', icon: '🌤' },
+          2: { desc: '一部曇り', icon: '⛅' },
+          3: { desc: 'くもり', icon: '☁️' },
+          45: { desc: '霧', icon: '🌫' },
+          48: { desc: '着氷霧', icon: '🌫' },
+          51: { desc: '霧雨（弱）', icon: '🌧' },
+          53: { desc: '霧雨（中）', icon: '🌧' },
+          55: { desc: '霧雨（強）', icon: '🌧' },
+          61: { desc: '小雨', icon: '☔' },
+          63: { desc: '雨', icon: '☔' },
+          65: { desc: '大雨', icon: '☔' },
+          71: { desc: '小雪', icon: '❄️' },
+          73: { desc: '雪', icon: '❄️' },
+          75: { desc: '大雪', icon: '❄️' },
+          80: { desc: 'にわか雨', icon: '🌦' },
+          81: { desc: '強いにわか雨', icon: '🌦' },
+          82: { desc: '激しいにわか雨', icon: '⛈' },
+          95: { desc: '雷雨', icon: '🌩' },
+          96: { desc: '雹を伴う雷雨', icon: '🌩' }
+        };
+        return codes[code] || { desc: '不明', icon: '🌡' };
+      }
+
+      async function fetchWeather(city) {
+        $('#weather-title').textContent = `${city.name}の天気`;
+        $('#current-condition').textContent = '更新中...';
+        
+        try {
+          const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('Network error');
+          const data = await res.json();
+
+          const cur = data.current;
+          const info = getWeatherInfo(cur.weather_code);
+          $('#current-temp').textContent = `${Math.round(cur.temperature_2m)}°C`;
+          $('#current-condition').textContent = info.desc;
+          $('#current-icon').textContent = info.icon;
+          $('#apparent-temp').textContent = `${Math.round(cur.apparent_temperature)}°C`;
+          $('#humidity-wind').textContent = `${cur.relative_humidity_2m}% / ${Math.round(cur.wind_speed_10m)} m/s`;
+
+          // Render daily list
+          const dailyContainer = $('#daily-forecast-list');
+          dailyContainer.replaceChildren();
+
+          const daily = data.daily;
+          for (let i = 0; i < daily.time.length; i++) {
+            const dateStr = daily.time[i];
+            const dateObj = new Date(dateStr);
+            const dayLabel = `${dateObj.getMonth() + 1}/${dateObj.getDate()} (${['日','月','火','水','木','金','土'][dateObj.getDay()]})`;
+            const dayInfo = getWeatherInfo(daily.weather_code[i]);
+            const maxTemp = Math.round(daily.temperature_2m_max[i]);
+            const minTemp = Math.round(daily.temperature_2m_min[i]);
+            const pop = daily.precipitation_probability_max[i] ?? 0;
+
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(235,241,245,.10);';
+            row.innerHTML = `
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:20px;">${dayInfo.icon}</span>
+                <span style="font-size:14px;">${dayLabel}</span>
+              </div>
+              <div style="font-size:13px; color:var(--subtext);">
+                <span>降水: ${pop}%</span>
+                <span style="margin-left:12px; color:var(--text); font-weight:500;">${maxTemp}° / ${minTemp}°</span>
+              </div>
+            `;
+            dailyContainer.append(row);
+          }
+        } catch (e) {
+          console.error(e);
+          $('#current-condition').textContent = 'データ取得失敗';
+          toast('天気データの取得に失敗しました');
+        }
+      }
+
+      async function getSavedCities() {
+        return await getSetting('citiesList', defaultCities);
+      }
+
+      async function renderCityList() {
+        const cities = await getSavedCities();
+        const activeCity = await getSetting('activeCity', cities[0] || defaultCities[0]);
+        
+        $('#current-city-sub').textContent = `現在の選択: ${activeCity.name}`;
+        $('#cities-count-sub').textContent = `登録済み都市: ${cities.length}都市`;
+
+        const list = $('#city-list');
+        list.replaceChildren();
+
+        cities.forEach(city => {
+          const row = document.createElement('button');
+          row.className = 'city-card';
+          row.innerHTML = `
+            <span class="card-copy">
+              <strong>${city.name} ${city.id === activeCity.id ? '✓' : ''}</strong>
+              <small>北緯: ${city.lat.toFixed(2)} / 東経: ${city.lon.toFixed(2)}</small>
+            </span>
+            <button class="delete-action" aria-label="削除">×</button>
+          `;
+
+          row.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-action')) return;
+            await setSetting('activeCity', city);
+            await renderCityList();
+            toast(`${city.name}を選択しました`);
+            fetchWeather(city);
+            showScreen('#weather-screen');
+          });
+
+          row.querySelector('.delete-action').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (cities.length <= 1) {
+              toast('最低1つの都市を登録しておく必要があります');
+              return;
+            }
+            const updated = cities.filter(c => c.id !== city.id);
+            await setSetting('citiesList', updated);
+            if (activeCity.id === city.id) {
+              await setSetting('activeCity', updated[0]);
+            }
+            await renderCityList();
+            toast(`${city.name}を削除しました`);
+          });
+
+          list.append(row);
+        });
+      }
+
+      async function initDpiSetting() {
+        const slider = $('#app-dpi-slider');
+        const savedDpi = await getSetting('appDpi', 100);
+        
+        slider.value = savedDpi;
+        updateSliderTrack(slider);
+        applyAppDpi(savedDpi);
+
+        slider.addEventListener('input', (e) => {
+          const val = Number(e.target.value);
+          updateSliderTrack(e.target);
+          applyAppDpi(val);
+        });
+
+        slider.addEventListener('change', async (e) => {
+          const val = Number(e.target.value);
+          await setSetting('appDpi', val);
+          toast(`DPIを ${val}% に保存しました`);
+        });
+      }
+
+      async function setWakeLock() {
+        const enabled = $('#keep-awake').checked;
+        if (!enabled || !('wakeLock' in navigator)) {
+          if (wakeLock) {
+            wakeLock.release().catch(() => {});
+            wakeLock = null;
+          }
+          return;
+        }
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch {
+          toast('スリープ防止機能を使用できません');
+        }
+      }
+
+      function setupDialog() {
+        const dialog = $('#add-city-dialog');
+        const input = $('#city-search-input');
+        const resultsContainer = $('#search-results');
+
+        $('#open-add-city').addEventListener('click', () => {
+          input.value = '';
+          resultsContainer.replaceChildren();
+          dialog.showModal();
+        });
+
+        $('#close-city-dialog').addEventListener('click', () => dialog.close());
+        $('#cancel-city-dialog').addEventListener('click', () => dialog.close());
+
+        $('#search-city-btn').addEventListener('click', async () => {
+          const query = input.value.trim();
+          if (!query) return;
+
+          resultsContainer.innerHTML = '<div style="font-size:13px; color:var(--subtext);">検索中...</div>';
+          try {
+            const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=ja&format=json`);
+            const data = await res.json();
+
+            resultsContainer.replaceChildren();
+            if (!data.results || data.results.length === 0) {
+              resultsContainer.innerHTML = '<div style="font-size:13px; color:var(--subtext);">都市が見つかりませんでした</div>';
+              return;
+            }
+
+            data.results.forEach(item => {
+              const row = document.createElement('button');
+              row.className = 'pill-button muted';
+              row.style.cssText = 'width:100%; text-align:left; justify-content:flex-start; margin-bottom:4px;';
+              row.textContent = `${item.name} (${item.country || ''} ${item.admin1 || ''})`;
+              row.addEventListener('click', async () => {
+                const newCity = {
+                  id: `city-${Date.now()}`,
+                  name: item.name,
+                  lat: item.latitude,
+                  lon: item.longitude
+                };
+                const current = await getSavedCities();
+                current.push(newCity);
+                await setSetting('citiesList', current);
+                await setSetting('activeCity', newCity);
+                await renderCityList();
+                dialog.close();
+                toast(`${item.name}を追加しました`);
+                fetchWeather(newCity);
+                showScreen('#weather-screen');
+              });
+              resultsContainer.append(row);
+            });
+          } catch {
+            resultsContainer.innerHTML = '<div style="font-size:13px; color:var(--subtext);">検索に失敗しました</div>';
+          }
+        });
+      }
+
+      window.addEventListener('DOMContentLoaded', async () => {
+        await initDpiSetting();
+        await renderCityList();
+        setupDialog();
+
+        document.querySelectorAll('[data-home]').forEach(btn => {
+          btn.addEventListener('click', () => showScreen('#home'));
+        });
+
+        $('#open-weather').addEventListener('click', async () => {
+          const activeCity = await getSetting('activeCity', defaultCities[0]);
+          fetchWeather(activeCity);
+          showScreen('#weather-screen');
+        });
+
+        $('#open-cities').addEventListener('click', () => showScreen('#cities-screen'));
+        $('#open-settings').addEventListener('click', () => showScreen('#settings-screen'));
+
+        $('#refresh-weather').addEventListener('click', async () => {
+          const activeCity = await getSetting('activeCity', defaultCities[0]);
+          fetchWeather(activeCity);
+          toast('天気を再取得しました');
+        });
+
+        $('#keep-awake').addEventListener('change', setWakeLock);
+      });
+    })();
+  </script>
+</body>
+</html>
