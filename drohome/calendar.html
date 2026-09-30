@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FOSS Calendar</title>
+    <!-- Material Icons CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <!-- PeerJS CDN -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #ffffff;
+            color: #212121;
+        }
+
+        /* --- Android 7.1 (Nougat) Switch Component (ユーザー指定) --- */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        /* --- View Containers --- */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            background-color: #f5f5f5;
+            z-index: 1;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* --- Action Bar / Header --- */
+        .app-bar {
+            height: 56px;
+            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .app-bar-left, .app-bar-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            outline: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #5f6368;
+            cursor: pointer;
+        }
+
+        .icon-btn:active {
+            background-color: rgba(0,0,0,0.08);
+        }
+
+        .app-title {
+            font-size: 20px;
+            font-weight: 500;
+            color: #202124;
+            margin-left: 8px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .app-title .material-icons {
+            margin-left: 4px;
+            font-size: 20px;
+            color: #757575;
+        }
+
+        .calendar-icon-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calendar-day-num {
+            position: absolute;
+            font-size: 11px;
+            font-weight: bold;
+            top: 13px;
+            color: #5f6368;
+        }
+
+        /* --- Drawer Menu --- */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 100;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .drawer-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 101;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.25);
+        }
+
+        .drawer.active {
+            transform: translateX(280px);
+        }
+
+        .drawer-header {
+            padding: 24px 16px 16px 16px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #1976d2;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .user-email {
+            font-size: 14px;
+            font-weight: 500;
+            color: #212121;
+        }
+
+        .drawer-content {
+            flex: 1;
+            padding: 8px 0;
+            overflow-y: auto;
+        }
+
+        .drawer-item {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 14px;
+            color: #3c4043;
+            cursor: pointer;
+        }
+
+        .drawer-item:active {
+            background-color: #f1f3f4;
+        }
+
+        .drawer-item .material-icons {
+            margin-right: 24px;
+            color: #5f6368;
+        }
+
+        .drawer-item .color-box {
+            width: 18px;
+            height: 18px;
+            background-color: #039be5;
+            border-radius: 2px;
+            margin-right: 24px;
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 8px 0;
+        }
+
+        /* --- Main Day View Grid --- */
+        .day-view-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background-color: #ffffff;
+            position: relative;
+        }
+
+        .day-header {
+            display: flex;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            background-color: #ffffff;
+        }
+
+        .day-header-left {
+            width: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .day-header-number {
+            font-size: 36px;
+            font-weight: 300;
+            color: #1a73e8;
+            line-height: 1;
+        }
+
+        .day-header-name {
+            font-size: 13px;
+            color: #1a73e8;
+            margin-top: 2px;
+        }
+
+        .day-header-right {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding-left: 12px;
+            color: #70757a;
+            font-size: 13px;
+        }
+
+        .timeline-scroll {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .timeline-slot {
+            height: 60px;
+            border-bottom: 1px solid #f1f3f4;
+            display: flex;
+            position: relative;
+        }
+
+        .timeline-label {
+            width: 60px;
+            padding-right: 8px;
+            text-align: right;
+            font-size: 11px;
+            color: #70757a;
+            transform: translateY(-6px);
+        }
+
+        .timeline-grid {
+            flex: 1;
+            border-left: 1px solid #e0e0e0;
+            position: relative;
+        }
+
+        .event-card {
+            position: absolute;
+            left: 4px;
+            right: 12px;
+            background-color: #039be5;
+            color: white;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            overflow: hidden;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        /* --- Floating Action Button (FAB) --- */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: #db4437;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 20;
+            transition: transform 0.15s ease;
+        }
+
+        .fab:active {
+            transform: scale(0.92);
+        }
+
+        /* --- Edit Event Screen --- */
+        .blue-header {
+            height: 56px;
+            background-color: #009688;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+        }
+
+        .blue-header-title {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .save-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .form-container {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #ffffff;
+            padding: 16px;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .form-icon {
+            width: 40px;
+            color: #757575;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-input {
+            border: none;
+            outline: none;
+            font-size: 16px;
+            width: 100%;
+            color: #212121;
+        }
+
+        .form-input::placeholder {
+            color: #9e9e9e;
+        }
+
+        .form-label-value {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            cursor: pointer;
+        }
+
+        .date-time-text {
+            font-size: 15px;
+            color: #212121;
+        }
+
+        /* --- Peer Transfer Sub Activity Screen --- */
+        .peer-screen-body {
+            flex: 1;
+            padding: 16px;
+            background-color: #ffffff;
+            overflow-y: auto;
+        }
+
+        .peer-item-card {
+            background-color: #ffffff;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .peer-item-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 4px;
+        }
+
+        .peer-item-sub {
+            font-size: 12px;
+            color: #616161;
+            line-height: 1.4;
+        }
+
+        .peer-row-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .peer-code-box {
+            font-size: 16px;
+            font-weight: 500;
+            color: #212121;
+            margin: 12px 0;
+            word-break: break-all;
+        }
+
+        .btn-blue-3d {
+            background: linear-gradient(to bottom, #1e88e5, #1565c0);
+            color: white;
+            border: 1px solid #1565c0;
+            border-radius: 6px;
+            padding: 12px 28px;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 -1px 1px rgba(0,0,0,0.4);
+            margin-top: 12px;
+        }
+
+        .btn-blue-3d:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 3px rgba(0,0,0,0.3);
+        }
+
+        .text-input-field {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            font-size: 15px;
+            margin-top: 8px;
+            outline: none;
+        }
+
+        /* --- Modals and Dialogs --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .dialog-card {
+            width: 85%;
+            max-width: 320px;
+            background-color: white;
+            border-radius: 4px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .dialog-icon {
+            color: #009688;
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .dialog-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #212121;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 24px;
+            gap: 12px;
+        }
+
+        .dialog-btn {
+            background: none;
+            border: none;
+            color: #009688;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 8px 12px;
+        }
+
+        /* GUI Custom Datepicker Dialog */
+        .gui-picker-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .picker-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 16px;
+        }
+
+        .picker-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid #ccc;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Onboarding Screen Layout */
+        .onboarding-screen {
+            background-color: #29b6f6;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .onboarding-img {
+            width: 220px;
+            height: 180px;
+            margin-bottom: 24px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .onboarding-text {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 32px;
+        }
+
+        .onboarding-btn {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 36px;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Toast Popup */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #323232;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            z-index: 300;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 90%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- MAIN CALENDAR SCREEN -->
+    <div id="main-screen" class="screen active">
+        <div class="app-bar">
+            <div class="app-bar-left">
+                <button class="icon-btn" id="btn-open-drawer">
+                    <span class="material-icons">menu</span>
+                </button>
+                <div class="app-title" id="btn-month-dropdown">
+                    <span id="current-month-year-text">9月</span>
+                    <span class="material-icons">arrow_drop_down</span>
+                </div>
+            </div>
+            <div class="app-bar-right">
+                <button class="icon-btn" id="btn-today">
+                    <div class="calendar-icon-container">
+                        <span class="material-icons" style="font-size: 26px;">calendar_today</span>
+                        <span class="calendar-day-num" id="today-icon-num">30</span>
+                    </div>
+                </button>
+                <button class="icon-btn" id="btn-menu-more">
+                    <span class="material-icons">more_vert</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="day-view-container">
+            <div class="day-header">
+                <div class="day-header-left">
+                    <div class="day-header-number" id="header-day-num">30</div>
+                    <div class="day-header-name" id="header-day-name">水</div>
+                </div>
+                <div class="day-header-right" id="header-empty-text">
+                    予定はありません。タップして新しい予定を作成してください。
+                </div>
+            </div>
+
+            <div class="timeline-scroll" id="timeline-container">
+                <!-- 24時間 タイムスロット -->
+            </div>
+        </div>
+
+        <div class="fab" id="fab-add-event">
+            <span class="material-icons" style="font-size: 28px;">add</span>
+        </div>
+    </div>
+
+    <!-- DRAWER MENU OVERLAY -->
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+    <div id="drawer" class="drawer">
+        <div class="drawer-header">
+            <div class="user-avatar">
+                <span class="material-icons" style="font-size: 32px;">person</span>
+            </div>
+            <div class="user-email">myaccount@email.com</div>
+        </div>
+        <div class="drawer-content">
+            <div class="drawer-item">
+                <div class="color-box"></div>
+                <span>予定</span>
+            </div>
+            <div class="drawer-divider"></div>
+            <div class="drawer-item" id="drawer-settings">
+                <span class="material-icons">settings</span>
+                <span>設定 (Peer/バックアップ)</span>
+            </div>
+            <div class="drawer-item" id="drawer-help">
+                <span class="material-icons">help_outline</span>
+                <span>ヘルプとフィードバック</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEARCH SCREEN -->
+    <div id="search-screen" class="screen">
+        <div class="app-bar" style="border-bottom: 1px solid #e0e0e0;">
+            <div class="app-bar-left" style="width: 100%;">
+                <button class="icon-btn" id="btn-search-back">
+                    <span class="material-icons">arrow_back</span>
+                </button>
+                <input type="text" placeholder="検索" style="border: none; outline: none; font-size: 18px; margin-left: 12px; width: 100%; color: #212121;" id="search-input">
+            </div>
+        </div>
+        <div style="flex:1; background-color: #eee; padding: 16px;" id="search-results-list">
+            <!-- 検索結果一覧 -->
+        </div>
+    </div>
+
+    <!-- EDIT EVENT SCREEN -->
+    <div id="event-edit-screen" class="screen">
+        <div class="blue-header">
+            <div style="display: flex; align-items: center;">
+                <button class="icon-btn" id="btn-edit-close" style="color: white; margin-right: 12px;">
+                    <span class="material-icons">close</span>
+                </button>
+                <span class="blue-header-title">予定を作成</span>
+            </div>
+            <button class="save-btn" id="btn-event-save">保存</button>
+        </div>
+
+        <div class="form-container">
+            <div class="form-row">
+                <div class="form-icon"></div>
+                <div class="form-content">
+                    <input type="text" id="event-title" class="form-input" placeholder="タイトル" style="font-size: 20px;">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-icon">
+                    <span class="material-icons">calendar_today</span>
+                </div>
+                <div class="form-content">
+                    <span style="font-size: 15px; color: #212121;">予定</span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-icon">
+                    <span class="material-icons">access_time</span>
+                </div>
+                <div class="form-content">
+                    <div class="form-label-value">
+                        <span style="font-size: 15px; color: #212121;">終日</span>
+                        <label class="switch">
+                            <input type="checkbox" id="event-allday-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="form-label-value" id="row-start-datetime">
+                        <span class="date-time-text" id="text-start-date">2026年9月1日火曜日</span>
+                        <span class="date-time-text" id="text-start-time">17:30</span>
+                    </div>
+
+                    <div class="form-label-value" id="row-end-datetime">
+                        <span class="date-time-text" id="text-end-date">2026年9月1日火曜日</span>
+                        <span class="date-time-text" id="text-end-time">18:30</span>
+                    </div>
+
+                    <div style="font-size: 13px; color: #757575; padding-top: 8px;">詳細オプション</div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-icon">
+                    <span class="material-icons">place</span>
+                </div>
+                <div class="form-content">
+                    <input type="text" id="event-location" class="form-input" placeholder="場所を追加">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-icon">
+                    <span class="material-icons">notifications_none</span>
+                </div>
+                <div class="form-content">
+                    <div style="font-size: 15px; color: #212121; padding: 4px 0;">30分前</div>
+                    <div style="font-size: 13px; color: #757575; padding-top: 8px;">別の通知を追加</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PEER TRANSFER & BACKUP SUB ACTIVITY SCREEN -->
+    <div id="peer-screen" class="screen">
+        <div class="app-bar" style="border-bottom: 1px solid #e0e0e0;">
+            <div class="app-bar-left">
+                <button class="icon-btn" id="btn-peer-back">
+                    <span class="material-icons">arrow_back</span>
+                </button>
+                <span class="app-title" style="font-size: 18px; font-weight: bold;">Peerでの予定送受信</span>
+            </div>
+            <div class="app-bar-right">
+                <button class="icon-btn">
+                    <span class="material-icons">more_vert</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="peer-screen-body">
+            <div class="peer-item-card">
+                <div class="peer-item-title">.peerをDownload,load</div>
+                <div class="peer-item-sub" style="margin-bottom: 8px;">
+                    BackupFile Download/import<br>PeerJSでの転送が使用不可の場合のみ使ってください
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button id="btn-download-backup" style="padding: 6px 12px; background:#e0e0e0; border:none; border-radius:4px; font-size:12px;">バックアップ保存</button>
+                    <button id="btn-load-backup-trigger" style="padding: 6px 12px; background:#e0e0e0; border:none; border-radius:4px; font-size:12px;">ファイルから読込</button>
+                    <input type="file" id="file-input-backup" accept=".peer,.json" style="display: none;">
+                </div>
+            </div>
+
+            <div class="peer-item-card">
+                <div class="peer-row-flex">
+                    <div class="peer-item-title" style="font-size: 16px;">PeerJS受信待機</div>
+                    <label class="switch">
+                        <input type="checkbox" id="peer-listen-switch" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="peer-item-card">
+                <div style="font-size: 16px; font-weight: bold;">MyPeerCode:10桁の自動生成</div>
+                <div class="peer-item-sub">例:12xnwo42jd</div>
+                <div class="peer-code-box" id="display-mypeercode">生成中...</div>
+            </div>
+
+            <div class="peer-item-card" style="border-bottom: none;">
+                <div style="font-size: 16px; font-weight: bold;">別デバイスに送信</div>
+                <div class="peer-item-sub">相手側受信待機ON必須</div>
+                <div style="font-size: 15px; font-weight: bold; margin-top: 12px;">相手のPeercodeを入力</div>
+                <input type="text" id="target-peercode-input" class="text-input-field" placeholder="PeerCodeを入力">
+                <div>
+                    <button class="btn-blue-3d" id="btn-peer-send">送 信</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PERMISSION DIALOG MODAL -->
+    <div id="modal-permission" class="modal-overlay">
+        <div class="dialog-card">
+            <div class="dialog-icon">
+                <span class="material-icons" style="font-size: 44px;">event</span>
+            </div>
+            <div class="dialog-title">
+                カレンダー にカレンダーへのアクセスを許可しますか？
+            </div>
+            <div class="dialog-buttons">
+                <button class="dialog-btn" id="btn-perm-deny">許可しない</button>
+                <button class="dialog-btn" id="btn-perm-allow">許可</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ONBOARDING GUIDE MODAL -->
+    <div id="modal-onboarding" class="modal-overlay">
+        <div class="screen onboarding-screen" style="display: flex; position: relative;">
+            <div style="width: 100%; max-width: 300px; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px;">
+                <div class="material-icons" style="font-size: 80px; margin-bottom: 16px;">cloud_sync</div>
+                <div class="onboarding-text">
+                    <strong>peerjs,indexedDBサポート</strong><br><br>
+                    Kiosk端末でも外部から予定の追加が可能になりました。peerはアプリ設定から設定することができます
+                </div>
+                <div style="font-size: 12px; opacity: 0.8; margin-bottom: 24px;">これは [設定] で変更できます。</div>
+                <button class="onboarding-btn" id="btn-onboarding-finish">終 了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GUI CUSTOM DATE / TIME PICKER DIALOG -->
+    <div id="modal-gui-picker" class="modal-overlay">
+        <div class="dialog-card">
+            <div class="dialog-title" id="gui-picker-title">日時を設定</div>
+            <div class="gui-picker-body">
+                <div class="picker-row">
+                    <span>年: <strong id="picker-year-val">2026</strong></span>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="picker-btn" id="btn-year-minus">-</button>
+                        <button class="picker-btn" id="btn-year-plus">+</button>
+                    </div>
+                </div>
+                <div class="picker-row">
+                    <span>月: <strong id="picker-month-val">9</strong></span>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="picker-btn" id="btn-month-minus">-</button>
+                        <button class="picker-btn" id="btn-month-plus">+</button>
+                    </div>
+                </div>
+                <div class="picker-row">
+                    <span>日: <strong id="picker-day-val">1</strong></span>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="picker-btn" id="btn-day-minus">-</button>
+                        <button class="picker-btn" id="btn-day-plus">+</button>
+                    </div>
+                </div>
+                <div class="picker-row" id="picker-time-row-1">
+                    <span>時: <strong id="picker-hour-val">17</strong></span>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="picker-btn" id="btn-hour-minus">-</button>
+                        <button class="picker-btn" id="btn-hour-plus">+</button>
+                    </div>
+                </div>
+                <div class="picker-row" id="picker-time-row-2">
+                    <span>分: <strong id="picker-minute-val">30</strong></span>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="picker-btn" id="btn-minute-minus">-</button>
+                        <button class="picker-btn" id="btn-minute-plus">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-buttons">
+                <button class="dialog-btn" id="btn-picker-cancel">キャンセル</button>
+                <button class="dialog-btn" id="btn-picker-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="toast">メッセージ</div>
+
+    <script>
+        // --- APP STATE & INDEXEDDB ENGINE ---
+        const DB_NAME = 'FOSSCalendarDB';
+        const DB_VERSION = 1;
+        let db = null;
+
+        let myPeerCode = '';
+        let peerInstance = null;
+        let peerDataConnection = null;
+
+        window.addEventListener('unhandledrejection', function(event) {
+            if (event.reason && (event.reason.name === 'SecurityError' || String(event.reason).includes('WebSocket'))) {
+                console.warn('WebSocket connection restricted in Canvas/preview sandbox environment:', event.reason);
+                event.preventDefault(); // Suppress unhandled rejection modal in sandbox
+            }
+        });
+
+        // Active State Variables
+        let currentDate = new Date(2026, 8, 30); // 2026年9月30日水曜日
+        let eventsList = [];
+
+        // Currently editing event temporary state
+        let tempEditEvent = {
+            id: null,
+            title: '',
+            isAllDay: false,
+            startDate: '2026-09-01',
+            startTime: '17:30',
+            endDate: '2026-09-01',
+            endTime: '18:30',
+            location: '',
+            notification: '30分前'
+        };
+
+        // Custom GUI Picker State
+        let pickerTarget = 'start'; // 'start' or 'end'
+        let pickerState = { year: 2026, month: 9, day: 1, hour: 17, minute: 30 };
+
+        // Toast Helper
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3500);
+        }
+
+        // --- INDEXEDDB INITIALIZATION ---
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const database = e.target.result;
+                    if (!database.objectStoreNames.contains('events')) {
+                        database.createObjectStore('events', { keyPath: 'id' });
+                    }
+                    if (!database.objectStoreNames.contains('settings')) {
+                        database.createObjectStore('settings', { keyPath: 'key' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = (e) => {
+                    console.error('IndexedDB error:', e);
+                    reject(e);
+                };
+            });
+        }
+
+        function loadEventsFromDB() {
+            return new Promise((resolve) => {
+                if (!db) return resolve([]);
+                const tx = db.transaction('events', 'readonly');
+                const store = tx.objectStore('events');
+                const req = store.getAll();
+                req.onsuccess = () => {
+                    eventsList = req.result || [];
+                    resolve(eventsList);
+                };
+                req.onerror = () => resolve([]);
+            });
+        }
+
+        function saveEventsToIndexedDB(eventsArray) {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject('DB not initialized');
+                const tx = db.transaction('events', 'readwrite');
+                const store = tx.objectStore('events');
+                store.clear();
+                eventsArray.forEach(item => store.put(item));
+                tx.oncomplete = () => {
+                    eventsList = eventsArray;
+                    resolve(true);
+                };
+                tx.onerror = (err) => reject(err);
+            });
+        }
+
+        function getSettingFromDB(key) {
+            return new Promise((resolve) => {
+                if (!db) return resolve(null);
+                const tx = db.transaction('settings', 'readonly');
+                const store = tx.objectStore('settings');
+                const req = store.get(key);
+                req.onsuccess = () => resolve(req.result ? req.result.value : null);
+                req.onerror = () => resolve(null);
+            });
+        }
+
+        function setSettingToDB(key, value) {
+            return new Promise((resolve) => {
+                if (!db) return resolve();
+                const tx = db.transaction('settings', 'readwrite');
+                const store = tx.objectStore('settings');
+                store.put({ key: key, value: value });
+                tx.oncomplete = () => resolve();
+            });
+        }
+
+        // --- PEERCODE GENERATION (初回コードずっと使用、現在日程+時刻+ランダム重なり不可能な仕様) ---
+        function generateUniquePeerCode() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const sec = String(now.getSeconds()).padStart(2, '0');
+            const rand = Math.random().toString(36).substring(2, 6);
+            // 例: 202610011244a7x9
+            return `${year}${month}${day}${hour}${min}${sec}${rand}`;
+        }
+
+        async function initPeerJS() {
+            let savedCode = await getSettingFromDB('myPeerCode');
+            if (!savedCode) {
+                savedCode = generateUniquePeerCode();
+                await setSettingToDB('myPeerCode', savedCode);
+            }
+            myPeerCode = savedCode;
+            document.getElementById('display-mypeercode').innerText = myPeerCode;
+
+            try {
+                // PeerJS インスタンス化
+                peerInstance = new Peer(myPeerCode);
+
+                peerInstance.on('open', (id) => {
+                    console.log('PeerJS Connected with ID:', id);
+                });
+
+                peerInstance.on('connection', (conn) => {
+                    const isListenON = document.getElementById('peer-listen-switch').checked;
+                    if (!isListenON) {
+                        conn.close();
+                        return;
+                    }
+                    handleIncomingPeerConnection(conn);
+                });
+
+                peerInstance.on('error', (err) => {
+                    console.warn('PeerJS socket error:', err);
+                    showToast('Peer通信: オフライン / WebSocket制限');
+                });
+            } catch (err) {
+                console.warn('PeerJS instantiation restricted:', err);
+                document.getElementById('display-mypeercode').innerText = `${myPeerCode} (オフラインモード)`;
+            }
+        }
+
+        // --- PEERJS 16KB BINARY CHUNK RECEIVE PROTOCOL ---
+        let receiveBufferState = {
+            receiving: false,
+            totalChunks: 0,
+            totalBytes: 0,
+            expectedHash: '',
+            chunks: {},
+            receivedCount: 0
+        };
+
+        function handleIncomingPeerConnection(conn) {
+            conn.on('data', async (msg) => {
+                if (!msg || typeof msg !== 'object') return;
+
+                if (msg.type === 'START_TRANSFER') {
+                    receiveBufferState = {
+                        receiving: true,
+                        totalChunks: msg.totalChunks,
+                        totalBytes: msg.totalBytes,
+                        expectedHash: msg.hash,
+                        chunks: {},
+                        receivedCount: 0
+                    };
+                } 
+                else if (msg.type === 'CHUNK') {
+                    if (!receiveBufferState.receiving) return;
+                    const { index, total, size, data } = msg;
+
+                    // サイズ検証 (16KB以下)
+                    if (size > 16384 + 100) return;
+
+                    // 重複チェック & インデックス付き受領
+                    if (!receiveBufferState.chunks[index]) {
+                        receiveBufferState.chunks[index] = new Uint8Array(data);
+                        receiveBufferState.receivedCount++;
+                    }
+                } 
+                else if (msg.type === 'END_TRANSFER') {
+                    if (receiveBufferState.receivedCount !== receiveBufferState.totalChunks) {
+                        showToast('転送エラー: チャンク欠損を検知しました');
+                        return;
+                    }
+
+                    // 順序再構成 (Order Assembly)
+                    const assembled = new Uint8Array(receiveBufferState.totalBytes);
+                    let offset = 0;
+                    for (let i = 0; i < receiveBufferState.totalChunks; i++) {
+                        const chunk = receiveBufferState.chunks[i];
+                        if (!chunk) {
+                            showToast(`転送エラー: チャンク ${i} が欠損しています`);
+                            return;
+                        }
+                        assembled.set(chunk, offset);
+                        offset += chunk.length;
+                    }
+
+                    // SHA-256 検証
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', assembled);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    const actualHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                    if (actualHash !== receiveBufferState.expectedHash) {
+                        showToast('ハッシュ不一致: データが破損しています');
+                        return;
+                    }
+
+                    // SHA-256一致後、JSON復元してIndexedDBに保存
+                    try {
+                        const jsonText = new TextDecoder().decode(assembled);
+                        const importedEvents = JSON.parse(jsonText);
+
+                        await saveEventsToIndexedDB(importedEvents);
+
+                        // 保存成功時だけ TRANSFER_COMPLETE を返答
+                        conn.send({ type: 'TRANSFER_COMPLETE', success: true });
+                        showToast('Peerからの予定データを正常に受信・保存しました');
+                        renderMainView();
+                    } catch (e) {
+                        showToast('IndexedDB保存失敗: ' + e);
+                    }
+                }
+            });
+        }
+
+        // --- PEERJS 16KB BINARY CHUNK SEND PROTOCOL ---
+        async function sendEventsViaPeer(targetPeerId) {
+            if (!targetPeerId) {
+                showToast('相手のPeerCodeを入力してください');
+                return;
+            }
+
+            if (!peerInstance || peerInstance.destroyed || peerInstance.disconnected) {
+                showToast('WebSocket接続が制限されています。ファイル( .peer )の保存/読込をご利用ください。');
+                return;
+            }
+
+            const events = await loadEventsFromDB();
+            const jsonText = JSON.stringify(events);
+            const encoder = new TextEncoder();
+            const fullBytes = encoder.encode(jsonText);
+
+            // SHA-256 ハッシュ計算
+            const hashBuffer = await crypto.subtle.digest('SHA-256', fullBytes);
+            const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+            const CHUNK_SIZE = 16384; // 16KB
+            const totalChunks = Math.ceil(fullBytes.length / CHUNK_SIZE);
+
+            showToast('接続中...');
+            let conn;
+            try {
+                conn = peerInstance.connect(targetPeerId);
+            } catch (err) {
+                showToast('WebSocket制限により送信できません。ファイルバックアップ機能をご利用ください。');
+                return;
+            }
+
+            let transferTimeout = setTimeout(() => {
+                showToast('転送タイムアウト: 相手からの応答がありません');
+                if (conn) conn.close();
+            }, 30000);
+
+            conn.on('open', async () => {
+                showToast('送信中...');
+                // START Message
+                conn.send({
+                    type: 'START_TRANSFER',
+                    totalChunks: totalChunks,
+                    totalBytes: fullBytes.length,
+                    hash: hashHex
+                });
+
+                // 16KB チャンク順次送信
+                for (let i = 0; i < totalChunks; i++) {
+                    const start = i * CHUNK_SIZE;
+                    const end = Math.min(start + CHUNK_SIZE, fullBytes.length);
+                    const chunkSlice = fullBytes.slice(start, end).buffer;
+
+                    // bufferedAmount チェック (バッファ溢れ防止)
+                    while (conn.dataChannel && conn.dataChannel.bufferedAmount > 64 * 1024) {
+                        await new Promise(r => setTimeout(r, 50));
+                    }
+
+                    conn.send({
+                        type: 'CHUNK',
+                        index: i,
+                        total: totalChunks,
+                        size: chunkSlice.byteLength,
+                        data: chunkSlice
+                    });
+                }
+
+                // END Message
+                conn.send({ type: 'END_TRANSFER' });
+            });
+
+            // 受信側からの完了応答 (TRANSFER_COMPLETE) を待つ
+            conn.on('data', (data) => {
+                if (data && data.type === 'TRANSFER_COMPLETE' && data.success) {
+                    clearTimeout(transferTimeout);
+                    showToast('送信完了: 相手の端末に保存されました');
+                    conn.close();
+                }
+            });
+
+            conn.on('error', (err) => {
+                clearTimeout(transferTimeout);
+                showToast('送信エラー: ' + err);
+            });
+
+            conn.on('close', () => {
+                clearTimeout(transferTimeout);
+            });
+        }
+
+        // --- CALENDAR RENDER & VIEW NAVIGATION ---
+        const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+
+        function renderMainView() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+            const date = currentDate.getDate();
+            const dayIdx = currentDate.getDay();
+
+            document.getElementById('current-month-year-text').innerText = `${year}年${month}月`;
+            document.getElementById('today-icon-num').innerText = (new Date()).getDate();
+            document.getElementById('header-day-num').innerText = date;
+            document.getElementById('header-day-name').innerText = dayNames[dayIdx];
+
+            // Render Timeline slots (0:00 - 23:00)
+            const timeline = document.getElementById('timeline-container');
+            timeline.innerHTML = '';
+
+            const formattedDateStr = `${year}-${String(month).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+            const todaysEvents = eventsList.filter(e => e.startDate === formattedDateStr);
+
+            const emptyText = document.getElementById('header-empty-text');
+            if (todaysEvents.length > 0) {
+                emptyText.innerText = `予定 ${todaysEvents.length}件`;
+            } else {
+                emptyText.innerText = '予定はありません。タップして新しい予定を作成してください。';
+            }
+
+            for (let h = 0; h < 24; h++) {
+                const slot = document.createElement('div');
+                slot.className = 'timeline-slot';
+
+                const label = document.createElement('div');
+                label.className = 'timeline-label';
+                label.innerText = h === 0 ? '' : `${h}:00`;
+
+                const grid = document.createElement('div');
+                grid.className = 'timeline-grid';
+
+                // タップでその時間に新しい予定作成
+                grid.addEventListener('click', () => {
+                    openEventEditScreen(null, formattedDateStr, `${String(h).padStart(2,'0')}:00`);
+                });
+
+                slot.appendChild(label);
+                slot.appendChild(grid);
+                timeline.appendChild(slot);
+            }
+
+            // 該当する予定カードを開始時刻〜終了時刻の長さに応じて描画
+            todaysEvents.forEach(evt => {
+                const [sH, sM] = (evt.startTime || '00:00').split(':').map(n => parseInt(n, 10) || 0);
+                const [eH, eM] = (evt.endTime || '01:00').split(':').map(n => parseInt(n, 10) || 0);
+
+                const startMin = sH * 60 + sM;
+                let endMin = eH * 60 + eM;
+                if (endMin <= startMin) endMin = startMin + 60; // 開始時刻より終了時刻が前の場合は最低1時間確保
+
+                // 1時間あたり60px（1分あたり1px）で位置と高さを計算
+                const topPx = startMin + 2;
+                const heightPx = Math.max(endMin - startMin - 4, 24);
+
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                card.style.position = 'absolute';
+                card.style.left = '64px';
+                card.style.right = '12px';
+                card.style.top = `${topPx}px`;
+                card.style.height = `${heightPx}px`;
+                card.innerText = `${evt.title || '(無題)'}\n${evt.startTime} - ${evt.endTime}`;
+                card.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openEventEditScreen(evt);
+                });
+                timeline.appendChild(card);
+            });
+        }
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function openEventEditScreen(evt = null, defaultDateStr = null, defaultTimeStr = null) {
+            if (evt) {
+                tempEditEvent = { ...evt };
+            } else {
+                const todayStr = defaultDateStr || `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
+                const timeStr = defaultTimeStr || '17:30';
+                tempEditEvent = {
+                    id: Date.now().toString(),
+                    title: '',
+                    isAllDay: false,
+                    startDate: todayStr,
+                    startTime: timeStr,
+                    endDate: todayStr,
+                    endTime: '18:30',
+                    location: '',
+                    notification: '30分前'
+                };
+            }
+
+            document.getElementById('event-title').value = tempEditEvent.title;
+            document.getElementById('event-allday-toggle').checked = tempEditEvent.isAllDay;
+            document.getElementById('event-location').value = tempEditEvent.location;
+
+            updateDateTimeDisplay();
+            switchScreen('event-edit-screen');
+        }
+
+        function updateDateTimeDisplay() {
+            const sParts = tempEditEvent.startDate.split('-');
+            const sDateObj = new Date(sParts[0], sParts[1]-1, sParts[2]);
+            document.getElementById('text-start-date').innerText = `${sParts[0]}年${parseInt(sParts[1])}月${parseInt(sParts[2])}日${dayNames[sDateObj.getDay()]}曜日`;
+            document.getElementById('text-start-time').innerText = tempEditEvent.startTime;
+
+            const eParts = tempEditEvent.endDate.split('-');
+            const eDateObj = new Date(eParts[0], eParts[1]-1, eParts[2]);
+            document.getElementById('text-end-date').innerText = `${eParts[0]}年${parseInt(eParts[1])}月${parseInt(eParts[2])}日${dayNames[eDateObj.getDay()]}曜日`;
+            document.getElementById('text-end-time').innerText = tempEditEvent.endTime;
+        }
+
+        // --- GUI DATE PICKER MODAL LOGIC (Datepicker要素不使用) ---
+        function openGuiPicker(target) {
+            pickerTarget = target; // 'start', 'end', or 'view'
+            let dateStr, timeStr;
+
+            if (target === 'view') {
+                const y = currentDate.getFullYear();
+                const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+                const d = String(currentDate.getDate()).padStart(2, '0');
+                dateStr = `${y}-${m}-${d}`;
+                timeStr = '00:00';
+                document.getElementById('gui-picker-title').innerText = '表示日付を選択';
+                document.getElementById('picker-time-row-1').style.display = 'none';
+                document.getElementById('picker-time-row-2').style.display = 'none';
+            } else {
+                dateStr = target === 'start' ? tempEditEvent.startDate : tempEditEvent.endDate;
+                timeStr = target === 'start' ? tempEditEvent.startTime : tempEditEvent.endTime;
+                document.getElementById('gui-picker-title').innerText = '日時を設定';
+                document.getElementById('picker-time-row-1').style.display = 'flex';
+                document.getElementById('picker-time-row-2').style.display = 'flex';
+            }
+
+            const dParts = dateStr.split('-');
+            const tParts = timeStr.split(':');
+
+            pickerState = {
+                year: parseInt(dParts[0], 10),
+                month: parseInt(dParts[1], 10),
+                day: parseInt(dParts[2], 10),
+                hour: parseInt(tParts[0], 10),
+                minute: parseInt(tParts[1], 10)
+            };
+
+            updatePickerUI();
+            document.getElementById('modal-gui-picker').classList.add('active');
+        }
+
+        function updatePickerUI() {
+            document.getElementById('picker-year-val').innerText = pickerState.year;
+            document.getElementById('picker-month-val').innerText = pickerState.month;
+            document.getElementById('picker-day-val').innerText = pickerState.day;
+            document.getElementById('picker-hour-val').innerText = String(pickerState.hour).padStart(2,'0');
+            document.getElementById('picker-minute-val').innerText = String(pickerState.minute).padStart(2,'0');
+        }
+
+        function setupPickerListeners() {
+            document.getElementById('btn-year-minus').onclick = () => { pickerState.year--; updatePickerUI(); };
+            document.getElementById('btn-year-plus').onclick = () => { pickerState.year++; updatePickerUI(); };
+            
+            document.getElementById('btn-month-minus').onclick = () => { 
+                pickerState.month = pickerState.month > 1 ? pickerState.month - 1 : 12; 
+                updatePickerUI(); 
+            };
+            document.getElementById('btn-month-plus').onclick = () => { 
+                pickerState.month = pickerState.month < 12 ? pickerState.month + 1 : 1; 
+                updatePickerUI(); 
+            };
+
+            document.getElementById('btn-day-minus').onclick = () => { 
+                pickerState.day = pickerState.day > 1 ? pickerState.day - 1 : 31; 
+                updatePickerUI(); 
+            };
+            document.getElementById('btn-day-plus').onclick = () => { 
+                pickerState.day = pickerState.day < 31 ? pickerState.day + 1 : 1; 
+                updatePickerUI(); 
+            };
+
+            document.getElementById('btn-hour-minus').onclick = () => { 
+                pickerState.hour = pickerState.hour > 0 ? pickerState.hour - 1 : 23; 
+                updatePickerUI(); 
+            };
+            document.getElementById('btn-hour-plus').onclick = () => { 
+                pickerState.hour = pickerState.hour < 23 ? pickerState.hour + 1 : 0; 
+                updatePickerUI(); 
+            };
+
+            document.getElementById('btn-minute-minus').onclick = () => { 
+                pickerState.minute = (pickerState.minute - 5 + 60) % 60; 
+                updatePickerUI(); 
+            };
+            document.getElementById('btn-minute-plus').onclick = () => { 
+                pickerState.minute = (pickerState.minute + 5) % 60; 
+                updatePickerUI(); 
+            };
+
+            document.getElementById('btn-picker-cancel').onclick = () => {
+                document.getElementById('modal-gui-picker').classList.remove('active');
+            };
+
+            document.getElementById('btn-picker-ok').onclick = () => {
+                const formattedDate = `${pickerState.year}-${String(pickerState.month).padStart(2,'0')}-${String(pickerState.day).padStart(2,'0')}`;
+                const formattedTime = `${String(pickerState.hour).padStart(2,'0')}:${String(pickerState.minute).padStart(2,'0')}`;
+
+                if (pickerTarget === 'view') {
+                    currentDate = new Date(pickerState.year, pickerState.month - 1, pickerState.day);
+                    renderMainView();
+                } else if (pickerTarget === 'start') {
+                    tempEditEvent.startDate = formattedDate;
+                    tempEditEvent.startTime = formattedTime;
+                    updateDateTimeDisplay();
+                } else {
+                    tempEditEvent.endDate = formattedDate;
+                    tempEditEvent.endTime = formattedTime;
+                    updateDateTimeDisplay();
+                }
+
+                document.getElementById('modal-gui-picker').classList.remove('active');
+            };
+        }
+
+        // --- BACKUP FILE DOWNLOAD & IMPORT ---
+        async function downloadBackupFile() {
+            const events = await loadEventsFromDB();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(events, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `foss_calendar_backup_${Date.now()}.peer`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            showToast('バックアップファイルをダウンロードしました');
+        }
+
+        function triggerFileInput() {
+            document.getElementById('file-input-backup').click();
+        }
+
+        function handleFileImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if (Array.isArray(imported)) {
+                        await saveEventsToIndexedDB(imported);
+                        showToast('ファイルから予定を正常にロードしました');
+                        renderMainView();
+                    } else {
+                        showToast('無効なファイルフォーマットです');
+                    }
+                } catch (err) {
+                    showToast('読み込み失敗: ' + err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- EVENT BINDINGS & ATTACHMENTS ---
+        function attachUIEventListeners() {
+            // Drawer Controls
+            const drawer = document.getElementById('drawer');
+            const drawerOverlay = document.getElementById('drawer-overlay');
+
+            document.getElementById('btn-open-drawer').onclick = () => {
+                drawer.classList.add('active');
+                drawerOverlay.classList.add('active');
+            };
+
+            drawerOverlay.onclick = () => {
+                drawer.classList.remove('active');
+                drawerOverlay.classList.remove('active');
+            };
+
+            document.getElementById('drawer-settings').onclick = () => {
+                drawer.classList.remove('active');
+                drawerOverlay.classList.remove('active');
+                switchScreen('peer-screen');
+            };
+
+            document.getElementById('drawer-help').onclick = () => {
+                drawer.classList.remove('active');
+                drawerOverlay.classList.remove('active');
+                document.getElementById('modal-onboarding').classList.add('active');
+            };
+
+            // Today button
+            document.getElementById('btn-today').onclick = () => {
+                currentDate = new Date();
+                renderMainView();
+            };
+
+            // Select display date via title or day header
+            document.getElementById('btn-month-dropdown').onclick = () => {
+                openGuiPicker('view');
+            };
+            const dayHeaderLeft = document.querySelector('.day-header-left');
+            if (dayHeaderLeft) {
+                dayHeaderLeft.onclick = () => {
+                    openGuiPicker('view');
+                };
+            }
+
+            // Search and Peer Screens Back Buttons
+            document.getElementById('btn-menu-more').onclick = () => {
+                switchScreen('search-screen');
+            };
+
+            document.getElementById('btn-search-back').onclick = () => {
+                switchScreen('main-screen');
+            };
+
+            document.getElementById('btn-peer-back').onclick = () => {
+                switchScreen('main-screen');
+            };
+
+            // FAB Event Creation
+            document.getElementById('fab-add-event').onclick = () => {
+                openEventEditScreen();
+            };
+
+            document.getElementById('btn-edit-close').onclick = () => {
+                switchScreen('main-screen');
+            };
+
+            // Event Save Button
+            document.getElementById('btn-event-save').onclick = async () => {
+                tempEditEvent.title = document.getElementById('event-title').value;
+                tempEditEvent.isAllDay = document.getElementById('event-allday-toggle').checked;
+                tempEditEvent.location = document.getElementById('event-location').value;
+
+                let existingEvents = await loadEventsFromDB();
+                const idx = existingEvents.findIndex(e => e.id === tempEditEvent.id);
+                if (idx >= 0) {
+                    existingEvents[idx] = tempEditEvent;
+                } else {
+                    existingEvents.push(tempEditEvent);
+                }
+
+                await saveEventsToIndexedDB(existingEvents);
+                showToast('予定を保存しました');
+                switchScreen('main-screen');
+                renderMainView();
+            };
+
+            // GUI Picker Open Triggers
+            document.getElementById('row-start-datetime').onclick = () => openGuiPicker('start');
+            document.getElementById('row-end-datetime').onclick = () => openGuiPicker('end');
+
+            // Peer Send & Backup Actions
+            document.getElementById('btn-peer-send').onclick = () => {
+                const targetCode = document.getElementById('target-peercode-input').value.trim();
+                sendEventsViaPeer(targetCode);
+            };
+
+            document.getElementById('btn-download-backup').onclick = downloadBackupFile;
+            document.getElementById('btn-load-backup-trigger').onclick = triggerFileInput;
+            document.getElementById('file-input-backup').onchange = handleFileImport;
+
+            // Permission & Onboarding Modal Handlers
+            document.getElementById('btn-perm-deny').onclick = () => {
+                document.getElementById('modal-permission').classList.remove('active');
+                document.getElementById('modal-onboarding').classList.add('active');
+            };
+
+            document.getElementById('btn-perm-allow').onclick = () => {
+                document.getElementById('modal-permission').classList.remove('active');
+                document.getElementById('modal-onboarding').classList.add('active');
+            };
+
+            document.getElementById('btn-onboarding-finish').onclick = () => {
+                document.getElementById('modal-onboarding').classList.remove('active');
+            };
+
+            setupPickerListeners();
+        }
+
+        // --- APP INITIALIZATION ON WINDOW LOAD ---
+        window.onload = async function() {
+            await initIndexedDB();
+            await loadEventsFromDB();
+            await initPeerJS();
+
+            attachUIEventListeners();
+            renderMainView();
+
+            // 初回アクセスカレンダーダイアログの表示
+            const hasInitialized = await getSettingFromDB('hasInitialized');
+            if (!hasInitialized) {
+                document.getElementById('modal-permission').classList.add('active');
+                await setSettingToDB('hasInitialized', true);
+            }
+        };
+    </script>
+</body>
+</html>
