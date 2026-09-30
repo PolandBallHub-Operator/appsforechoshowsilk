@@ -4,6 +4,8 @@ Android™7.0のMaterialアプリを完全再現。FOSS
 
 - EchoShowでローカルファイルを使おう
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsui/
+- EchoShowで天気アプリを使おう
+- https://polandballhub-operator.github.io/appsforechoshowsilk/omweather/
 - EchoShowを縦画面でWeb見よう
 - https://polandballhub-operator.github.io/appsforechoshowsilk/kiosk2phone/
 - EchoShow向けWebリンクブックマーク
