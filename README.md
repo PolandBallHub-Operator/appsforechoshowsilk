@@ -22,6 +22,8 @@ Android™7.0のMaterialアプリを完全再現。FOSS
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/setting.html
 - Android7連絡帳 モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/contact.html
+- Android7ダイヤラ モック
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/dialer.html
 - Android7AOSPDevTool モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/devtool.html
 - Android7AOSPgallery モック
