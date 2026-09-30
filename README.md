@@ -30,6 +30,8 @@ Android™7.0のMaterialアプリを完全再現。FOSS
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gallery.html
 - Android7AOSPcamera モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/camera.html
+- Android7AOSPcamera2 実用化
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/camera2.html
 - Fire OS 6 設定 モック
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/firesetting.html
 - Android7AOSPmessage モック
