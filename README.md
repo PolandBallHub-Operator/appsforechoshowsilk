@@ -48,5 +48,7 @@ Android™7.0のMaterialアプリを完全再現。FOSS
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/searchbox.html
 - Android7gallery 実用性有り
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/gphoto.html
+- Android7メモ 実用性有り
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/memo.html
 - Android7Launcher3
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/launcher3.html
