@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser</title>
+    <!-- Google Material Symbols CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #0f1115;
+            color: #eceff1;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Top Bar Container */
+        .browser-header {
+            background-color: #1a1d24;
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid #101216;
+            z-index: 10;
+        }
+
+        /* Tabs Bar */
+        .tabs-bar {
+            display: flex;
+            align-items: flex-end;
+            background-color: #12141a;
+            padding-top: 4px;
+            padding-left: 6px;
+            padding-right: 6px;
+            height: 38px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tabs-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            height: 32px;
+            min-width: 140px;
+            max-width: 200px;
+            background-color: #232731;
+            color: #90a4ae;
+            padding: 0 10px;
+            margin-right: 2px;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.15s ease;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-bottom: none;
+        }
+
+        .tab.active {
+            background-color: #2e3440;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .tab-title {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 6px;
+        }
+
+        .tab-close {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            color: #90a4ae;
+            font-size: 14px;
+        }
+        .tab-close:hover {
+            background-color: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+
+        .new-tab-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 30px;
+            color: #b0bec5;
+            cursor: pointer;
+            margin-left: 4px;
+            border-radius: 4px;
+        }
+        .new-tab-btn:hover {
+            background-color: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+
+        /* Toolbar & Address Bar (Exact AOSP Nougat Reproduction) */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            height: 48px;
+            background-color: #2e3440;
+            padding: 0 6px;
+            gap: 4px;
+        }
+
+        .tool-btn {
+            background: transparent;
+            border: none;
+            color: #b0bec5;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            outline: none;
+        }
+        .tool-btn:active {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .address-bar {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background-color: #1e222b;
+            height: 36px;
+            border-radius: 4px;
+            padding: 0 8px;
+            border: 1px solid #14171d;
+        }
+
+        .address-bar img.site-icon {
+            width: 18px;
+            height: 18px;
+            margin-right: 6px;
+            object-fit: contain;
+        }
+
+        .address-bar .lock-icon {
+            font-size: 16px;
+            color: #81c784;
+            margin-right: 6px;
+        }
+
+        .address-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #ffffff;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        .address-actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .address-action-btn {
+            background: transparent;
+            border: none;
+            color: #90a4ae;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .address-action-btn:hover {
+            color: #eceff1;
+        }
+
+        /* Content Display Area */
+        #content-area {
+            flex: 1;
+            position: relative;
+            background-color: #ffffff;
+            width: 100%;
+            height: calc(100vh - 86px);
+        }
+
+        iframe.web-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: #ffffff;
+        }
+
+        body.fullscreen-active .browser-header {
+            display: none !important;
+        }
+
+        body.fullscreen-active #content-area {
+            height: 100vh !important;
+        }
+
+        /* Floating exit fullscreen control */
+        #exit-fullscreen-btn {
+            display: none;
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s, background-color 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+
+        #exit-fullscreen-btn:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.85);
+        }
+
+        body.fullscreen-active #exit-fullscreen-btn {
+            display: flex;
+        }
+
+        /* Dropdown Popup Menu (Image 2 Replica) */
+        #menu-popup {
+            display: none;
+            position: absolute;
+            top: 80px;
+            right: 8px;
+            width: 220px;
+            background-color: #212121;
+            border: 1px solid #333333;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            border-radius: 2px;
+            padding: 4px 0;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            color: #e0e0e0;
+            font-size: 14px;
+            cursor: pointer;
+            border-bottom: 1px solid #2c2c2c;
+        }
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+        .menu-item:active {
+            background-color: #333333;
+        }
+        .menu-item.disabled {
+            color: #616161;
+            cursor: default;
+        }
+        .menu-item .checkbox-square {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #757575;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .menu-item .checkbox-square.checked {
+            background-color: #009688;
+            border-color: #009688;
+        }
+        .menu-item .checkbox-square.checked::after {
+            content: "✓";
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Settings Activity View (Image 3 Replica) */
+        .sub-activity {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 500;
+            flex-direction: column;
+            color: #212121;
+        }
+
+        .activity-header {
+            background-color: #3f4752;
+            color: #ffffff;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .activity-header .back-btn {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .activity-header .app-icon {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+        }
+
+        .activity-header h1 {
+            font-size: 18px;
+            font-weight: 400;
+        }
+
+        .settings-list {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #ffffff;
+        }
+
+        .settings-group {
+            border-bottom: 1px solid #e0e0e0;
+            padding: 14px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .settings-group:active {
+            background-color: #f5f5f5;
+        }
+
+        .settings-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            padding-right: 12px;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111111;
+        }
+
+        .settings-desc {
+            font-size: 13px;
+            color: #616161;
+        }
+
+        /* Android 7.1 (Nougat) Switch Component (Provided CSS) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        /* Rich Text Note / Offline Reading Activity (IndexedDB Tool) */
+        .notes-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 16px;
+            background-color: #f9f9f9;
+        }
+
+        .notes-toolbar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            background-color: #eeeeee;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+
+        .editor-btn {
+            background: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .editor-btn:hover {
+            background-color: #e2e2e2;
+        }
+
+        .note-editor {
+            flex: 1;
+            background-color: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            padding: 12px;
+            outline: none;
+            overflow-y: auto;
+            min-height: 200px;
+            font-size: 15px;
+            color: #333333;
+        }
+
+        .notes-list-section {
+            margin-top: 16px;
+            height: 160px;
+            overflow-y: auto;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 8px;
+        }
+
+        .note-card {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .note-card-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #212121;
+        }
+
+        .btn-primary {
+            background-color: #009688;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Pattern Lock Overlay */
+        #pattern-modal {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-gap: 30px;
+            margin-top: 24px;
+        }
+
+        .pattern-dot {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid #80cbd2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .pattern-dot::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            background-color: #009688;
+            border-radius: 50%;
+        }
+
+        .device-info-footer {
+            font-size: 11px;
+            color: #757575;
+            text-align: center;
+            padding: 8px;
+            background-color: #eceff1;
+            border-top: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Floating Button for Exit Fullscreen -->
+        <button id="exit-fullscreen-btn" onclick="toggleFullscreen()" title="Exit Fullscreen">
+            <span class="material-symbols-outlined">fullscreen_exit</span>
+        </button>
+
+        <!-- Browser Top Header -->
+        <header class="browser-header">
+            <!-- Tabs Row -->
+            <div class="tabs-bar" id="tabs-bar">
+                <!-- Tabs generated dynamically -->
+                <div class="new-tab-btn" onclick="addNewTab()" title="New Tab">
+                    <span class="material-symbols-outlined">add</span>
+                </div>
+            </div>
+
+            <!-- Toolbar & Address Bar -->
+            <div class="toolbar">
+                <button class="tool-btn" onclick="navigateBack()" title="Back">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <button class="tool-btn" onclick="navigateForward()" title="Forward">
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                </button>
+                <button class="tool-btn" onclick="reloadTab()" title="Reload">
+                    <span class="material-symbols-outlined">refresh</span>
+                </button>
+
+                <div class="address-bar">
+                    <img src="https://raw.githubusercontent.com/PolandBallHub-Operator/Android_7_icon_repo/refs/heads/main/brow.png" class="site-icon" alt="icon">
+                    <span class="material-symbols-outlined lock-icon">lock</span>
+                    <input type="text" id="address-input" class="address-input" placeholder="Search or type URL" onkeydown="handleAddressKeyDown(event)">
+                    
+                    <div class="address-actions">
+                        <button class="address-action-btn" onclick="toggleBookmark()" id="star-btn" title="Save Bookmark">
+                            <span class="material-symbols-outlined" id="star-icon">star</span>
+                        </button>
+                        <button class="address-action-btn" onclick="triggerSearch()" title="Search">
+                            <span class="material-symbols-outlined">search</span>
+                        </button>
+                        <button class="address-action-btn" onclick="openBookmarksActivity()" title="Bookmarks">
+                            <span class="material-symbols-outlined">turned_in</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button class="tool-btn" onclick="toggleMenu()" title="Menu">
+                    <span class="material-symbols-outlined">more_vert</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content (iFrame) -->
+        <main id="content-area">
+            <!-- Dynamic iFrames created for tabs -->
+        </main>
+
+        <!-- Dropdown Menu (Image 2 Replication) -->
+        <div id="menu-popup">
+            <div class="menu-item" onclick="reloadTab(); closeMenu();">
+                <span>Refresh</span>
+            </div>
+            <div class="menu-item" onclick="navigateForward(); closeMenu();">
+                <span>Forward</span>
+            </div>
+            <div class="menu-item" onclick="openBookmarksActivity(); closeMenu();">
+                <span>Bookmarks</span>
+            </div>
+            <div class="menu-item" onclick="toggleBookmark(); closeMenu();">
+                <span>Save to bookmarks</span>
+            </div>
+            <div class="menu-item" onclick="toggleFullscreen(); closeMenu();">
+                <span>Fullscreen</span>
+                <div class="checkbox-square" id="fullscreen-check"></div>
+            </div>
+            <div class="menu-item" onclick="sharePage(); closeMenu();">
+                <span>Share page</span>
+            </div>
+            <div class="menu-item" onclick="openPatternLock(); closeMenu();">
+                <span>Draw pattern to unlock</span>
+            </div>
+            <div class="menu-item" onclick="toggleDesktopSite(); closeMenu();">
+                <span>Request desktop site</span>
+                <div class="checkbox-square" id="desktop-check"></div>
+            </div>
+            <div class="menu-item" onclick="openNotesActivity(); closeMenu();">
+                <span>Save for offline reading</span>
+            </div>
+            <div class="menu-item" onclick="openSettingsActivity(); closeMenu();">
+                <span>Settings</span>
+            </div>
+        </div>
+
+        <!-- Sub-Activity 1: Settings (Image 3 Replication) -->
+        <div id="settings-activity" class="sub-activity">
+            <div class="activity-header">
+                <button class="back-btn" onclick="closeSubActivities()">
+                    <span class="material-symbols-outlined">arrow_back_ios</span>
+                </button>
+                <img src="https://raw.githubusercontent.com/PolandBallHub-Operator/Android_7_icon_repo/refs/heads/main/brow.png" class="app-icon" alt="Browser Icon">
+                <h1>Settings</h1>
+            </div>
+
+            <div class="settings-list">
+                <div class="settings-group" onclick="showCategoryDetail('General')">
+                    <div class="settings-info">
+                        <span class="settings-title">General</span>
+                        <span class="settings-desc">Settings for homepage, toolbar & form auto fill</span>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-info">
+                        <span class="settings-title">Privacy & Security</span>
+                        <span class="settings-desc">Settings for managing personal data from web browsing & usage</span>
+                    </div>
+                    <!-- Switch Demo inside Settings -->
+                    <label class="switch" onclick="event.stopPropagation()">
+                        <input type="checkbox" checked id="privacy-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-info">
+                        <span class="settings-title">Accessibility</span>
+                        <span class="settings-desc">Adjust text size and rendering options</span>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-info">
+                        <span class="settings-title">Advanced</span>
+                        <span class="settings-desc">Adjust JavaScript and other web content settings</span>
+                    </div>
+                    <label class="switch" onclick="event.stopPropagation()">
+                        <input type="checkbox" checked id="js-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-info">
+                        <span class="settings-title">Bandwidth management</span>
+                        <span class="settings-desc">Settings for search result preloading and load images</span>
+                    </div>
+                    <label class="switch" onclick="event.stopPropagation()">
+                        <input type="checkbox" id="bandwidth-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-info">
+                        <span class="settings-title">Device Specification</span>
+                        <span class="settings-desc">Echo Show 5 gen3 (Android 7.1 AOSP Core)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="device-info-footer">
+                Device: Echo Show 5 gen3 | Android 7.1 Nougat AOSP Browser
+            </div>
+        </div>
+
+        <!-- Sub-Activity 2: Offline Reading / Rich Text Notes (IndexedDB Tool) -->
+        <div id="notes-activity" class="sub-activity">
+            <div class="activity-header">
+                <button class="back-btn" onclick="closeSubActivities()">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <img src="https://raw.githubusercontent.com/PolandBallHub-Operator/Android_7_icon_repo/refs/heads/main/brow.png" class="app-icon" alt="Browser Icon">
+                <h1>Save for Offline Reading (Notes)</h1>
+            </div>
+
+            <div class="notes-container">
+                <div class="notes-toolbar">
+                    <button class="editor-btn" onclick="formatNote('bold')">B</button>
+                    <button class="editor-btn" onclick="formatNote('italic')"><i>I</i></button>
+                    <button class="editor-btn" onclick="formatNote('underline')"><u>U</u></button>
+                    <button class="editor-btn" onclick="formatNote('insertUnorderedList')">• List</button>
+                    <button class="editor-btn" onclick="formatNote('formatBlock', 'H3')">H3</button>
+                    <button class="editor-btn" onclick="saveCurrentPageToNotes()">+ Capture Current Page</button>
+                </div>
+
+                <div id="note-editor" class="note-editor" contenteditable="true" placeholder="Type offline note content here..."></div>
+
+                <div style="margin-top: 10px; display: flex; gap: 8px;">
+                    <button class="btn-primary" onclick="saveNoteToDB()">Save Note to IndexedDB</button>
+                    <button class="editor-btn" onclick="clearNoteEditor()">Clear</button>
+                </div>
+
+                <div class="notes-list-section">
+                    <h3 style="font-size: 14px; margin-bottom: 8px; color: #424242;">Saved Offline Pages & Notes</h3>
+                    <div id="notes-list-container">
+                        <!-- IndexedDB Items -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sub-Activity 3: Bookmarks List -->
+        <div id="bookmarks-activity" class="sub-activity">
+            <div class="activity-header">
+                <button class="back-btn" onclick="closeSubActivities()">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <img src="https://raw.githubusercontent.com/PolandBallHub-Operator/Android_7_icon_repo/refs/heads/main/brow.png" class="app-icon" alt="Browser Icon">
+                <h1>Bookmarks</h1>
+            </div>
+
+            <div class="settings-list" id="bookmarks-list-container">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <!-- Pattern Lock Overlay -->
+        <div id="pattern-modal">
+            <h2>Draw pattern to unlock</h2>
+            <p style="font-size: 13px; color: #b0bec5; margin-top: 4px;">Android Security Prompt</p>
+            <div class="pattern-grid">
+                <div class="pattern-dot" onclick="highlightDot(this)"></div>
+                <div class="pattern-dot" onclick="highlightDot(this)"></div>
+                <div class="pattern-dot" onclick="highlightDot(this)"></div>
+                <div class="pattern-dot" onclick="highlightDot(this)"></div>
+                <div class="pattern-dot" onclick="highlightDot(this)"></div>
+                <div class="pattern-dot" onclick="highlightDot(this)"></div>
+                <div class="pattern-dot" onclick="highlightDot(this)"></div>
+                <div class="pattern-dot" onclick="highlightDot(this)"></div>
+                <div class="pattern-dot" onclick="highlightDot(this)"></div>
+            </div>
+            <button class="btn-primary" style="margin-top: 24px;" onclick="closePatternLock()">Done / Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // System State
+        const DEFAULT_URL = "https://www.google.com/?igu=1";
+        const SEARCH_BASE_URL = "https://www.google.com/search?q=";
+        const DEVICE_NAME = "Echo show 5 gen3";
+
+        let tabs = [];
+        let activeTabId = null;
+        let db = null;
+        let isFullscreenMode = false;
+        let isDesktopSiteMode = false;
+
+        // Initialize App
+        window.addEventListener('load', () => {
+            initIndexedDB();
+            addNewTab(DEFAULT_URL, "Google");
+
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        });
+
+        function handleFullscreenChange() {
+            const isDocFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+            isFullscreenMode = isDocFullscreen;
+
+            const check = document.getElementById('fullscreen-check');
+            if (isDocFullscreen) {
+                document.body.classList.add('fullscreen-active');
+                if (check) check.classList.add('checked');
+            } else {
+                document.body.classList.remove('fullscreen-active');
+                if (check) check.classList.remove('checked');
+            }
+        }
+
+        // IndexedDB Initialization
+        function initIndexedDB() {
+            const request = indexedDB.open("AOSPBrowserDB", 1);
+            
+            request.onupgradeneeded = (e) => {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains("notes")) {
+                    db.createObjectStore("notes", { keyPath: "id", autoIncrement: true });
+                }
+                if (!db.objectStoreNames.contains("bookmarks")) {
+                    db.createObjectStore("bookmarks", { keyPath: "id", autoIncrement: true });
+                }
+            };
+
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                loadNotesFromDB();
+                loadBookmarksFromDB();
+            };
+
+            request.onerror = (e) => {
+                console.error("IndexedDB error:", e);
+            };
+        }
+
+        // Tab Management
+        function addNewTab(url = DEFAULT_URL, title = "New Tab") {
+            const tabId = "tab_" + Date.now();
+            const tabObj = {
+                id: tabId,
+                url: url,
+                title: title,
+                history: [url],
+                historyIndex: 0
+            };
+
+            tabs.push(tabObj);
+
+            // Create iFrame
+            const iframe = document.createElement('iframe');
+            iframe.className = "web-frame";
+            iframe.id = "frame_" + tabId;
+            iframe.src = url;
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+
+            document.getElementById('content-area').appendChild(iframe);
+
+            switchTab(tabId);
+            renderTabs();
+        }
+
+        function switchTab(tabId) {
+            activeTabId = tabId;
+            
+            // Toggle iframe visibility
+            document.querySelectorAll('iframe.web-frame').forEach(frame => {
+                frame.style.display = (frame.id === "frame_" + tabId) ? "block" : "none";
+            });
+
+            const currentTab = getActiveTab();
+            if (currentTab) {
+                document.getElementById('address-input').value = currentTab.url;
+            }
+
+            renderTabs();
+        }
+
+        function closeTab(tabId, event) {
+            if (event) event.stopPropagation();
+            if (tabs.length <= 1) return; // Keep at least one tab
+
+            const index = tabs.findIndex(t => t.id === tabId);
+            if (index !== -1) {
+                tabs.splice(index, 1);
+                const frame = document.getElementById("frame_" + tabId);
+                if (frame) frame.remove();
+
+                if (activeTabId === tabId) {
+                    const newActive = tabs[Math.max(0, index - 1)];
+                    switchTab(newActive.id);
+                } else {
+                    renderTabs();
+                }
+            }
+        }
+
+        function getActiveTab() {
+            return tabs.find(t => t.id === activeTabId);
+        }
+
+        function renderTabs() {
+            const tabsContainer = document.getElementById('tabs-bar');
+            // Remove existing tabs except new tab button
+            const newTabBtn = tabsContainer.querySelector('.new-tab-btn');
+            tabsContainer.innerHTML = '';
+
+            tabs.forEach(tab => {
+                const tabEl = document.createElement('div');
+                tabEl.className = `tab ${tab.id === activeTabId ? 'active' : ''}`;
+                tabEl.onclick = () => switchTab(tab.id);
+
+                tabEl.innerHTML = `
+                    <span class="tab-title">${escapeHtml(tab.title)}</span>
+                    <span class="tab-close" onclick="closeTab('${tab.id}', event)">×</span>
+                `;
+
+                tabsContainer.appendChild(tabEl);
+            });
+
+            tabsContainer.appendChild(newTabBtn);
+        }
+
+        // Address Bar & Navigation
+        function handleAddressKeyDown(event) {
+            if (event.key === 'Enter') {
+                triggerSearch();
+            }
+        }
+
+        function triggerSearch() {
+            const input = document.getElementById('address-input').value.trim();
+            if (!input) return;
+
+            let finalUrl = input;
+            if (isUrl(input)) {
+                if (!input.startsWith('http://') && !input.startsWith('https://')) {
+                    finalUrl = 'https://' + input;
+                }
+            } else {
+                finalUrl = SEARCH_BASE_URL + encodeURIComponent(input) + "&igu=1";
+            }
+
+            loadUrlInActiveTab(finalUrl);
+        }
+
+        function isUrl(str) {
+            const pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+                '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+                '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+                '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+                '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+                '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+            return !!pattern.test(str) || str.includes('.');
+        }
+
+        function loadUrlInActiveTab(url) {
+            const tab = getActiveTab();
+            if (!tab) return;
+
+            tab.url = url;
+            tab.title = extractTitleFromUrl(url);
+            
+            const frame = document.getElementById("frame_" + tab.id);
+            if (frame) {
+                frame.src = url;
+            }
+
+            document.getElementById('address-input').value = url;
+            renderTabs();
+        }
+
+        function extractTitleFromUrl(url) {
+            try {
+                const u = new URL(url);
+                if (u.hostname.includes('google')) return 'Google';
+                if (u.hostname.includes('wikipedia')) return 'Wikipedia';
+                return u.hostname;
+            } catch(e) {
+                return url;
+            }
+        }
+
+        function navigateBack() {
+            const tab = getActiveTab();
+            const frame = document.getElementById("frame_" + tab.id);
+            if (frame && frame.contentWindow) {
+                try {
+                    frame.contentWindow.history.back();
+                } catch(e) {
+                    console.log("Cross-origin back triggered");
+                }
+            }
+        }
+
+        function navigateForward() {
+            const tab = getActiveTab();
+            const frame = document.getElementById("frame_" + tab.id);
+            if (frame && frame.contentWindow) {
+                try {
+                    frame.contentWindow.history.forward();
+                } catch(e) {
+                    console.log("Cross-origin forward triggered");
+                }
+            }
+        }
+
+        function reloadTab() {
+            const tab = getActiveTab();
+            const frame = document.getElementById("frame_" + tab.id);
+            if (frame) {
+                frame.src = frame.src;
+            }
+        }
+
+        // Menu Popover Controls
+        function toggleMenu() {
+            const menu = document.getElementById('menu-popup');
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function closeMenu() {
+            document.getElementById('menu-popup').style.display = 'none';
+        }
+
+        // Sub-Activities Manager
+        function closeSubActivities() {
+            document.querySelectorAll('.sub-activity').forEach(act => {
+                act.style.display = 'none';
+            });
+        }
+
+        function openSettingsActivity() {
+            closeSubActivities();
+            document.getElementById('settings-activity').style.display = 'flex';
+        }
+
+        function openNotesActivity() {
+            closeSubActivities();
+            document.getElementById('notes-activity').style.display = 'flex';
+        }
+
+        function openBookmarksActivity() {
+            closeSubActivities();
+            document.getElementById('bookmarks-activity').style.display = 'flex';
+            renderBookmarksList();
+        }
+
+        // Feature Toggles (Fullscreen, Desktop Site)
+        function toggleFullscreen() {
+            isFullscreenMode = !isFullscreenMode;
+            
+            if (isFullscreenMode) {
+                document.body.classList.add('fullscreen-active');
+                const docEl = document.documentElement;
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen().catch(() => {});
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                }
+            } else {
+                document.body.classList.remove('fullscreen-active');
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+
+            const check = document.getElementById('fullscreen-check');
+            if (check) {
+                if (isFullscreenMode) check.classList.add('checked');
+                else check.classList.remove('checked');
+            }
+        }
+
+        function toggleDesktopSite() {
+            isDesktopSiteMode = !isDesktopSiteMode;
+            const check = document.getElementById('desktop-check');
+            const tab = getActiveTab();
+            const frame = document.getElementById("frame_" + tab.id);
+
+            if (isDesktopSiteMode) {
+                check.classList.add('checked');
+                if (frame) frame.style.transform = "scale(0.8) translateY(-10%)";
+            } else {
+                check.classList.remove('checked');
+                if (frame) frame.style.transform = "none";
+            }
+        }
+
+        function sharePage() {
+            const tab = getActiveTab();
+            if (tab) {
+                navigator.clipboard.writeText(tab.url).then(() => {
+                    alert("URL copied to clipboard: " + tab.url);
+                }).catch(() => {
+                    const temp = document.createElement('input');
+                    document.body.appendChild(temp);
+                    temp.value = tab.url;
+                    temp.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(temp);
+                    alert("URL copied to clipboard: " + tab.url);
+                });
+            }
+        }
+
+        // Pattern Lock Dialog
+        function openPatternLock() {
+            document.getElementById('pattern-modal').style.display = 'flex';
+        }
+
+        function closePatternLock() {
+            document.getElementById('pattern-modal').style.display = 'none';
+        }
+
+        function highlightDot(el) {
+            el.style.backgroundColor = 'rgba(0, 150, 136, 0.4)';
+        }
+
+        // IndexedDB Rich Text Note Functions
+        function formatNote(command, value = null) {
+            document.execCommand(command, false, value);
+        }
+
+        function clearNoteEditor() {
+            document.getElementById('note-editor').innerHTML = '';
+        }
+
+        function saveCurrentPageToNotes() {
+            const tab = getActiveTab();
+            if (tab) {
+                const editor = document.getElementById('note-editor');
+                editor.innerHTML += `<div><strong>Captured Page:</strong> <a href="${tab.url}">${tab.title}</a> (${new Date().toLocaleTimeString()})</div><br>`;
+            }
+        }
+
+        function saveNoteToDB() {
+            const content = document.getElementById('note-editor').innerHTML.trim();
+            if (!content) return;
+
+            if (!db) return;
+            const tx = db.transaction("notes", "readwrite");
+            const store = tx.objectStore("notes");
+
+            const noteData = {
+                title: "Note " + new Date().toLocaleString(),
+                content: content,
+                timestamp: Date.now()
+            };
+
+            store.add(noteData);
+            tx.oncomplete = () => {
+                clearNoteEditor();
+                loadNotesFromDB();
+            };
+        }
+
+        function loadNotesFromDB() {
+            if (!db) return;
+            const tx = db.transaction("notes", "readonly");
+            const store = tx.objectStore("notes");
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                const notes = request.result;
+                const container = document.getElementById('notes-list-container');
+                container.innerHTML = '';
+
+                notes.reverse().forEach(note => {
+                    const card = document.createElement('div');
+                    card.className = 'note-card';
+                    card.innerHTML = `
+                        <div>
+                            <div class="note-card-title">${escapeHtml(note.title)}</div>
+                            <div style="font-size: 12px; color: #616161;">${note.content.substring(0, 40)}...</div>
+                        </div>
+                        <button class="editor-btn" onclick="deleteNoteFromDB(${note.id})">Delete</button>
+                    `;
+                    container.appendChild(card);
+                });
+            };
+        }
+
+        function deleteNoteFromDB(id) {
+            if (!db) return;
+            const tx = db.transaction("notes", "readwrite");
+            store = tx.objectStore("notes");
+            store.delete(id);
+            tx.oncomplete = () => loadNotesFromDB();
+        }
+
+        // Bookmarks Persistence (IndexedDB)
+        function toggleBookmark() {
+            const tab = getActiveTab();
+            if (!tab || !db) return;
+
+            const tx = db.transaction("bookmarks", "readwrite");
+            const store = tx.objectStore("bookmarks");
+
+            store.add({
+                title: tab.title,
+                url: tab.url,
+                timestamp: Date.now()
+            });
+
+            tx.oncomplete = () => {
+                const icon = document.getElementById('star-icon');
+                icon.style.color = '#fbc02d';
+                setTimeout(() => { icon.style.color = ''; }, 1500);
+            };
+        }
+
+        function loadBookmarksFromDB() {
+            if (!db) return;
+            renderBookmarksList();
+        }
+
+        function renderBookmarksList() {
+            if (!db) return;
+            const tx = db.transaction("bookmarks", "readonly");
+            const store = tx.objectStore("bookmarks");
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                const bookmarks = request.result;
+                const container = document.getElementById('bookmarks-list-container');
+                container.innerHTML = '';
+
+                if (bookmarks.length === 0) {
+                    container.innerHTML = '<div style="padding: 16px; color: #757575;">No saved bookmarks yet.</div>';
+                    return;
+                }
+
+                bookmarks.forEach(bm => {
+                    const item = document.createElement('div');
+                    item.className = 'settings-group';
+                    item.onclick = () => {
+                        loadUrlInActiveTab(bm.url);
+                        closeSubActivities();
+                    };
+
+                    item.innerHTML = `
+                        <div class="settings-info">
+                            <span class="settings-title">${escapeHtml(bm.title)}</span>
+                            <span class="settings-desc">${escapeHtml(bm.url)}</span>
+                        </div>
+                        <button class="editor-btn" onclick="event.stopPropagation(); deleteBookmarkFromDB(${bm.id})">Remove</button>
+                    `;
+                    container.appendChild(item);
+                });
+            };
+        }
+
+        function deleteBookmarkFromDB(id) {
+            if (!db) return;
+            const tx = db.transaction("bookmarks", "readwrite");
+            tx.objectStore("bookmarks").delete(id);
+            tx.oncomplete = () => renderBookmarksList();
+        }
+
+        // Helper Utility
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+    </script>
+</body>
+</html>
