@@ -62,3 +62,4 @@ Android™7.0のMaterialアプリを完全再現。FOSS
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/pmessage.html
 - Android7 Calendar β版
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/calendar.html
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/PAINTAPK.html
