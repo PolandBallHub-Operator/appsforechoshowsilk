@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Peer Message</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Roboto', sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #ffffff;
+            color: #212121;
+        }
+
+        /* App View Container Framework */
+        .app-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+            transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
+            z-index: 1;
+        }
+
+        .app-view.hidden {
+            display: none !important;
+        }
+
+        /* Android 7.1 (Nougat) Switch Component */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        /* Action Bar Styles */
+        .action-bar {
+            height: 56px;
+            background-color: #009688; /* Hangouts Android green */
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .action-bar-title {
+            font-size: 20px;
+            font-weight: 500;
+            margin-left: 16px;
+            flex: 1;
+        }
+
+        .action-bar .icon-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .action-bar .icon-btn:active {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .search-bar-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: transparent;
+            margin-left: 8px;
+            overflow: hidden;
+        }
+
+        .search-chip {
+            background-color: rgba(255,255,255,0.2);
+            color: #ffffff;
+            border-radius: 16px;
+            padding: 4px 12px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: 6px;
+            white-space: nowrap;
+        }
+
+        .search-chip .chip-icon {
+            font-size: 16px;
+            background: #00796b;
+            border-radius: 50%;
+            padding: 2px;
+        }
+
+        .search-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            color: #ffffff;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255,255,255,0.8);
+        }
+
+        /* Main View Body */
+        .content-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+            background-color: #ffffff;
+        }
+
+        .empty-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .empty-robot-img {
+            width: 200px;
+            height: auto;
+            margin-bottom: 24px;
+            filter: grayscale(100%);
+            opacity: 0.7;
+        }
+
+        .empty-text {
+            color: #757575;
+            font-size: 16px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* Main Activity Chat List Item */
+        .chat-list-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.15s ease;
+        }
+
+        .chat-list-item:active {
+            background-color: #e0f2f1;
+        }
+
+        .chat-avatar-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #009688;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+
+        .chat-avatar-icon .material-symbols-outlined {
+            font-size: 28px;
+        }
+
+        .chat-info-block {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .chat-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 4px;
+        }
+
+        .chat-target-id {
+            font-size: 16px;
+            font-weight: 500;
+            color: #212121;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-timestamp {
+            font-size: 12px;
+            color: #757575;
+            margin-left: 8px;
+            white-space: nowrap;
+        }
+
+        .chat-last-msg {
+            font-size: 14px;
+            color: #616161;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Floating Action Button (FAB) */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: #009688;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: none;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .fab:active {
+            background-color: #00796b;
+        }
+
+        /* Navigation Drawer */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .drawer-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background-color: #ffffff;
+            z-index: 101;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+        }
+
+        .drawer.active {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            height: 140px;
+            background: linear-gradient(135deg, #2b527d 0%, #3e6d9c 100%);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: #ffffff;
+            position: relative;
+        }
+
+        .drawer-user-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: #64b5f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .drawer-user-avatar .material-symbols-outlined {
+            font-size: 40px;
+            color: #ffffff;
+        }
+
+        .sms-badge {
+            position: absolute;
+            bottom: -2px;
+            right: -4px;
+            background-color: #5c6bc0;
+            color: #ffffff;
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .drawer-id-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .drawer-id-text {
+            font-size: 15px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 210px;
+        }
+
+        .drawer-menu-list {
+            padding: 8px 0;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: #37474f;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            gap: 24px;
+        }
+
+        .drawer-item:active {
+            background-color: #eceff1;
+        }
+
+        .drawer-item .material-symbols-outlined {
+            color: #546e7a;
+            font-size: 22px;
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 8px 0;
+        }
+
+        /* Search Activity Styles */
+        .search-results-list {
+            width: 100%;
+            background-color: #ffffff;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+        }
+
+        .contact-item:active {
+            background-color: #e0f2f1;
+        }
+
+        .contact-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #009688;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            margin-right: 16px;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .contact-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: #212121;
+        }
+
+        .contact-sub {
+            font-size: 13px;
+            color: #757575;
+        }
+
+        .not-found-row {
+            display: flex;
+            align-items: flex-start;
+            padding: 16px;
+            gap: 16px;
+            color: #546e7a;
+        }
+
+        .alien-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background-color: #b0bec5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            flex-shrink: 0;
+        }
+
+        .not-found-text {
+            font-size: 15px;
+            line-height: 1.4;
+            color: #455a64;
+            padding-top: 8px;
+        }
+
+        /* Chat Activity Styles */
+        .chat-messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background-color: #eceff1;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.4;
+            position: relative;
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .message-bubble.sent {
+            align-self: flex-end;
+            background-color: #cfd8dc;
+            color: #263238;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message-bubble.received {
+            align-self: flex-start;
+            background-color: #ffffff;
+            color: #212121;
+            border-bottom-left-radius: 2px;
+        }
+
+        .message-status {
+            font-size: 11px;
+            color: #607d8b;
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        .media-preview {
+            max-width: 220px;
+            max-height: 220px;
+            border-radius: 6px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .chat-footer {
+            background-color: #ffffff;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-input-box {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            padding: 8px;
+            color: #212121;
+        }
+
+        .chat-action-icons {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 6px;
+            color: #78909c;
+        }
+
+        .chat-action-icons .icon-btn {
+            background: none;
+            border: none;
+            color: #607d8b;
+            padding: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #eceff1;
+            color: #78909c;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .send-btn.active {
+            background-color: #009688;
+            color: #ffffff;
+        }
+
+        /* Modal Dialog */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-box {
+            width: 85%;
+            max-width: 420px;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            background: #ffffff;
+            border-radius: 4px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            background: none;
+            border: none;
+            color: #009688;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 6px 12px;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+        }
+
+        .peer-code-setting-row {
+            display: block;
+            padding: 14px 0 4px;
+        }
+
+        .peer-code-setting-label {
+            display: block;
+            color: #616161;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .peer-code-setting-value {
+            display: block;
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #b2dfdb;
+            border-radius: 4px;
+            background: #f1f8f7;
+            color: #00695c;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+            word-break: break-all;
+            user-select: text;
+        }
+
+        .hidden-file-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Activity View -->
+    <div id="main-activity" class="app-view">
+        <div class="action-bar">
+            <button class="icon-btn" onclick="toggleDrawer(true)">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+            <div class="action-bar-title">PeerMessage</div>
+        </div>
+
+        <div id="main-content-body" class="content-body">
+            <!-- Dynamic list of chats or empty state -->
+        </div>
+
+        <button class="fab" onclick="openSearchActivity()">
+            <span class="material-symbols-outlined" style="font-size: 28px;">add</span>
+        </button>
+    </div>
+
+    <!-- Search Sub Activity View -->
+    <div id="search-activity" class="app-view hidden">
+        <div class="action-bar" style="background-color: #547585;">
+            <button class="icon-btn" onclick="closeSearchActivity()">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div class="search-bar-container">
+                <input type="text" id="target-peer-input" class="search-input" placeholder="ここに相手のpeerjsのid" oninput="handleSearchInput(this.value)">
+            </div>
+        </div>
+
+        <div id="search-results-container" class="search-results-list">
+            <!-- Dynamic search results or default not found -->
+        </div>
+    </div>
+
+    <!-- Chat Activity View -->
+    <div id="chat-activity" class="app-view hidden">
+        <div class="action-bar">
+            <button class="icon-btn" onclick="closeChatActivity()">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div style="flex:1; margin-left: 8px; overflow: hidden;">
+                <div id="chat-target-title" style="font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">+81124345418...</div>
+            </div>
+            <button class="icon-btn"><span class="material-symbols-outlined">videocam</span></button>
+            <button class="icon-btn"><span class="material-symbols-outlined">call</span></button>
+            <button class="icon-btn"><span class="material-symbols-outlined">more_vert</span></button>
+        </div>
+
+        <div id="chat-messages" class="chat-messages-container">
+            <!-- Messages inserted here -->
+        </div>
+
+        <div class="chat-footer">
+            <div class="chat-input-row">
+                <input type="text" id="chat-text-input" class="chat-input-box" placeholder="メッセージを入力" oninput="updateSendButton()">
+                <button id="send-msg-btn" class="send-btn" onclick="sendTextMessage()">
+                    <span class="material-symbols-outlined" style="font-size: 20px;">send</span>
+                </button>
+            </div>
+            <div class="chat-action-icons">
+                <button class="icon-btn"><span class="material-symbols-outlined">sentiment_satisfied</span></button>
+                <button class="icon-btn" onclick="triggerFileUpload('image/*')"><span class="material-symbols-outlined">image</span></button>
+                <button class="icon-btn" onclick="triggerFileUpload('video/*')"><span class="material-symbols-outlined">photo_camera</span></button>
+                <button class="icon-btn"><span class="material-symbols-outlined">gif</span></button>
+                <button class="icon-btn"><span class="material-symbols-outlined">my_location</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Input for Files -->
+    <input type="file" id="media-file-input" class="hidden-file-input" onchange="handleFileSelected(event)">
+
+    <!-- Navigation Drawer -->
+    <div id="drawer-overlay" class="drawer-overlay" onclick="toggleDrawer(false)"></div>
+    <div id="drawer" class="drawer">
+        <div class="drawer-header">
+            <div class="drawer-user-avatar">
+                <span class="material-symbols-outlined">person</span>
+                <span class="sms-badge">SMS</span>
+            </div>
+            <div class="drawer-id-row">
+                <div id="my-peer-id-display" class="drawer-id-text">ここにPeerJSのID</div>
+                <span class="material-symbols-outlined" style="font-size: 20px; cursor: pointer;">arrow_drop_down</span>
+            </div>
+        </div>
+        <div class="drawer-menu-list">
+            <div class="drawer-item"><span class="material-symbols-outlined">notifications_off</span>通知をスヌーズ</div>
+            <div class="drawer-item"><span class="material-symbols-outlined">person</span>連絡先</div>
+            <div class="drawer-item"><span class="material-symbols-outlined">mail</span>招待</div>
+            <div class="drawer-item"><span class="material-symbols-outlined">archive</span>アーカイブ済み</div>
+            <div class="drawer-item"><span class="material-symbols-outlined">report</span>ブロック中のユーザー</div>
+            <div class="drawer-divider"></div>
+            <div class="drawer-item" onclick="openSettingsModal()"><span class="material-symbols-outlined">settings</span>設定</div>
+            <div class="drawer-item"><span class="material-symbols-outlined">help</span>ヘルプとフィードバック</div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">設定</div>
+            <div class="setting-row">
+                <span>SMS有効化</span>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <span>通知の音</span>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <span>バイブレーション</span>
+                <label class="switch">
+                    <input type="checkbox">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="peer-code-setting-row">
+                <span class="peer-code-setting-label">現在のPeerコード</span>
+                <code id="settings-peer-code" class="peer-code-setting-value">生成中...</code>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeSettingsModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">会話の削除</div>
+            <div style="font-size: 14px; color: #616161; line-height: 1.4;">
+                この会話とメッセージの履歴を削除しますか？
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" style="color: #757575;" onclick="closeDeleteModal()">キャンセル</button>
+                <button class="modal-btn" style="color: #d32f2f;" onclick="confirmDeleteChat()">削除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CHUNK_SIZE = 16384; // 16KB binary chunk
+        const MAX_TRANSFER_SIZE = 100 * 1024 * 1024;
+        const SEND_BUFFER_LIMIT = 512 * 1024;
+        let peer = null;
+        let activeConn = null;
+        let myPeerId = "";
+        let currentTargetId = "";
+        let db = null;
+        let pendingTransfers = {};
+        let incomingTransfers = {};
+        let activeFileTransfer = null;
+        let longPressTimer = null;
+        let targetToDelete = null;
+
+        // Conversations data state: { peerId: { lastMsg, timestamp, isMine, messages: [...] } }
+        let conversations = {};
+
+        function loadConversations() {
+            try {
+                const stored = localStorage.getItem("peer_msg_conversations");
+                if (stored) {
+                    conversations = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error("Failed to load conversations:", e);
+                conversations = {};
+            }
+        }
+
+        function saveConversations() {
+            try {
+                localStorage.setItem("peer_msg_conversations", JSON.stringify(conversations));
+            } catch (e) {
+                console.error("Failed to save conversations:", e);
+            }
+        }
+
+        // Generate physically collision-proof persistent ID
+        function getOrCreatePeerId() {
+            let storedId = localStorage.getItem("peer_msg_id");
+            if (!storedId) {
+                const now = new Date();
+                const dateStr = now.getFullYear().toString() +
+                    (now.getMonth() + 1).toString().padStart(2, '0') +
+                    now.getDate().toString().padStart(2, '0');
+                const timeStr = now.getHours().toString().padStart(2, '0') +
+                    now.getMinutes().toString().padStart(2, '0') +
+                    now.getSeconds().toString().padStart(2, '0');
+                const randomCode = Math.random().toString(36).substring(2, 8);
+                storedId = `pm_${dateStr}_${timeStr}_${randomCode}`;
+                localStorage.setItem("peer_msg_id", storedId);
+            }
+            return storedId;
+        }
+
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open("PeerMessageMediaDB", 1);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains("media")) {
+                        db.createObjectStore("media", { keyPath: "transferId" });
+                    }
+                };
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+                request.onerror = (event) => {
+                    console.error("IndexedDB Error:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        function saveMediaToIndexedDB(record) {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject("DB not initialized");
+                const tx = db.transaction("media", "readwrite");
+                const store = tx.objectStore("media");
+                const req = store.put(record);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function initPeerJS() {
+            myPeerId = getOrCreatePeerId();
+            document.getElementById("my-peer-id-display").innerText = myPeerId;
+            document.getElementById("settings-peer-code").innerText = myPeerId;
+
+            peer = new Peer(myPeerId, { debug: 0 });
+
+            peer.on('open', (id) => {
+                console.log("PeerJS Connected with ID:", id);
+            });
+
+            peer.on('connection', (conn) => {
+                setupConnectionListeners(conn);
+            });
+
+            peer.on('error', (err) => {
+                console.error("PeerJS Global Error:", err);
+            });
+        }
+
+        function setupConnectionListeners(conn) {
+            activeConn = conn;
+
+            conn.on('open', () => {
+                console.log("Connection opened with:", conn.peer);
+            });
+
+            conn.on('data', (data) => {
+                handleIncomingData(data, conn).catch((err) => {
+                    console.error("Incoming transfer handling failed:", err);
+                    if (data?.transferId) {
+                        conn.send({ type: 'TRANSFER_ERROR', transferId: data.transferId, message: err.message || '受信処理に失敗しました' });
+                    }
+                });
+            });
+
+            conn.on('close', () => {
+                console.log("Connection closed with:", conn.peer);
+            });
+
+            conn.on('error', (err) => {
+                console.error("Connection Error:", err);
+            });
+        }
+
+        async function calculateSHA256(arrayBuffer) {
+            const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function handleIncomingData(data, conn) {
+            const peerId = conn.peer;
+
+            if (data.type === 'TEXT') {
+                recordMessage(peerId, data.text, 'received');
+                if (currentTargetId === peerId) {
+                    appendChatMessage(data.text, 'received');
+                }
+                renderMainConversationList();
+            } 
+            else if (data.type === 'TRANSFER_COMPLETE') {
+                if (pendingTransfers[data.transferId]) {
+                    pendingTransfers[data.transferId].resolve();
+                    delete pendingTransfers[data.transferId];
+                }
+            } 
+            else if (data.type === 'TRANSFER_ERROR') {
+                if (pendingTransfers[data.transferId]) {
+                    pendingTransfers[data.transferId].reject(new Error(data.message || '受信側でエラーが発生しました'));
+                    delete pendingTransfers[data.transferId];
+                }
+            }
+            else if (data.type === 'FILE_START') {
+                const totalSize = Number(data.totalSize);
+                const totalChunks = Number(data.totalChunks);
+                if (!Number.isSafeInteger(totalSize) || totalSize <= 0 || totalSize > MAX_TRANSFER_SIZE ||
+                    !Number.isSafeInteger(totalChunks) || totalChunks !== Math.ceil(totalSize / CHUNK_SIZE)) {
+                    conn.send({ type: 'TRANSFER_ERROR', transferId: data.transferId, message: '不正または大きすぎるファイルです' });
+                    return;
+                }
+                incomingTransfers[data.transferId] = {
+                    fileName: data.fileName || 'received-file',
+                    fileType: data.fileType || 'application/octet-stream',
+                    totalSize,
+                    totalChunks,
+                    expectedSha256: data.sha256,
+                    receivedChunks: new Array(totalChunks),
+                    receivedCount: 0,
+                    receivedBytes: 0
+                };
+            } 
+            else if (data.type === 'FILE_CHUNK') {
+                const transfer = incomingTransfers[data.transferId];
+                if (!transfer) return;
+
+                if (!Number.isSafeInteger(data.chunkIndex) || data.chunkIndex < 0 ||
+                    data.chunkIndex >= transfer.totalChunks || transfer.receivedChunks[data.chunkIndex]) return;
+                const chunk = data.chunkData instanceof ArrayBuffer
+                    ? new Uint8Array(data.chunkData)
+                    : ArrayBuffer.isView(data.chunkData)
+                        ? new Uint8Array(data.chunkData.buffer, data.chunkData.byteOffset, data.chunkData.byteLength)
+                        : new Uint8Array(data.chunkData || []);
+                const expectedLength = data.chunkIndex === transfer.totalChunks - 1
+                    ? transfer.totalSize - data.chunkIndex * CHUNK_SIZE
+                    : CHUNK_SIZE;
+                if (chunk.byteLength === expectedLength) {
+                    transfer.receivedChunks[data.chunkIndex] = chunk;
+                    transfer.receivedCount++;
+                    transfer.receivedBytes += chunk.byteLength;
+                }
+            }
+            else if (data.type === 'FILE_END') {
+                const transfer = incomingTransfers[data.transferId];
+                if (!transfer || transfer.receivedCount !== transfer.totalChunks || transfer.receivedBytes !== transfer.totalSize) {
+                    conn.send({ type: 'TRANSFER_ERROR', transferId: data.transferId, message: '欠損またはサイズ不一致のチャンクがあります' });
+                    delete incomingTransfers[data.transferId];
+                    return;
+                }
+                await processCompletedMediaTransfer(data.transferId, conn);
+            }
+        }
+
+        async function processCompletedMediaTransfer(transferId, conn) {
+            const transfer = incomingTransfers[transferId];
+            if (!transfer) return;
+
+            const completeBuffer = new Uint8Array(transfer.totalSize);
+            let offset = 0;
+
+            for (let i = 0; i < transfer.totalChunks; i++) {
+                if (!transfer.receivedChunks[i]) {
+                    conn.send({ type: 'TRANSFER_ERROR', transferId: transferId, message: `欠損チャンク #${i}` });
+                    delete incomingTransfers[transferId];
+                    return;
+                }
+                const chunk = transfer.receivedChunks[i];
+                completeBuffer.set(chunk, offset);
+                offset += chunk.byteLength;
+            }
+
+            const computedHash = await calculateSHA256(completeBuffer.buffer);
+            if (computedHash === transfer.expectedSha256) {
+                const blob = new Blob([completeBuffer], { type: transfer.fileType });
+                const record = {
+                    transferId: transferId,
+                    blob: blob,
+                    fileName: transfer.fileName,
+                    fileType: transfer.fileType,
+                    timestamp: Date.now()
+                };
+
+                try {
+                    await saveMediaToIndexedDB(record);
+                    conn.send({ type: 'TRANSFER_COMPLETE', transferId: transferId });
+
+                    const mediaUrl = URL.createObjectURL(blob);
+                    const mediaLabel = transfer.fileType.startsWith("image/") ? "[画像]" : "[動画]";
+                    recordMessage(conn.peer, mediaLabel, 'received', mediaUrl, transfer.fileType);
+
+                    if (currentTargetId === conn.peer) {
+                        appendMediaMessage(mediaUrl, transfer.fileType, 'received');
+                    }
+                    renderMainConversationList();
+                } catch (e) {
+                    console.error("IndexedDB Save Failed:", e);
+                    conn.send({ type: 'TRANSFER_ERROR', transferId: transferId, message: 'IndexedDB保存に失敗しました' });
+                }
+            } else {
+                console.error("SHA-256 Mismatch Error!");
+                conn.send({ type: 'TRANSFER_ERROR', transferId: transferId, message: 'SHA-256が一致しません。ファイルが破損しています' });
+            }
+
+            delete incomingTransfers[transferId];
+        }
+
+        async function sendMediaFileInChunks(file) {
+            if (activeFileTransfer) return;
+            if (!activeConn || !activeConn.open) {
+                alert("接続が完了していません。");
+                return;
+            }
+            activeFileTransfer = (async () => {
+                const conn = activeConn;
+                const arrayBuffer = await file.arrayBuffer();
+                const totalSize = arrayBuffer.byteLength;
+                if (!totalSize || totalSize > MAX_TRANSFER_SIZE) throw new Error('ファイルサイズが不正、または上限を超えています');
+                const sha256 = await calculateSHA256(arrayBuffer);
+                const totalChunks = Math.ceil(totalSize / CHUNK_SIZE);
+                const transferId = `tr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+                const fileType = file.type || 'application/octet-stream';
+                const localUrl = URL.createObjectURL(file);
+                const msgBubble = appendMediaMessage(localUrl, fileType, 'sent');
+                updateMessageStatus(msgBubble, '送信中...');
+
+                const completion = new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        delete pendingTransfers[transferId];
+                        reject(new Error("受信側の保存確認がタイムアウトしました"));
+                    }, 180000);
+                    pendingTransfers[transferId] = {
+                        resolve: () => { clearTimeout(timeout); resolve(); },
+                        reject: (error) => { clearTimeout(timeout); reject(error); }
+                    };
+                });
+
+                try {
+                    conn.send({
+                        type: 'FILE_START', transferId, fileName: file.name,
+                        fileType, totalSize, totalChunks, sha256
+                    });
+                    for (let i = 0; i < totalChunks; i++) {
+                        const start = i * CHUNK_SIZE;
+                        const chunkData = arrayBuffer.slice(start, Math.min(start + CHUNK_SIZE, totalSize));
+                        while (conn.dataChannel && conn.dataChannel.bufferedAmount > SEND_BUFFER_LIMIT) {
+                            await new Promise(r => setTimeout(r, 20));
+                            if (conn.closed || conn.dataChannel.readyState !== 'open') throw new Error('PeerJS接続が閉じられました');
+                        }
+                        conn.send({ type: 'FILE_CHUNK', transferId, chunkIndex: i, chunkData });
+                    }
+                    while (conn.dataChannel && conn.dataChannel.bufferedAmount > 0) {
+                        await new Promise(r => setTimeout(r, 20));
+                        if (conn.closed || conn.dataChannel.readyState !== 'open') throw new Error('PeerJS接続が閉じられました');
+                    }
+                    conn.send({ type: 'FILE_END', transferId });
+                    await completion;
+                    updateMessageStatus(msgBubble, '送信完了・保存確認済み');
+                    const mediaLabel = fileType.startsWith("image/") ? "[画像]" : "[動画]";
+                    recordMessage(currentTargetId, mediaLabel, 'sent', localUrl, fileType);
+                    renderMainConversationList();
+                } catch (err) {
+                    delete pendingTransfers[transferId];
+                    throw err;
+                }
+            })().catch(err => {
+                console.error("Transfer Error:", err);
+                alert('転送エラー: ' + (err.message || err));
+            }).finally(() => { activeFileTransfer = null; });
+        }
+
+        // Record message in LocalStorage conversation state
+        function recordMessage(peerId, text, type, mediaUrl = null, mediaType = null) {
+            if (!conversations[peerId]) {
+                conversations[peerId] = {
+                    peerId: peerId,
+                    messages: []
+                };
+            }
+
+            const msgObj = {
+                text: text,
+                type: type,
+                mediaUrl: mediaUrl,
+                mediaType: mediaType,
+                timestamp: Date.now()
+            };
+
+            conversations[peerId].messages.push(msgObj);
+            conversations[peerId].lastMsg = text;
+            conversations[peerId].isMine = (type === 'sent');
+            conversations[peerId].timestamp = Date.now();
+
+            saveConversations();
+        }
+
+        // Render Conversation List on Main Screen
+        function renderMainConversationList() {
+            const body = document.getElementById("main-content-body");
+            const keys = Object.keys(conversations);
+
+            if (keys.length === 0) {
+                body.innerHTML = `
+                    <div class="empty-container">
+                        <img class="empty-robot-img" src="https://raw.githubusercontent.com/PolandBallHub-Operator/Android_7_icon_repo/refs/heads/main/img1.png" alt="Robot with Flower" onerror="this.style.display='none'">
+                        <div class="empty-text">
+                            連絡先がありません<br>
+                            友だちを招待しましょう。
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort conversations by latest timestamp
+            const sorted = keys.map(k => conversations[k]).sort((a, b) => b.timestamp - a.timestamp);
+
+            let html = "";
+            sorted.forEach(c => {
+                const prefix = c.isMine ? "自分: " : "";
+                const displayText = `${prefix}${c.lastMsg || ""}`;
+                const timeStr = "たった今";
+
+                html += `
+                    <div class="chat-list-item" 
+                         onclick="onChatListItemClick('${c.peerId}')" 
+                         ontouchstart="handleTouchStart(event, '${c.peerId}')" 
+                         ontouchend="handleTouchEnd()" 
+                         ontouchmove="handleTouchEnd()" 
+                         onmousedown="handleMouseDown(event, '${c.peerId}')" 
+                         onmouseup="handleMouseUp()" 
+                         onmouseleave="handleMouseUp()"
+                         oncontextmenu="event.preventDefault(); openDeleteModal('${c.peerId}')">
+                        <div class="chat-avatar-icon">
+                            <span class="material-symbols-outlined">person</span>
+                        </div>
+                        <div class="chat-info-block">
+                            <div class="chat-header-row">
+                                <div class="chat-target-id">${c.peerId}</div>
+                                <div class="chat-timestamp">${timeStr}</div>
+                            </div>
+                            <div class="chat-last-msg">${displayText}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            body.innerHTML = html;
+        }
+
+        /* Long press delete handling */
+        function handleTouchStart(e, peerId) {
+            longPressTimer = setTimeout(() => {
+                openDeleteModal(peerId);
+            }, 600);
+        }
+
+        function handleTouchEnd() {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }
+
+        function handleMouseDown(e, peerId) {
+            longPressTimer = setTimeout(() => {
+                openDeleteModal(peerId);
+            }, 600);
+        }
+
+        function handleMouseUp() {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }
+
+        function openDeleteModal(peerId) {
+            targetToDelete = peerId;
+            document.getElementById("delete-modal").classList.add("active");
+        }
+
+        function closeDeleteModal() {
+            document.getElementById("delete-modal").classList.remove("active");
+            targetToDelete = null;
+        }
+
+        function confirmDeleteChat() {
+            if (targetToDelete && conversations[targetToDelete]) {
+                delete conversations[targetToDelete];
+                saveConversations();
+                renderMainConversationList();
+            }
+            closeDeleteModal();
+        }
+
+        function onChatListItemClick(peerId) {
+            if (longPressTimer) clearTimeout(longPressTimer);
+            startChatWith(peerId);
+        }
+
+        function toggleDrawer(open) {
+            document.getElementById("drawer").classList.toggle("active", open);
+            document.getElementById("drawer-overlay").classList.toggle("active", open);
+        }
+
+        function openSearchActivity() {
+            document.getElementById("search-activity").classList.remove("hidden");
+            document.getElementById("target-peer-input").focus();
+            renderSearchResults("");
+        }
+
+        function closeSearchActivity() {
+            document.getElementById("search-activity").classList.add("hidden");
+        }
+
+        function handleSearchInput(val) {
+            renderSearchResults(val.trim());
+        }
+
+        function renderSearchResults(query) {
+            const container = document.getElementById("search-results-container");
+            if (!query) {
+                container.innerHTML = `
+                    <div class="not-found-row">
+                        <div class="alien-avatar">
+                            <span class="material-symbols-outlined" style="font-size: 28px;">sentiment_dissatisfied</span>
+                        </div>
+                        <div class="not-found-text">連絡先には一致する結果は見つかりません</div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="contact-item" onclick="startChatWith('${query}')">
+                        <div class="contact-avatar">
+                            <span class="material-symbols-outlined">person</span>
+                        </div>
+                        <div class="contact-info">
+                            <div class="contact-title">${query}</div>
+                            <div class="contact-sub">Direct PeerJS Peer</div>
+                        </div>
+                    </div>
+                    <div class="not-found-row">
+                        <div class="alien-avatar">
+                            <span class="material-symbols-outlined" style="font-size: 28px;">sentiment_dissatisfied</span>
+                        </div>
+                        <div class="not-found-text">連絡先には一致する結果は見つかりません</div>
+                    </div>
+                `;
+            }
+        }
+
+        function startChatWith(peerId) {
+            currentTargetId = peerId;
+            closeSearchActivity();
+            document.getElementById("chat-target-title").innerText = peerId;
+
+            // Clear chat messages container and load stored messages
+            const msgContainer = document.getElementById("chat-messages");
+            msgContainer.innerHTML = "";
+
+            if (conversations[peerId] && conversations[peerId].messages) {
+                conversations[peerId].messages.forEach(m => {
+                    if (m.mediaUrl) {
+                        appendMediaMessage(m.mediaUrl, m.mediaType, m.type);
+                    } else {
+                        appendChatMessage(m.text, m.type);
+                    }
+                });
+            }
+
+            document.getElementById("chat-activity").classList.remove("hidden");
+
+            if (!activeConn || activeConn.peer !== peerId) {
+                const conn = peer.connect(peerId);
+                setupConnectionListeners(conn);
+            }
+        }
+
+        function closeChatActivity() {
+            document.getElementById("chat-activity").classList.add("hidden");
+            currentTargetId = "";
+            renderMainConversationList();
+        }
+
+        function updateSendButton() {
+            const input = document.getElementById("chat-text-input");
+            const btn = document.getElementById("send-msg-btn");
+            if (input.value.trim().length > 0) {
+                btn.classList.add("active");
+            } else {
+                btn.classList.remove("active");
+            }
+        }
+
+        function sendTextMessage() {
+            const input = document.getElementById("chat-text-input");
+            const text = input.value.trim();
+            if (!text) return;
+
+            if (activeConn && activeConn.open) {
+                activeConn.send({ type: 'TEXT', text: text });
+                appendChatMessage(text, 'sent');
+                recordMessage(currentTargetId, text, 'sent');
+                input.value = "";
+                updateSendButton();
+                renderMainConversationList();
+            } else {
+                // Pre-record and display locally if offline/connecting
+                appendChatMessage(text, 'sent');
+                recordMessage(currentTargetId, text, 'sent');
+                input.value = "";
+                updateSendButton();
+                renderMainConversationList();
+            }
+        }
+
+        function appendChatMessage(text, type) {
+            const container = document.getElementById("chat-messages");
+            const bubble = document.createElement("div");
+            bubble.className = `message-bubble ${type}`;
+            bubble.innerText = text;
+
+            if (type === 'sent') {
+                const status = document.createElement("div");
+                status.className = "message-status";
+                status.innerText = "送信しています";
+                bubble.appendChild(status);
+            }
+
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+            return bubble;
+        }
+
+        function appendMediaMessage(url, mimeType, type) {
+            const container = document.getElementById("chat-messages");
+            const bubble = document.createElement("div");
+            bubble.className = `message-bubble ${type}`;
+
+            if (mimeType && mimeType.startsWith("image/")) {
+                const img = document.createElement("img");
+                img.src = url;
+                img.className = "media-preview";
+                bubble.appendChild(img);
+            } else if (mimeType && mimeType.startsWith("video/")) {
+                const video = document.createElement("video");
+                video.src = url;
+                video.controls = true;
+                video.className = "media-preview";
+                bubble.appendChild(video);
+            }
+
+            if (type === 'sent') {
+                const status = document.createElement("div");
+                status.className = "message-status";
+                status.innerText = "送信中...";
+                bubble.appendChild(status);
+            }
+
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+            return bubble;
+        }
+
+        function updateMessageStatus(bubble, text) {
+            const status = bubble.querySelector(".message-status");
+            if (status) status.innerText = text;
+        }
+
+        function triggerFileUpload(acceptType) {
+            const fileInput = document.getElementById("media-file-input");
+            fileInput.accept = acceptType;
+            fileInput.click();
+        }
+
+        function handleFileSelected(event) {
+            const file = event.target.files[0];
+            if (file) {
+                sendMediaFileInChunks(file);
+            }
+            event.target.value = "";
+        }
+
+        /* Modal Handlers */
+        function openSettingsModal() {
+            toggleDrawer(false);
+            document.getElementById("settings-peer-code").innerText = myPeerId || "生成中...";
+            document.getElementById("settings-modal").classList.add("active");
+        }
+
+        function closeSettingsModal() {
+            document.getElementById("settings-modal").classList.remove("active");
+        }
+
+        // Initialize application on load
+        window.addEventListener("load", async () => {
+            loadConversations();
+            renderMainConversationList();
+            await initIndexedDB();
+            await initPeerJS();
+        });
+    </script>
+</body>
+</html>
