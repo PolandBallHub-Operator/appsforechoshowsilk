@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Android 7.1 AOSP Dialer</title>
+    <!-- Google Material Symbols Outlined CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <!-- Android Standard Font (Roboto & Noto Sans JP) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+JP:wght@300;400;500&display=swap">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #ffffff;
+            font-family: 'Roboto', 'Noto Sans JP', sans-serif;
+            color: #212121;
+        }
+
+        /* Screen Manager Layout */
+        .app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            background-color: #ffffff;
+            z-index: 1;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Material Symbols Styling Helper */
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Search Bar Header */
+        .search-header {
+            padding: 8px;
+            background-color: #1565c0; /* AOSP Primary Blue */
+        }
+
+        .search-bar {
+            background-color: #ffffff;
+            height: 48px;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .search-icon {
+            color: #757575;
+            margin-right: 16px;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            color: #424242;
+            font-family: inherit;
+        }
+
+        .menu-btn {
+            color: #757575;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        /* Tabs Header */
+        .tabs-header {
+            background-color: #1565c0;
+            display: flex;
+            height: 48px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.26);
+            z-index: 2;
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .tab-item.active {
+            color: #ffffff;
+        }
+
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: #ffffff;
+        }
+
+        /* Content Area */
+        .tab-content {
+            flex: 1;
+            position: relative;
+            overflow-y: auto;
+            background-color: #fafafa;
+        }
+
+        .tab-pane {
+            display: none;
+            height: 100%;
+            width: 100%;
+        }
+
+        .tab-pane.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Favorites Empty State Graphic */
+        .empty-favorites-graphic {
+            width: 220px;
+            height: 120px;
+            position: relative;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-text {
+            color: #9e9e9e;
+            font-size: 18px;
+            text-align: center;
+            padding: 0 32px;
+            line-height: 1.4;
+            max-width: 320px;
+        }
+
+        .add-favorite-btn {
+            margin-top: 24px;
+            color: #0091ea;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        /* Floating Action Button (FAB) */
+        .fab {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: #0288d1;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* Dialpad Overlay View */
+        .dialpad-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.25s cubic-bezier(0, 0, 0.2, 1);
+            z-index: 20;
+        }
+
+        .dialpad-container.open {
+            transform: translateY(0);
+        }
+
+        .dialpad-digits-header {
+            height: 20%;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 24px;
+            position: relative;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .dialpad-number-display {
+            font-size: 36px;
+            color: #212121;
+            font-weight: 300;
+            letter-spacing: 1px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            width: 100%;
+            text-align: center;
+        }
+
+        .delete-btn {
+            position: absolute;
+            right: 20px;
+            color: #9e9e9e;
+            cursor: pointer;
+            display: none;
+            padding: 8px;
+        }
+
+        .delete-btn.visible {
+            display: block;
+        }
+
+        /* Dialpad Grid */
+        .dialpad-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            padding: 12px 16px;
+        }
+
+        .key-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            margin: 4px;
+        }
+
+        .key-btn:active {
+            background-color: #e0e0e0;
+        }
+
+        .key-number {
+            font-size: 32px;
+            color: #1565c0;
+            font-weight: 300;
+            line-height: 1;
+        }
+
+        .key-letters {
+            font-size: 10px;
+            color: #757575;
+            margin-top: 2px;
+            letter-spacing: 1px;
+            height: 12px;
+        }
+
+        .dialpad-action-bar {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .call-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #00c853;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+            cursor: pointer;
+        }
+
+        .call-btn:active {
+            background-color: #00b248;
+        }
+
+        /* In-Call Screen (`#screen-calling`) */
+        .call-screen-top {
+            background-color: #1565c0;
+            height: 38%;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 20px;
+            box-sizing: border-box;
+            color: #ffffff;
+        }
+
+        .call-status {
+            font-size: 22px;
+            font-weight: 400;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        .call-number {
+            font-size: 42px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            margin-bottom: auto;
+        }
+
+        .call-actions-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .call-action-icon {
+            color: #ffffff;
+            opacity: 0.9;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        .call-screen-bottom {
+            flex: 1;
+            background-color: #424242;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 40px;
+            position: relative;
+        }
+
+        .avatar-container {
+            margin-top: auto;
+            margin-bottom: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar-svg {
+            width: 140px;
+            height: 140px;
+            fill: #616161;
+        }
+
+        .end-call-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background-color: #ff1744;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+
+        /* Settings Sub-Activity (`#screen-settings`) */
+        .settings-header {
+            background-color: #1565c0;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .back-btn {
+            margin-right: 24px;
+            cursor: pointer;
+        }
+
+        .settings-title {
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .settings-list {
+            flex: 1;
+            background-color: #ffffff;
+            overflow-y: auto;
+        }
+
+        .settings-item {
+            padding: 18px 24px;
+            font-size: 16px;
+            color: #212121;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .settings-item:active {
+            background-color: #f5f5f5;
+        }
+
+        .settings-item-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-item-subtext {
+            font-size: 13px;
+            color: #757575;
+            margin-top: 4px;
+        }
+
+        /* Android 7.1 (Nougat) Switch Component (Provided Code) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        /* Hide HTML default checkbox */
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* Switch Track (OFF State) */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        /* Switch Thumb / Knob (OFF State) */
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Switch Track (ON State) */
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        /* Switch Thumb / Knob (ON State) */
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        /* Dropdown Popup Menu */
+        .popover-menu {
+            position: absolute;
+            top: 48px;
+            right: 8px;
+            background-color: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+            min-width: 140px;
+            padding: 8px 0;
+        }
+
+        .popover-menu.open {
+            display: flex;
+        }
+
+        .popover-item {
+            padding: 12px 16px;
+            font-size: 15px;
+            color: #212121;
+            cursor: pointer;
+        }
+
+        .popover-item:active {
+            background-color: #eeeeee;
+        }
+
+        /* Contacts & History Mock List Layout */
+        .list-group {
+            width: 100%;
+        }
+
+        .list-row {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            background: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .avatar-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #78909c;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-right: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+
+        <!-- 1. MAIN DIALER SCREEN -->
+        <div id="screen-main" class="screen active">
+            <!-- Top Search Header Bar -->
+            <div class="search-header">
+                <div class="search-bar">
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input type="text" class="search-input" placeholder="連絡先を検索" readonly>
+                    <span class="material-symbols-outlined menu-btn" id="main-menu-trigger">more_vert</span>
+                </div>
+            </div>
+
+            <!-- Popover Menu for Settings -->
+            <div class="popover-menu" id="main-popover">
+                <div class="popover-item" id="menu-item-settings">設定</div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="tabs-header">
+                <div class="tab-item active" data-tab="tab-speeddial">
+                    <span class="material-symbols-outlined" style="font-size: 26px;">star</span>
+                </div>
+                <div class="tab-item" data-tab="tab-recents">
+                    <span class="material-symbols-outlined" style="font-size: 26px;">schedule</span>
+                </div>
+                <div class="tab-item" data-tab="tab-contacts">
+                    <span class="material-symbols-outlined" style="font-size: 26px;">group</span>
+                </div>
+            </div>
+
+            <!-- Tabs Content Area -->
+            <div class="tab-content">
+                <!-- Speed Dial / Favorites Tab -->
+                <div id="tab-speeddial" class="tab-pane active">
+                    <div class="empty-favorites-graphic">
+                        <svg viewBox="0 0 220 120" style="width:100%; height:100%;">
+                            <g fill="#e0e0e0">
+                                <!-- Star Icon (Left) -->
+                                <path transform="translate(25, 32) scale(2.6)" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                <!-- Phone Receiver Icon (Center) -->
+                                <path transform="translate(72, 28) scale(3.0)" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
+                                <!-- Clock Icon (Right) -->
+                                <path transform="translate(138, 36) scale(2.4)" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="empty-text">クイックアクセスに登録済みの連絡先はまだありません</div>
+                    <div class="add-favorite-btn">お気に入りを追加</div>
+                </div>
+
+                <!-- Recents History Tab -->
+                <div id="tab-recents" class="tab-pane">
+                    <div class="list-group">
+                        <div class="list-row" onclick="startCall('111')">
+                            <div class="avatar-circle">1</div>
+                            <div>
+                                <div style="font-size: 16px; font-weight: 500;">111</div>
+                                <div style="font-size: 13px; color: #757575;">発信先 • 昨日</div>
+                            </div>
+                        </div>
+                        <div class="list-row" onclick="startCall('117')">
+                            <div class="avatar-circle">1</div>
+                            <div>
+                                <div style="font-size: 16px; font-weight: 500;">117 (時報)</div>
+                                <div style="font-size: 13px; color: #757575;">着信 • 3日前</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contacts List Tab -->
+                <div id="tab-contacts" class="tab-pane">
+                    <div class="list-group">
+                        <div class="list-row">
+                            <div class="avatar-circle" style="background-color:#ab47bc;">あ</div>
+                            <div style="font-size: 16px;">浅井 太郎</div>
+                        </div>
+                        <div class="list-row">
+                            <div class="avatar-circle" style="background-color:#26a69a;">か</div>
+                            <div style="font-size: 16px;">加藤 花子</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Action Button (FAB for Keypad) -->
+            <div class="fab" id="open-dialpad-fab">
+                <span class="material-symbols-outlined" style="font-size: 28px;">dialpad</span>
+            </div>
+
+            <!-- Slide-up Dialpad -->
+            <div class="dialpad-container" id="dialpad-overlay">
+                <div class="dialpad-digits-header">
+                    <div class="dialpad-number-display" id="dialpad-input"></div>
+                    <span class="material-symbols-outlined delete-btn" id="dialpad-backspace">backspace</span>
+                </div>
+                <div class="dialpad-grid">
+                    <div class="key-btn" data-key="1"><span class="key-number">1</span><span class="key-letters">⌕ / ➿</span></div>
+                    <div class="key-btn" data-key="2"><span class="key-number">2</span><span class="key-letters">ABC</span></div>
+                    <div class="key-btn" data-key="3"><span class="key-number">3</span><span class="key-letters">DEF</span></div>
+                    <div class="key-btn" data-key="4"><span class="key-number">4</span><span class="key-letters">GHI</span></div>
+                    <div class="key-btn" data-key="5"><span class="key-number">5</span><span class="key-letters">JKL</span></div>
+                    <div class="key-btn" data-key="6"><span class="key-number">6</span><span class="key-letters">MNO</span></div>
+                    <div class="key-btn" data-key="7"><span class="key-number">7</span><span class="key-letters">PQRS</span></div>
+                    <div class="key-btn" data-key="8"><span class="key-number">8</span><span class="key-letters">TUV</span></div>
+                    <div class="key-btn" data-key="9"><span class="key-number">9</span><span class="key-letters">WXYZ</span></div>
+                    <div class="key-btn" data-key="*"><span class="key-number">*</span><span class="key-letters"></span></div>
+                    <div class="key-btn" data-key="0"><span class="key-number">0</span><span class="key-letters">+</span></div>
+                    <div class="key-btn" data-key="#"><span class="key-number">#</span><span class="key-letters"></span></div>
+                </div>
+                <div class="dialpad-action-bar">
+                    <div class="call-btn" id="make-call-btn">
+                        <span class="material-symbols-outlined" style="font-size: 32px;">call</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. IN-CALL SCREEN -->
+        <div id="screen-calling" class="screen">
+            <div class="call-screen-top">
+                <div class="call-status">発信中</div>
+                <div class="call-number" id="calling-display-number">111</div>
+                <div class="call-actions-row">
+                    <span class="material-symbols-outlined call-action-icon">volume_up</span>
+                    <span class="material-symbols-outlined call-action-icon">mic_off</span>
+                    <span class="material-symbols-outlined call-action-icon">dialpad</span>
+                </div>
+            </div>
+            <div class="call-screen-bottom">
+                <div class="avatar-container">
+                    <svg class="avatar-svg" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="end-call-btn" id="end-call-btn">
+                    <span class="material-symbols-outlined" style="font-size: 36px; transform: rotate(135deg);">call</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. SETTINGS MAIN SCREEN -->
+        <div id="screen-settings" class="screen">
+            <div class="settings-header">
+                <span class="material-symbols-outlined back-btn" id="settings-back-btn">arrow_back</span>
+                <span class="settings-title">設定</span>
+            </div>
+            <div class="settings-list">
+                <div class="settings-item" onclick="openSubSettings('音とバイブレーション')">音とバイブレーション</div>
+                <div class="settings-item" onclick="openSubSettings('クイック返信')">クイック返信</div>
+                <div class="settings-item" onclick="openSubSettings('通話')">通話</div>
+                <div class="settings-item" onclick="openSubSettings('着信のブロック')">着信のブロック</div>
+                <div class="settings-item" onclick="openSubSettings('ユーザー補助機能')">ユーザー補助機能</div>
+            </div>
+        </div>
+
+        <!-- 4. SUB-SETTINGS DETAIL SCREEN (Includes Android 7.1 Toggle Switch) -->
+        <div id="screen-sub-settings" class="screen">
+            <div class="settings-header">
+                <span class="material-symbols-outlined back-btn" id="sub-settings-back-btn">arrow_back</span>
+                <span class="settings-title" id="sub-settings-title">設定詳細</span>
+            </div>
+            <div class="settings-list">
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span>機能の有効化</span>
+                        <span class="settings-item-subtext">着信音およびバイブレーション設定</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span>割り込み通知許可</span>
+                        <span class="settings-item-subtext">重要通知のみ受話</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <div class="settings-item-text">
+                        <span>ダイヤルタップ音</span>
+                        <span class="settings-item-subtext">キーパッド操作時のフィードバック</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Screen Switcher Helper
+            function showScreen(screenId) {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                const target = document.getElementById(screenId);
+                if (target) target.classList.add('active');
+            }
+
+            // Tabs Logic
+            const tabs = document.querySelectorAll('.tab-item');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    const targetTabId = tab.getAttribute('data-tab');
+                    document.querySelectorAll('.tab-pane').forEach(pane => {
+                        pane.classList.remove('active');
+                    });
+                    document.getElementById(targetTabId).classList.add('active');
+                });
+            });
+
+            // Popover Menu Toggle
+            const menuTrigger = document.getElementById('main-menu-trigger');
+            const popover = document.getElementById('main-popover');
+            
+            menuTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                popover.classList.toggle('open');
+            });
+
+            document.addEventListener('click', () => {
+                popover.classList.remove('open');
+            });
+
+            // Menu -> Settings Transition
+            document.getElementById('menu-item-settings').addEventListener('click', () => {
+                popover.classList.remove('open');
+                showScreen('screen-settings');
+            });
+
+            // Settings Back Button
+            document.getElementById('settings-back-btn').addEventListener('click', () => {
+                showScreen('screen-main');
+            });
+
+            // Sub Settings Navigation
+            window.openSubSettings = function(title) {
+                document.getElementById('sub-settings-title').textContent = title;
+                showScreen('screen-sub-settings');
+            };
+
+            document.getElementById('sub-settings-back-btn').addEventListener('click', () => {
+                showScreen('screen-settings');
+            });
+
+            // Dialpad Toggle & Actions
+            const fab = document.getElementById('open-dialpad-fab');
+            const dialpad = document.getElementById('dialpad-overlay');
+            const display = document.getElementById('dialpad-input');
+            const backspace = document.getElementById('dialpad-backspace');
+
+            fab.addEventListener('click', () => {
+                dialpad.classList.add('open');
+            });
+
+            // Keypad button input
+            document.querySelectorAll('.key-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const key = btn.getAttribute('data-key');
+                    display.textContent += key;
+                    updateBackspaceVisibility();
+                });
+            });
+
+            // Backspace delete functionality
+            backspace.addEventListener('click', () => {
+                display.textContent = display.textContent.slice(0, -1);
+                updateBackspaceVisibility();
+            });
+
+            function updateBackspaceVisibility() {
+                if (display.textContent.length > 0) {
+                    backspace.classList.add('visible');
+                } else {
+                    backspace.classList.remove('visible');
+                }
+            }
+
+            // Close dialpad if tapped on digits display area when empty
+            document.querySelector('.dialpad-digits-header').addEventListener('click', (e) => {
+                if (e.target !== backspace && display.textContent.length === 0) {
+                    dialpad.classList.remove('open');
+                }
+            });
+
+            // Make Call Logic
+            const callBtn = document.getElementById('make-call-btn');
+            callBtn.addEventListener('click', () => {
+                const number = display.textContent.trim() || '111';
+                startCall(number);
+            });
+
+            window.startCall = function(number) {
+                document.getElementById('calling-display-number').textContent = number;
+                dialpad.classList.remove('open');
+                showScreen('screen-calling');
+            };
+
+            // End Call Logic
+            document.getElementById('end-call-btn').addEventListener('click', () => {
+                showScreen('screen-main');
+            });
+        });
+    </script>
+</body>
+</html>
