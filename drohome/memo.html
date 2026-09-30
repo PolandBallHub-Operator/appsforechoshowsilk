@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FOSS Memo</title>
+    <!-- Google Material Icons CDN -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Roboto', 'Noto Sans CJK JP', 'Hiragino Sans', sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            color: #212121;
+        }
+
+        /* App Main Container */
+        #app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .activity-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #e8e8e8;
+            z-index: 1;
+            transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+        }
+
+        .activity-view.hidden {
+            display: none !important;
+        }
+
+        /* Android 7.1 (Nougat) Switch Component */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        .action-bar {
+            height: 56px;
+            background-color: #fbc02d;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+            color: #212121;
+        }
+
+        .action-bar.white-bar {
+            background-color: #ffffff;
+            color: #424242;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+
+        .action-bar .icon-btn {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            outline: none;
+        }
+
+        .action-bar .icon-btn:active {
+            background-color: rgba(0,0,0,0.1);
+        }
+
+        .action-bar .bar-title {
+            font-size: 20px;
+            font-weight: 500;
+            margin-left: 12px;
+            flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-input-container {
+            display: none;
+            flex-grow: 1;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin: 0 8px;
+        }
+
+        .search-input-container.active {
+            display: flex;
+        }
+
+        .search-input-container input {
+            border: none;
+            background: transparent;
+            outline: none;
+            width: 100%;
+            font-size: 16px;
+            color: #212121;
+        }
+
+        #drawer-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        #drawer-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #drawer-menu {
+            position: absolute;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 101;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.3);
+            transition: transform 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        #drawer-menu.open {
+            transform: translateX(280px);
+        }
+
+        .drawer-header {
+            height: 140px;
+            background-color: #9e9e9e;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .drawer-header-arrow {
+            position: absolute;
+            right: 16px;
+            bottom: 16px;
+            color: #ffffff;
+        }
+
+        .drawer-nav-list {
+            padding: 8px 0;
+            list-style: none;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            height: 48px;
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .drawer-item:active, .drawer-item.active {
+            background-color: #e0e0e0;
+        }
+
+        .drawer-item .material-icons {
+            margin-right: 24px;
+            color: #616161;
+            font-size: 22px;
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 8px 0;
+        }
+
+        #view-welcome {
+            background-color: #ffffff;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .welcome-icon-box {
+            width: 180px;
+            height: 180px;
+            background-color: #fbc02d;
+            border-radius: 28px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+
+        .welcome-icon-box::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            border-style: solid;
+            border-width: 0 0 40px 40px;
+            border-color: transparent transparent #fff59d #fff59d;
+            box-shadow: -2px -2px 4px rgba(0,0,0,0.1);
+        }
+
+        .welcome-icon-box .material-icons {
+            font-size: 110px;
+            color: #ffffff;
+        }
+
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 400;
+            color: #212121;
+            margin-bottom: 16px;
+        }
+
+        .welcome-desc {
+            font-size: 14px;
+            color: #757575;
+            line-height: 1.6;
+            max-width: 320px;
+            margin-bottom: 40px;
+        }
+
+        .btn-use {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            padding: 12px 28px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #333333;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            border-radius: 2px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .btn-use:active {
+            background-color: #f0f0f0;
+        }
+
+        .notes-content-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 8px;
+            position: relative;
+        }
+
+        .empty-notes-view {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            color: #9e9e9e;
+            width: 80%;
+        }
+
+        .empty-notes-view .material-icons {
+            font-size: 120px;
+            color: #d6d6d6;
+            margin-bottom: 16px;
+        }
+
+        .empty-notes-text {
+            font-size: 16px;
+            font-weight: 500;
+            color: #616161;
+        }
+
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 8px;
+            padding-bottom: 60px;
+        }
+
+        .notes-grid.list-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .note-card {
+            background-color: #ffffff;
+            border-radius: 2px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            word-break: break-word;
+        }
+
+        .note-card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #212121;
+        }
+
+        .note-card-text {
+            font-size: 13px;
+            color: #424242;
+            line-height: 1.4;
+            max-height: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .note-card-items {
+            font-size: 13px;
+            color: #616161;
+        }
+
+        .note-card-item-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 2px;
+        }
+
+        .note-card-item-row.checked span {
+            text-decoration: line-through;
+            color: #9e9e9e;
+        }
+
+        /* Attached Image Styles */
+        .note-card-image {
+            width: 100%;
+            max-height: 130px;
+            object-fit: cover;
+            border-radius: 2px 2px 0 0;
+            margin-bottom: 6px;
+        }
+
+        .editor-image-preview-area {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .editor-image-container {
+            position: relative;
+            width: 100%;
+            max-height: 260px;
+            background-color: #f0f0f0;
+            border-radius: 2px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .editor-image-container img {
+            max-width: 100%;
+            max-height: 260px;
+            object-fit: contain;
+        }
+
+        .editor-image-delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffffff;
+            border-radius: 50%;
+            padding: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.2s;
+        }
+
+        .editor-image-delete-btn:active {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .section-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #757575;
+            letter-spacing: 0.5px;
+            margin: 12px 8px 6px 8px;
+            text-transform: uppercase;
+        }
+
+        .bottom-bar {
+            height: 48px;
+            background-color: #ffffff;
+            box-shadow: 0 -1px 4px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            padding: 0 8px 0 16px;
+            z-index: 10;
+        }
+
+        .bottom-bar-placeholder {
+            flex-grow: 1;
+            font-size: 15px;
+            color: #757575;
+            cursor: pointer;
+        }
+
+        .bottom-bar-icons {
+            display: flex;
+            align-items: center;
+        }
+
+        .bottom-bar-icons .icon-btn {
+            background: none;
+            border: none;
+            color: #616161;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #view-editor {
+            background-color: #ffffff;
+        }
+
+        .editor-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .editor-title-input {
+            border: none;
+            outline: none;
+            font-size: 20px;
+            font-weight: 700;
+            color: #212121;
+            width: 100%;
+            background: transparent;
+        }
+
+        .editor-body-textarea {
+            border: none;
+            outline: none;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #333333;
+            width: 100%;
+            flex-grow: 1;
+            resize: none;
+            background: transparent;
+        }
+
+        .checklist-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .checklist-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checklist-row .drag-handle {
+            color: #bdbdbd;
+            cursor: grab;
+        }
+
+        .checklist-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #757575;
+            border-radius: 2px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checklist-checkbox.checked {
+            background-color: #757575;
+            border-color: #757575;
+        }
+
+        .checklist-checkbox .material-icons {
+            font-size: 16px;
+            color: #ffffff;
+        }
+
+        .checklist-input {
+            border: none;
+            outline: none;
+            font-size: 15px;
+            flex-grow: 1;
+            color: #212121;
+            background: transparent;
+        }
+
+        .checklist-input.checked {
+            text-decoration: line-through;
+            color: #9e9e9e;
+        }
+
+        .add-checklist-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #757575;
+            cursor: pointer;
+            padding: 8px 0;
+            font-size: 15px;
+        }
+
+        .checked-accordion-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #757575;
+            font-style: italic;
+            cursor: pointer;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .editor-bottom-bar {
+            height: 48px;
+            background-color: #ffffff;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+        }
+
+        .editor-bottom-left, .editor-bottom-right {
+            display: flex;
+            align-items: center;
+        }
+
+        #view-settings {
+            background-color: #fafafa;
+        }
+
+        .settings-content {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .settings-group-title {
+            padding: 16px 16px 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #009688;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .settings-item-text {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .settings-item-label {
+            font-size: 15px;
+            color: #212121;
+        }
+
+        .settings-item-value {
+            font-size: 14px;
+            color: #757575;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-box {
+            background: #fff;
+            width: 85%;
+            max-width: 320px;
+            border-radius: 3px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .modal-title { font-size: 18px; font-weight: 500; margin-bottom: 12px; }
+        .modal-input { width: 100%; padding: 8px 0; border: none; border-bottom: 2px solid #009688; outline: none; margin-bottom: 16px; font-size: 15px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+        .modal-btn { background: none; border: none; color: #009688; font-weight: 500; font-size: 14px; cursor: pointer; padding: 6px 12px; }
+
+        .action-sheet {
+            position: absolute;
+            bottom: -300px;
+            left: 0;
+            width: 100%;
+            background: #ffffff;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            z-index: 150;
+            transition: transform 0.25s ease-out;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .action-sheet.open {
+            transform: translateY(-300px);
+        }
+
+        .action-sheet-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 20px;
+            font-size: 15px;
+            color: #333333;
+            cursor: pointer;
+        }
+
+        .action-sheet-item:active {
+            background-color: #f0f0f0;
+        }
+
+        .action-sheet-item .material-icons {
+            margin-right: 20px;
+            color: #616161;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- Navigation Drawer Overlay & Drawer -->
+    <div id="drawer-overlay" onclick="toggleDrawer(false)"></div>
+    <div id="drawer-menu">
+        <div class="drawer-header" style="background-image: linear-gradient(to bottom, #757575, #616161);">
+            <span class="material-icons drawer-header-arrow">arrow_drop_down</span>
+        </div>
+        <ul class="drawer-nav-list">
+            <li class="drawer-item active" onclick="switchDrawerCategory('notes')">
+                <span class="material-icons">lightbulb_outline</span>
+                <span>メモ</span>
+            </li>
+            <li class="drawer-item" onclick="switchDrawerCategory('reminders')">
+                <span class="material-icons">touch_app</span>
+                <span>リマインダー</span>
+            </li>
+            <div class="drawer-divider"></div>
+            <li class="drawer-item" onclick="openLabelModal()">
+                <span class="material-icons">add</span>
+                <span>新しいラベルを作成</span>
+            </li>
+            <div class="drawer-divider"></div>
+            <li class="drawer-item" onclick="switchDrawerCategory('archive')">
+                <span class="material-icons">archive</span>
+                <span>アーカイブ</span>
+            </li>
+            <li class="drawer-item" onclick="switchDrawerCategory('trash')">
+                <span class="material-icons">delete</span>
+                <span>ゴミ箱</span>
+            </li>
+            <div class="drawer-divider"></div>
+            <li class="drawer-item" onclick="openSettingsView()">
+                <span class="material-icons">settings</span>
+                <span>設定</span>
+            </li>
+            <li class="drawer-item" onclick="showHelpModal()">
+                <span class="material-icons">help_outline</span>
+                <span>ヘルプとフィードバック</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 1. Welcome View (Activity) -->
+    <div id="view-welcome" class="activity-view">
+        <div class="welcome-icon-box">
+            <span class="material-icons">lightbulb_outline</span>
+        </div>
+        <div class="welcome-title">さまざまな方法でメモを作成</div>
+        <div class="welcome-desc">
+            リストの作成、写真の撮影、音声を録音など、FOSS Memoではさまざまな方法でメモを作成できます。
+        </div>
+        <button class="btn-use" onclick="showMainView()">使ってみる</button>
+    </div>
+
+    <!-- 2. Main Note List View (Activity) -->
+    <div id="view-main" class="activity-view hidden">
+        <div class="action-bar">
+            <button class="icon-btn" onclick="toggleDrawer(true)">
+                <span class="material-icons">menu</span>
+            </button>
+            <div class="bar-title" id="main-bar-title">メモ</div>
+            
+            <div class="search-input-container" id="search-container">
+                <input type="text" id="search-input" placeholder="検索..." oninput="handleSearchInput(this.value)">
+            </div>
+
+            <button class="icon-btn" onclick="toggleSearchInput()">
+                <span class="material-icons" id="search-icon">search</span>
+            </button>
+            <button class="icon-btn" onclick="toggleLayoutMode()">
+                <span class="material-icons" id="layout-toggle-icon">view_agenda</span>
+            </button>
+        </div>
+
+        <div class="notes-content-area" id="notes-content-area">
+            <div id="empty-state-view" class="empty-notes-view">
+                <span class="material-icons">lightbulb_outline</span>
+                <div class="empty-notes-text">追加したメモはここに表示されます</div>
+            </div>
+
+            <div id="notes-container" style="display: none;">
+                <div id="pinned-section" style="display:none;">
+                    <div class="section-header">ピン留め</div>
+                    <div class="notes-grid" id="pinned-grid"></div>
+                </div>
+                <div id="others-section" style="display:none;">
+                    <div class="section-header" id="others-header">その他</div>
+                    <div class="notes-grid" id="others-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <div class="bottom-bar-placeholder" onclick="openEditor('text')">メモを入力...</div>
+            <div class="bottom-bar-icons">
+                <button class="icon-btn" onclick="openEditor('checklist')" title="チェックリスト">
+                    <span class="material-icons">check_box</span>
+                </button>
+                <button class="icon-btn" onclick="openEditor('drawing')" title="手書き">
+                    <span class="material-icons">edit</span>
+                </button>
+                <button class="icon-btn" onclick="triggerAudioRecord()" title="音声">
+                    <span class="material-icons">mic</span>
+                </button>
+                <button class="icon-btn" onclick="triggerImageCapture()" title="写真">
+                    <span class="material-icons">photo_camera</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Note Editor View (Activity) -->
+    <div id="view-editor" class="activity-view hidden">
+        <div class="action-bar white-bar">
+            <button class="icon-btn" onclick="saveAndCloseEditor()">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <div style="flex-grow: 1;"></div>
+            <button class="icon-btn" onclick="togglePinCurrentNote()">
+                <span class="material-icons" id="editor-pin-icon">push_pin</span>
+            </button>
+            <button class="icon-btn" onclick="toggleReminderCurrentNote()">
+                <span class="material-icons">touch_app</span>
+            </button>
+            <button class="icon-btn" onclick="archiveCurrentNote()">
+                <span class="material-icons">archive</span>
+            </button>
+        </div>
+
+        <div class="editor-content">
+            <div id="editor-image-preview" class="editor-image-preview-area" style="display: none;"></div>
+
+            <div class="editor-header-row">
+                <input type="text" id="editor-title" class="editor-title-input" placeholder="タイトル" oninput="pushUndoState()">
+                <button class="icon-btn" id="checklist-more-btn" style="display:none;" onclick="showEditorMoreMenu()">
+                    <span class="material-icons" style="color:#616161;">more_vert</span>
+                </button>
+            </div>
+            
+            <textarea id="editor-text-body" class="editor-body-textarea" placeholder="メモ" style="display: none;" oninput="pushUndoState()"></textarea>
+
+            <div id="editor-checklist-body" class="checklist-container" style="display: none;">
+                <div id="checklist-active-items"></div>
+                <div class="add-checklist-btn" onclick="addNewChecklistItem('')">
+                    <span class="material-icons">add</span>
+                    <span>リストアイテム</span>
+                </div>
+
+                <div id="checklist-done-wrapper" style="display: none;">
+                    <div class="checked-accordion-header" onclick="toggleDoneAccordion()">
+                        <span class="material-icons" id="accordion-arrow">keyboard_arrow_down</span>
+                        <span id="checked-count-label">チェックマーク付きアイテム 0 件</span>
+                    </div>
+                    <div id="checklist-done-items" style="margin-top: 8px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="editor-bottom-bar">
+            <div class="editor-bottom-left">
+                <button class="icon-btn" onclick="showEditorAddMenu()">
+                    <span class="material-icons">add_box</span>
+                </button>
+            </div>
+            <div class="editor-bottom-right">
+                <button class="icon-btn" onclick="editorUndo()">
+                    <span class="material-icons">undo</span>
+                </button>
+                <button class="icon-btn" onclick="editorRedo()">
+                    <span class="material-icons">redo</span>
+                </button>
+                <button class="icon-btn" onclick="showEditorMoreMenu()">
+                    <span class="material-icons">more_vert</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Settings View (Activity) -->
+    <div id="view-settings" class="activity-view hidden">
+        <div class="action-bar">
+            <button class="icon-btn" onclick="closeSettingsView()">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <div class="bar-title">設定</div>
+        </div>
+
+        <div class="settings-content">
+            <div class="settings-group-title">リストの動作</div>
+            <div class="settings-item">
+                <div class="settings-item-label">新しいアイテムを末尾に追加する</div>
+                <label class="switch">
+                    <input type="checkbox" id="set-add-to-bottom" checked onchange="saveSetting('addBottom', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-item">
+                <div class="settings-item-label">選択したアイテムを末尾に移動する</div>
+                <label class="switch">
+                    <input type="checkbox" id="set-move-checked-bottom" checked onchange="saveSetting('moveChecked', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="settings-group-title">リマインダーの設定</div>
+            <div class="settings-item">
+                <div class="settings-item-text">
+                    <div class="settings-item-label">午前</div>
+                </div>
+                <div class="settings-item-value">8:00</div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-item-text">
+                    <div class="settings-item-label">午後</div>
+                </div>
+                <div class="settings-item-value">13:00</div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-item-text">
+                    <div class="settings-item-label">夕方</div>
+                </div>
+                <div class="settings-item-value">18:00</div>
+            </div>
+
+            <div class="settings-group-title">共有</div>
+            <div class="settings-item">
+                <div class="settings-item-label">共有を有効にする</div>
+                <label class="switch">
+                    <input type="checkbox" id="set-enable-share" checked onchange="saveSetting('enableShare', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="settings-group-title">便利機能の設定</div>
+            <div class="settings-item">
+                <div class="settings-item-label">iFrameでリンクのプレビューを表示</div>
+                <label class="switch">
+                    <input type="checkbox" id="set-iframe-preview" checked onchange="saveSetting('iframePreview', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Dialogs -->
+<div id="modal-label" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-title">新しいラベルを作成</div>
+        <input type="text" id="label-input" class="modal-input" placeholder="ラベル名">
+        <div class="modal-actions">
+            <button class="modal-btn" onclick="closeLabelModal()">キャンセル</button>
+            <button class="modal-btn" onclick="confirmCreateLabel()">作成</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Action Sheet Overlay -->
+<div id="action-sheet-overlay" class="modal-overlay" onclick="closeActionSheet()">
+    <div class="action-sheet" id="action-sheet-box" onclick="event.stopPropagation()">
+        <div id="action-sheet-content"></div>
+    </div>
+</div>
+
+<!-- Helper Input Elements -->
+<input type="file" id="file-input-image" accept="image/*" style="display:none;" onchange="handleImageSelected(event)">
+
+<script>
+const DB_NAME = 'foss_memo_db';
+const DB_VERSION = 1;
+let db = null;
+
+let currentCategory = 'notes';
+let notesList = [];
+let currentNote = null;
+let isListLayout = false;
+let isAccordionOpen = true;
+let isSearchActive = false;
+let searchQuery = '';
+
+// Undo/Redo Stacks
+let undoStack = [];
+let redoStack = [];
+
+let userSettings = {
+    addBottom: true,
+    moveChecked: true,
+    enableShare: true,
+    iframePreview: true
+};
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+            const dbRef = e.target.result;
+            if (!dbRef.objectStoreNames.contains('notes')) {
+                const store = dbRef.createObjectStore('notes', { keyPath: 'id' });
+                store.createIndex('category', 'category', { unique: false });
+                store.createIndex('isPinned', 'isPinned', { unique: false });
+            }
+        };
+        request.onsuccess = (e) => {
+            db = e.target.result;
+            resolve(db);
+        };
+        request.onerror = (e) => reject(e);
+    });
+}
+
+function getAllNotesFromDB() {
+    return new Promise((resolve) => {
+        if (!db) return resolve([]);
+        const tx = db.transaction('notes', 'readonly');
+        const store = tx.objectStore('notes');
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+    });
+}
+
+function saveNoteToDB(note) {
+    return new Promise((resolve) => {
+        if (!db) return resolve();
+        const tx = db.transaction('notes', 'readwrite');
+        const store = tx.objectStore('notes');
+        store.put(note);
+        tx.oncomplete = () => resolve();
+    });
+}
+
+function deleteNoteFromDB(id) {
+    return new Promise((resolve) => {
+        if (!db) return resolve();
+        const tx = db.transaction('notes', 'readwrite');
+        const store = tx.objectStore('notes');
+        store.delete(id);
+        tx.oncomplete = () => resolve();
+    });
+}
+
+window.addEventListener('load', async () => {
+    await initDB();
+    
+    const hasSeenWelcome = localStorage.getItem('foss_welcome_seen');
+    if (!hasSeenWelcome) {
+        showView('view-welcome');
+    } else {
+        showMainView();
+    }
+});
+
+function showView(viewId) {
+    document.querySelectorAll('.activity-view').forEach(view => {
+        view.classList.add('hidden');
+    });
+    document.getElementById(viewId).classList.remove('hidden');
+}
+
+function showMainView() {
+    localStorage.setItem('foss_welcome_seen', 'true');
+    showView('view-main');
+    loadAndRenderNotes();
+}
+
+function toggleDrawer(open) {
+    const overlay = document.getElementById('drawer-overlay');
+    const menu = document.getElementById('drawer-menu');
+    if (open) {
+        overlay.classList.add('open');
+        menu.classList.add('open');
+    } else {
+        overlay.classList.remove('open');
+        menu.classList.remove('open');
+    }
+}
+
+function switchDrawerCategory(cat) {
+    currentCategory = cat;
+    toggleDrawer(false);
+    
+    const titles = {
+        'notes': 'メモ',
+        'reminders': 'リマインダー',
+        'archive': 'アーカイブ',
+        'trash': 'ゴミ箱'
+    };
+    document.getElementById('main-bar-title').innerText = titles[cat] || 'メモ';
+    loadAndRenderNotes();
+}
+
+function toggleSearchInput() {
+    isSearchActive = !isSearchActive;
+    const container = document.getElementById('search-container');
+    const title = document.getElementById('main-bar-title');
+    const input = document.getElementById('search-input');
+    if (isSearchActive) {
+        container.classList.add('active');
+        title.style.display = 'none';
+        input.focus();
+    } else {
+        container.classList.remove('active');
+        title.style.display = 'block';
+        input.value = '';
+        searchQuery = '';
+        loadAndRenderNotes();
+    }
+}
+
+function handleSearchInput(val) {
+    searchQuery = val.toLowerCase().trim();
+    loadAndRenderNotes();
+}
+
+async function loadAndRenderNotes() {
+    notesList = await getAllNotesFromDB();
+    
+    let filtered = notesList.filter(n => {
+        if (currentCategory === 'trash') return n.isTrashed;
+        if (n.isTrashed) return false;
+        if (currentCategory === 'archive') return n.isArchived;
+        if (n.isArchived) return false;
+        if (currentCategory === 'reminders') return !!n.reminder;
+        return true;
+    });
+
+    if (searchQuery) {
+        filtered = filtered.filter(n => 
+            (n.title && n.title.toLowerCase().includes(searchQuery)) ||
+            (n.body && n.body.toLowerCase().includes(searchQuery)) ||
+            (n.items && n.items.some(i => i.text.toLowerCase().includes(searchQuery)))
+        );
+    }
+
+    const emptyView = document.getElementById('empty-state-view');
+    const notesContainer = document.getElementById('notes-container');
+    const pinnedSection = document.getElementById('pinned-section');
+    const othersSection = document.getElementById('others-section');
+    const pinnedGrid = document.getElementById('pinned-grid');
+    const othersGrid = document.getElementById('others-grid');
+
+    if (filtered.length === 0) {
+        emptyView.style.display = 'flex';
+        notesContainer.style.display = 'none';
+        return;
+    }
+
+    emptyView.style.display = 'none';
+    notesContainer.style.display = 'block';
+    
+    pinnedGrid.innerHTML = '';
+    othersGrid.innerHTML = '';
+
+    const pinnedNotes = filtered.filter(n => n.isPinned);
+    const otherNotes = filtered.filter(n => !n.isPinned);
+
+    if (pinnedNotes.length > 0) {
+        pinnedSection.style.display = 'block';
+        pinnedNotes.forEach(n => pinnedGrid.appendChild(createNoteCard(n)));
+    } else {
+        pinnedSection.style.display = 'none';
+    }
+
+    if (otherNotes.length > 0) {
+        othersSection.style.display = 'block';
+        document.getElementById('others-header').style.display = pinnedNotes.length > 0 ? 'block' : 'none';
+        otherNotes.forEach(n => othersGrid.appendChild(createNoteCard(n)));
+    } else {
+        othersSection.style.display = 'none';
+    }
+}
+
+function createNoteCard(note) {
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    card.onclick = () => openExistingNote(note.id);
+
+    if (note.images && note.images.length > 0) {
+        const img = document.createElement('img');
+        img.className = 'note-card-image';
+        img.src = note.images[0];
+        card.appendChild(img);
+    }
+
+    if (note.title) {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'note-card-title';
+        titleEl.innerText = note.title;
+        card.appendChild(titleEl);
+    }
+
+    if (note.type === 'checklist' && Array.isArray(note.items)) {
+        const itemsEl = document.createElement('div');
+        itemsEl.className = 'note-card-items';
+        note.items.slice(0, 5).forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'note-card-item-row' + (item.checked ? ' checked' : '');
+            row.innerHTML = `<span class="material-icons" style="font-size:14px;color:#757575;">${item.checked ? 'check_box' : 'check_box_outline_blank'}</span><span>${escapeHtml(item.text)}</span>`;
+            itemsEl.appendChild(row);
+        });
+        card.appendChild(itemsEl);
+    } else if (note.body) {
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'note-card-text';
+        bodyEl.innerText = note.body;
+        card.appendChild(bodyEl);
+    }
+
+    return card;
+}
+
+function toggleLayoutMode() {
+    isListLayout = !isListLayout;
+    document.getElementById('layout-toggle-icon').innerText = isListLayout ? 'dashboard' : 'view_agenda';
+    document.getElementById('pinned-grid').classList.toggle('list-layout', isListLayout);
+    document.getElementById('others-grid').classList.toggle('list-layout', isListLayout);
+}
+
+function openEditor(type = 'text') {
+    currentNote = {
+        id: 'note_' + Date.now(),
+        title: '',
+        body: '',
+        type: type,
+        items: [],
+        images: [],
+        isPinned: false,
+        isArchived: false,
+        isTrashed: false,
+        reminder: null,
+        updatedAt: Date.now()
+    };
+    undoStack = [];
+    redoStack = [];
+    setupEditorUI();
+    showView('view-editor');
+}
+
+async function openExistingNote(id) {
+    const note = notesList.find(n => n.id === id);
+    if (!note) return;
+    currentNote = JSON.parse(JSON.stringify(note));
+    if (!currentNote.images) currentNote.images = [];
+    undoStack = [];
+    redoStack = [];
+    setupEditorUI();
+    showView('view-editor');
+}
+
+function setupEditorUI() {
+    document.getElementById('editor-title').value = currentNote.title || '';
+    document.getElementById('editor-pin-icon').style.color = currentNote.isPinned ? '#fbc02d' : 'inherit';
+
+    renderEditorImages();
+
+    const textBody = document.getElementById('editor-text-body');
+    const checklistBody = document.getElementById('editor-checklist-body');
+    const checklistMoreBtn = document.getElementById('checklist-more-btn');
+
+    if (currentNote.type === 'checklist') {
+        textBody.style.display = 'none';
+        checklistBody.style.display = 'flex';
+        checklistMoreBtn.style.display = 'block';
+        renderChecklistItems();
+    } else {
+        textBody.style.display = 'block';
+        checklistBody.style.display = 'none';
+        checklistMoreBtn.style.display = 'none';
+        textBody.value = currentNote.body || '';
+    }
+}
+
+function renderEditorImages() {
+    const previewContainer = document.getElementById('editor-image-preview');
+    if (!previewContainer) return;
+
+    if (currentNote.images && currentNote.images.length > 0) {
+        previewContainer.style.display = 'flex';
+        previewContainer.innerHTML = currentNote.images.map((imgSrc, idx) => `
+            <div class="editor-image-container">
+                <img src="${imgSrc}" alt="添付画像">
+                <span class="material-icons editor-image-delete-btn" onclick="removeEditorImage(${idx})">delete</span>
+            </div>
+        `).join('');
+    } else {
+        previewContainer.style.display = 'none';
+        previewContainer.innerHTML = '';
+    }
+}
+
+function removeEditorImage(idx) {
+    pushUndoState();
+    if (currentNote && currentNote.images) {
+        currentNote.images.splice(idx, 1);
+        renderEditorImages();
+    }
+}
+
+function pushUndoState() {
+    if (!currentNote) return;
+    undoStack.push({
+        title: document.getElementById('editor-title').value,
+        body: document.getElementById('editor-text-body').value,
+        items: JSON.parse(JSON.stringify(currentNote.items || [])),
+        images: JSON.parse(JSON.stringify(currentNote.images || []))
+    });
+}
+
+function editorUndo() {
+    if (undoStack.length === 0) return;
+    const currentState = {
+        title: document.getElementById('editor-title').value,
+        body: document.getElementById('editor-text-body').value,
+        items: JSON.parse(JSON.stringify(currentNote.items || [])),
+        images: JSON.parse(JSON.stringify(currentNote.images || []))
+    };
+    redoStack.push(currentState);
+
+    const previousState = undoStack.pop();
+    document.getElementById('editor-title').value = previousState.title;
+    document.getElementById('editor-text-body').value = previousState.body;
+    currentNote.items = previousState.items;
+    currentNote.images = previousState.images;
+    if (currentNote.type === 'checklist') renderChecklistItems();
+    renderEditorImages();
+}
+
+function editorRedo() {
+    if (redoStack.length === 0) return;
+    const currentState = {
+        title: document.getElementById('editor-title').value,
+        body: document.getElementById('editor-text-body').value,
+        items: JSON.parse(JSON.stringify(currentNote.items || [])),
+        images: JSON.parse(JSON.stringify(currentNote.images || []))
+    };
+    undoStack.push(currentState);
+
+    const nextState = redoStack.pop();
+    document.getElementById('editor-title').value = nextState.title;
+    document.getElementById('editor-text-body').value = nextState.body;
+    currentNote.items = nextState.items;
+    currentNote.images = nextState.images;
+    if (currentNote.type === 'checklist') renderChecklistItems();
+    renderEditorImages();
+}
+
+function triggerImageCapture() {
+    document.getElementById('file-input-image').click();
+}
+
+function handleImageSelected(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const dataUrl = evt.target.result;
+            if (!currentNote) {
+                openEditor('text');
+            }
+            if (!currentNote.images) {
+                currentNote.images = [];
+            }
+            pushUndoState();
+            currentNote.images.push(dataUrl);
+            renderEditorImages();
+        };
+        reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+}
+
+function renderChecklistItems() {
+    const activeBox = document.getElementById('checklist-active-items');
+    const doneBox = document.getElementById('checklist-done-items');
+    const doneWrapper = document.getElementById('checklist-done-wrapper');
+
+    activeBox.innerHTML = '';
+    doneBox.innerHTML = '';
+
+    const activeItems = (currentNote.items || []).filter(i => !i.checked);
+    const doneItems = (currentNote.items || []).filter(i => i.checked);
+
+    activeItems.forEach((item) => {
+        activeBox.appendChild(createChecklistItemRow(item, false));
+    });
+
+    if (doneItems.length > 0) {
+        doneWrapper.style.display = 'block';
+        document.getElementById('checked-count-label').innerText = `チェックマーク付きアイテム ${doneItems.length} 件`;
+        doneItems.forEach((item) => {
+            doneBox.appendChild(createChecklistItemRow(item, true));
+        });
+    } else {
+        doneWrapper.style.display = 'none';
+    }
+}
+
+function createChecklistItemRow(item, isDone) {
+    const row = document.createElement('div');
+    row.className = 'checklist-row';
+
+    row.innerHTML = `
+        <span class="material-icons drag-handle">drag_indicator</span>
+        <div class="checklist-checkbox ${item.checked ? 'checked' : ''}" onclick="toggleChecklistItem('${item.id}')">
+            ${item.checked ? '<span class="material-icons">check</span>' : ''}
+        </div>
+        <input type="text" class="checklist-input ${item.checked ? 'checked' : ''}" value="${escapeHtml(item.text)}" onchange="updateChecklistText('${item.id}', this.value)">
+        <span class="material-icons" style="color:#757575;cursor:pointer;font-size:18px;" onclick="removeChecklistItem('${item.id}')">close</span>
+    `;
+    return row;
+}
+
+function addNewChecklistItem(text = '') {
+    pushUndoState();
+    if (!currentNote.items) currentNote.items = [];
+    currentNote.items.push({
+        id: 'item_' + Date.now() + Math.random().toString(36).substr(2, 4),
+        text: text,
+        checked: false
+    });
+    renderChecklistItems();
+}
+
+function updateChecklistText(itemId, val) {
+    pushUndoState();
+    const item = currentNote.items.find(i => i.id === itemId);
+    if (item) item.text = val;
+}
+
+function toggleChecklistItem(itemId) {
+    pushUndoState();
+    const item = currentNote.items.find(i => i.id === itemId);
+    if (item) {
+        item.checked = !item.checked;
+        renderChecklistItems();
+    }
+}
+
+function removeChecklistItem(itemId) {
+    pushUndoState();
+    currentNote.items = currentNote.items.filter(i => i.id !== itemId);
+    renderChecklistItems();
+}
+
+function toggleDoneAccordion() {
+    isAccordionOpen = !isAccordionOpen;
+    document.getElementById('checklist-done-items').style.display = isAccordionOpen ? 'block' : 'none';
+    document.getElementById('accordion-arrow').innerText = isAccordionOpen ? 'keyboard_arrow_down' : 'keyboard_arrow_right';
+}
+
+function togglePinCurrentNote() {
+    currentNote.isPinned = !currentNote.isPinned;
+    document.getElementById('editor-pin-icon').style.color = currentNote.isPinned ? '#fbc02d' : 'inherit';
+}
+
+function toggleReminderCurrentNote() {
+    currentNote.reminder = currentNote.reminder ? null : '8:00';
+    showToast(currentNote.reminder ? 'リマインダーを午前8:00に設定しました' : 'リマインダーを解除しました');
+}
+
+function archiveCurrentNote() {
+    currentNote.isArchived = true;
+    saveAndCloseEditor();
+}
+
+async function saveAndCloseEditor() {
+    if (!currentNote) return showMainView();
+
+    currentNote.title = document.getElementById('editor-title').value.trim();
+    
+    if (currentNote.type === 'text') {
+        currentNote.body = document.getElementById('editor-text-body').value.trim();
+    }
+
+    const hasContent = currentNote.title || currentNote.body || (currentNote.items && currentNote.items.length > 0) || (currentNote.images && currentNote.images.length > 0);
+    if (hasContent) {
+        currentNote.updatedAt = Date.now();
+        await saveNoteToDB(currentNote);
+    } else {
+        await deleteNoteFromDB(currentNote.id);
+    }
+
+    currentNote = null;
+    showMainView();
+}
+
+function showEditorAddMenu() {
+    const html = `
+        <div class="action-sheet-item" onclick="triggerImageCapture(); closeActionSheet();">
+            <span class="material-icons">photo_camera</span>写真を撮影
+        </div>
+        <div class="action-sheet-item" onclick="triggerImageCapture(); closeActionSheet();">
+            <span class="material-icons">image</span>画像を追加
+        </div>
+        <div class="action-sheet-item" onclick="openEditor('drawing'); closeActionSheet();">
+            <span class="material-icons">brush</span>図形描画
+        </div>
+        <div class="action-sheet-item" onclick="triggerAudioRecord(); closeActionSheet();">
+            <span class="material-icons">mic</span>録音
+        </div>
+        <div class="action-sheet-item" onclick="convertNoteType('checklist'); closeActionSheet();">
+            <span class="material-icons">check_box</span>チェックボックス
+        </div>
+    `;
+    openActionSheet(html);
+}
+
+function showEditorMoreMenu() {
+    const html = `
+        <div class="action-sheet-item" onclick="deleteCurrentNote(); closeActionSheet();">
+            <span class="material-icons">delete</span>削除
+        </div>
+        <div class="action-sheet-item" onclick="duplicateCurrentNote(); closeActionSheet();">
+            <span class="material-icons">content_copy</span>コピーを作成
+        </div>
+        <div class="action-sheet-item" onclick="shareCurrentNote(); closeActionSheet();">
+            <span class="material-icons">share</span>送信
+        </div>
+        <div class="action-sheet-item" onclick="openLabelModal(); closeActionSheet();">
+            <span class="material-icons">label</span>ラベル
+        </div>
+    `;
+    openActionSheet(html);
+}
+
+function convertNoteType(targetType) {
+    if (!currentNote) return;
+    if (currentNote.type === targetType) return;
+    
+    currentNote.type = targetType;
+    if (targetType === 'checklist') {
+        const bodyText = document.getElementById('editor-text-body').value;
+        const lines = bodyText.split('\n').filter(l => l.trim().length > 0);
+        currentNote.items = lines.map(line => ({
+            id: 'item_' + Date.now() + Math.random().toString(36).substr(2, 4),
+            text: line,
+            checked: false
+        }));
+    } else {
+        const items = currentNote.items || [];
+        document.getElementById('editor-text-body').value = items.map(i => i.text).join('\n');
+    }
+    setupEditorUI();
+}
+
+async function deleteCurrentNote() {
+    if (currentNote) {
+        currentNote.isTrashed = true;
+        await saveNoteToDB(currentNote);
+        currentNote = null;
+    }
+    showMainView();
+}
+
+async function duplicateCurrentNote() {
+    if (currentNote) {
+        const copy = JSON.parse(JSON.stringify(currentNote));
+        copy.id = 'note_' + Date.now();
+        copy.title = (copy.title || '') + ' (コピー)';
+        await saveNoteToDB(copy);
+        showToast('コピーを作成しました');
+    }
+}
+
+function shareCurrentNote() {
+    showToast('共有ダイアログを開いています...');
+}
+
+function openActionSheet(contentHtml) {
+    const overlay = document.getElementById('action-sheet-overlay');
+    const sheet = document.getElementById('action-sheet-box');
+    document.getElementById('action-sheet-content').innerHTML = contentHtml;
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+}
+
+function closeActionSheet() {
+    const overlay = document.getElementById('action-sheet-overlay');
+    const sheet = document.getElementById('action-sheet-box');
+    overlay.classList.remove('open');
+    sheet.classList.remove('open');
+}
+
+function openSettingsView() {
+    toggleDrawer(false);
+    showView('view-settings');
+}
+
+function closeSettingsView() {
+    showMainView();
+}
+
+function saveSetting(key, val) {
+    userSettings[key] = val;
+    localStorage.setItem('foss_settings', JSON.stringify(userSettings));
+}
+
+function triggerAudioRecord() {
+    if (!currentNote) openEditor('text');
+    document.getElementById('editor-title').value = "音声メモ";
+    document.getElementById('editor-text-body').value = "録音された音声データ (00:05)";
+}
+
+function openLabelModal() {
+    toggleDrawer(false);
+    document.getElementById('modal-label').classList.add('open');
+}
+
+function closeLabelModal() {
+    document.getElementById('modal-label').classList.remove('open');
+}
+
+function confirmCreateLabel() {
+    const input = document.getElementById('label-input').value.trim();
+    if (input) {
+        showToast(`ラベル「${input}」を作成しました`);
+    }
+    closeLabelModal();
+}
+
+function showHelpModal() {
+    toggleDrawer(false);
+    showToast("FOSS Memo v1.0.0 (Android 7.1 Style)\n完全オープンソースのローカル優先メモツールです。");
+}
+
+function showToast(msg) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(50,50,50,0.9);
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 14px;
+        z-index: 300;
+        pointer-events: none;
+        white-space: nowrap;
+    `;
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+}
+
+function escapeHtml(text) {
+    return (text || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+</script>
+</body>
+</html>
