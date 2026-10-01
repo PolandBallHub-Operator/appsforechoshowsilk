@@ -24,17 +24,6 @@
             position: relative;
         }
 
-        /* Launcher Container with Android 7 Nougat Gradient Wallpaper */
-        #launcher {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            background: linear-gradient(180deg, #e475a0 0%, #ba4c81 40%, #571b59 75%, #2a0b38 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
         /* Launcher Container with Android 7 Nougat Wallpaper */
         #launcher {
             width: 100%;
@@ -46,7 +35,426 @@
             justify-content: space-between;
         }
 
-        /* Android System Status Bar */
+        /* Top Remove / Delete Zone for Dragging Home Icons */
+        #delete-zone {
+            position: absolute;
+            top: 28px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-80px);
+            background: rgba(229, 57, 53, 0.9);
+            color: #ffffff;
+            padding: 8px 32px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 3000;
+            transition: transform 0.2s cubic-bezier(0,0,0.2,1), background-color 0.2s ease;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        #delete-zone.active {
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+
+        #delete-zone.active.hover {
+            background: #d32f2f;
+            transform: translateX(-50%) translateY(0) scale(1.05);
+        }
+
+        /* Desktop Home App Grid Area */
+        #home-grid {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            right: 80px;
+            bottom: 60px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 12px;
+            z-index: 2;
+        }
+
+        .home-icon-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 8px;
+            padding: 4px;
+            transition: background 0.15s;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .home-icon-item.dragging {
+            opacity: 0.4;
+        }
+
+        .home-icon-item img {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .home-icon-item span {
+            font-size: 11px;
+            color: #ffffff;
+            margin-top: 4px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80px;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        /* Floating Drag Ghost Icon */
+        #drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 99999;
+            width: 56px;
+            height: 56px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transform: translate(-50%, -50%);
+            opacity: 0.9;
+        }
+
+        #drag-ghost img {
+            width: 44px;
+            height: 44px;
+        }
+
+        /* Android 7 Nougat Tablet UI Quick Settings & Notifications Panel */
+        #qs-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 24px;
+        }
+
+        #qs-overlay.active {
+            display: flex;
+        }
+
+        .qs-card {
+            width: 400px;
+            max-width: 90vw;
+            background: #263238;
+            border-radius: 2px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            color: #ffffff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .qs-header {
+            background: #1e272c;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #cfd8dc;
+            font-weight: 500;
+        }
+
+        .qs-header-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .qs-header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .qs-header-right .material-symbols-outlined {
+            font-size: 18px;
+            cursor: pointer;
+            color: #b0bec5;
+        }
+
+        /* Quick Settings Bar (Collapsed) */
+        .qs-collapsed-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #263238;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .qs-quick-icons {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .qs-quick-icons .material-symbols-outlined {
+            font-size: 20px;
+            color: #eceff1;
+        }
+
+        .qs-expand-btn {
+            cursor: pointer;
+            color: #b0bec5;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Quick Settings Body (Expanded) */
+        .qs-expanded-body {
+            display: none;
+            padding: 16px;
+            background: #263238;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .qs-card.expanded .qs-expanded-body {
+            display: block;
+        }
+
+        .qs-brightness-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .qs-brightness-row .material-symbols-outlined {
+            color: #b0bec5;
+            font-size: 20px;
+        }
+
+        .qs-slider {
+            flex: 1;
+            accent-color: #009688;
+            height: 4px;
+            cursor: pointer;
+        }
+
+        .qs-tiles-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px 8px;
+            text-align: center;
+        }
+
+        .qs-tile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .qs-tile .material-symbols-outlined {
+            font-size: 22px;
+            color: #eceff1;
+        }
+
+        .qs-tile span {
+            font-size: 11px;
+            color: #b0bec5;
+        }
+
+        .qs-edit-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .qs-edit-btn {
+            font-size: 12px;
+            font-weight: 500;
+            color: #80cbc4;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
+
+        /* Notifications Panel Area */
+        .qs-notifications {
+            background: #f5f5f5;
+            color: #212121;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .notif-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #ffffff;
+        }
+
+        .notif-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #616161;
+            margin-bottom: 4px;
+        }
+
+        .notif-header .material-symbols-outlined {
+            font-size: 14px;
+        }
+
+        .notif-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #212121;
+            margin-bottom: 2px;
+        }
+
+        .notif-subtext {
+            font-size: 12px;
+            color: #757575;
+        }
+
+        .qs-notif-footer {
+            background: #eceff1;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .qs-clear-all {
+            font-size: 12px;
+            font-weight: 600;
+            color: #546e7a;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
+
+        /* Recents View Screen Overlay */
+        #recents-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 8000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #recents-view.active {
+            display: flex;
+        }
+
+        .recents-empty {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        .recents-stack-container {
+            position: relative;
+            width: 340px;
+            height: 420px;
+            perspective: 1000px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .recents-card {
+            position: absolute;
+            width: 320px;
+            height: 280px;
+            background: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.25s ease, opacity 0.2s ease;
+            cursor: pointer;
+        }
+
+        .recents-card-header {
+            height: 38px;
+            background: #37474f;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+        }
+
+        .recents-card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .recents-card-title img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+        }
+
+        .recents-card-close {
+            cursor: pointer;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+        }
+
+        .recents-card-close:hover {
+            opacity: 1;
+        }
+
+        .recents-card-body {
+            flex: 1;
+            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            color: #757575;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .recents-card-body .material-symbols-outlined {
+            font-size: 48px;
+            color: #bdbdbd;
+            margin-bottom: 8px;
+        }
+
+        /* Status Bar Clickable Trigger */
         #status-bar {
             position: fixed;
             top: 0;
@@ -63,6 +471,7 @@
             z-index: 9999;
             background: transparent;
             transition: background-color 0.2s ease;
+            cursor: pointer;
         }
 
         #status-bar.app-active {
@@ -331,8 +740,14 @@
     <!-- Launcher Main Screen -->
     <div id="launcher">
 
-        <!-- Status Bar -->
-        <div id="status-bar">
+        <!-- Drag Delete Drop Zone -->
+        <div id="delete-zone">
+            <span class="material-symbols-outlined">delete</span>
+            <span>削除</span>
+        </div>
+
+        <!-- Status Bar (Click to open Quick Settings) -->
+        <div id="status-bar" onclick="openQSPanel()">
             <div class="status-icons">
                 <span class="material-symbols-outlined">signal_wifi_4_bar</span>
                 <span class="material-symbols-outlined">network_cell</span>
@@ -348,6 +763,11 @@
                 <span>検索</span>
             </div>
 
+            <!-- Home Screen Apps Placement Grid -->
+            <div id="home-grid">
+                <!-- Home Apps rendered dynamically -->
+            </div>
+
             <!-- Right Side Dock Bar -->
             <div class="dock-bar" id="dock-bar">
                 <!-- Dynamically Inserted Dock Apps -->
@@ -358,6 +778,113 @@
         <div class="drawer-trigger" onclick="openDrawer()">
             <span class="material-symbols-outlined">expand_less</span>
         </div>
+    </div>
+
+    <!-- Android 7 Tablet Quick Settings Overlay -->
+    <div id="qs-overlay" onclick="closeQSOutside(event)">
+        <div class="qs-card" id="qs-card" onclick="event.stopPropagation()">
+            <!-- QS Top Header -->
+            <div class="qs-header">
+                <div class="qs-header-left">
+                    <span id="qs-time">3:35 AM</span>
+                    <span>•</span>
+                    <span id="qs-date">Thu, Oct 1</span>
+                </div>
+                <div class="qs-header-right">
+                    <span class="material-symbols-outlined">account_circle</span>
+                    <span class="material-symbols-outlined" onclick="launchApp('setting.html'); closeQSPanel();">settings</span>
+                    <span class="material-symbols-outlined" onclick="toggleQSExpand()">expand_more</span>
+                </div>
+            </div>
+
+            <!-- Collapsed Quick Settings Bar -->
+            <div class="qs-collapsed-bar">
+                <div class="qs-quick-icons">
+                    <span class="material-symbols-outlined">signal_cellular_alt</span>
+                    <span class="material-symbols-outlined">battery_full</span>
+                    <span class="material-symbols-outlined">do_not_disturb_on</span>
+                    <span class="material-symbols-outlined">screen_rotation</span>
+                    <span class="material-symbols-outlined">airplanemode_inactive</span>
+                </div>
+                <div class="qs-expand-btn" onclick="toggleQSExpand()">
+                    <span class="material-symbols-outlined" id="qs-expand-icon">expand_more</span>
+                </div>
+            </div>
+
+            <!-- Expanded Quick Settings Section -->
+            <div class="qs-expanded-body">
+                <div class="qs-brightness-row">
+                    <span class="material-symbols-outlined">brightness_6</span>
+                    <input type="range" class="qs-slider" min="0" max="100" value="80">
+                </div>
+                <div class="qs-tiles-grid">
+                    <div class="qs-tile">
+                        <span class="material-symbols-outlined">signal_cellular_alt</span>
+                        <span>Android</span>
+                    </div>
+                    <div class="qs-tile">
+                        <span class="material-symbols-outlined">battery_full</span>
+                        <span>100%</span>
+                    </div>
+                    <div class="qs-tile">
+                        <span class="material-symbols-outlined">do_not_disturb_on</span>
+                        <span>Do not disturb</span>
+                    </div>
+                    <div class="qs-tile">
+                        <span class="material-symbols-outlined">screen_rotation</span>
+                        <span>Auto-rotate</span>
+                    </div>
+                    <div class="qs-tile">
+                        <span class="material-symbols-outlined">airplanemode_inactive</span>
+                        <span>Airplane mode</span>
+                    </div>
+                    <div class="qs-tile">
+                        <span class="material-symbols-outlined">location_on</span>
+                        <span>Location</span>
+                    </div>
+                </div>
+                <div class="qs-edit-row">
+                    <span class="qs-edit-btn">EDIT</span>
+                </div>
+            </div>
+
+            <!-- Notifications List Area -->
+            <div class="qs-notifications">
+                <div class="notif-item">
+                    <div class="notif-header">
+                        <span class="material-symbols-outlined">warning</span>
+                        <span>Chrome • 1m</span>
+                        <span class="material-symbols-outlined" style="margin-left:auto;">expand_more</span>
+                    </div>
+                    <div class="notif-title">Update Google Play services</div>
+                    <div class="notif-subtext">Chrome won't run unless you update Google Play services.</div>
+                </div>
+                <div class="notif-item">
+                    <div class="notif-header">
+                        <span class="material-symbols-outlined">android</span>
+                        <span>Android System</span>
+                    </div>
+                    <div class="notif-title">USB charging this device</div>
+                    <div class="notif-subtext">Tap for more options.</div>
+                </div>
+            </div>
+
+            <div class="qs-notif-footer">
+                <span class="qs-clear-all" onclick="clearNotifs()">CLEAR ALL</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Tasks View (3D Stack Overlay) -->
+    <div id="recents-view" onclick="closeRecentsOutside(event)">
+        <div class="recents-stack-container" id="recents-stack">
+            <!-- Dynamic 3D Recents Task Cards -->
+        </div>
+    </div>
+
+    <!-- Floating Ghost Icon for Dragging -->
+    <div id="drag-ghost">
+        <img id="ghost-img" src="" alt="ghost">
     </div>
 
     <!-- App Drawer Window -->
@@ -401,29 +928,40 @@
 
         // System Applications List (JSON Data Structure)
         const APPS_DATA = [
-            { name: "設定", url: "setting.html", icon: "setting.png", inDock: true },
-            { name: "ギャラリー", url: "gallery.html", icon: "gallery.png", inDock: true },
-            { name: "カメラ", url: "camera.html", icon: "camera.png", inDock: true },
-            { name: "連絡先", url: "contact.html", icon: "contact.png", inDock: true },
-            { name: "メッセージ", url: "message.html", icon: "message.png", inDock: true },
-            { name: "Play Store", url: "market.html", icon: "market.png" },
-            { name: "Dev Tools", url: "devtool.html", icon: "devtool.png" },
-            { name: "API Demo", url: "apidemo.html", icon: "apidemo.png" },
-            { name: "時計", url: "clock.html", icon: "clock.png" },
-            { name: "Play Music", url: "gpmusic.html", icon: "music.png" },
-            { name: "Play Books", url: "gpbooks.html", icon: "books.png" },
-            { name: "ブラウザ", url: "brow.html", icon: "brow.png" },
-            { name: "セットアップ", url: "setup.html", icon: "sysapp.png" }
+            { name: "設定", url: "setting.html", icon: "setting.png", inDock: true, color: "#455a64" },
+            { name: "ギャラリー", url: "gallery.html", icon: "gallery.png", inDock: true, color: "#009688" },
+            { name: "カメラ", url: "camera.html", icon: "camera.png", inDock: true, color: "#212121" },
+            { name: "連絡先", url: "contact.html", icon: "contact.png", inDock: true, color: "#1e88e5" },
+            { name: "メッセージ", url: "message.html", icon: "message.png", inDock: true, color: "#43a047" },
+            { name: "Play Store", url: "market.html", icon: "market.png", color: "#0f9d58" },
+            { name: "Dev Tools", url: "devtool.html", icon: "devtool.png", color: "#616161" },
+            { name: "API Demo", url: "apidemo.html", icon: "apidemo.png", color: "#795548" },
+            { name: "時計", url: "clock.html", icon: "clock.png", color: "#1565c0" },
+            { name: "Play Music", url: "gpmusic.html", icon: "music.png", color: "#ff5722" },
+            { name: "Play Books", url: "gpbooks.html", icon: "books.png", color: "#0288d1" },
+            { name: "セットアップ", url: "setup.html", icon: "sysapp.png", color: "#78909c" }
         ];
 
         let isAppOpen = false;
+        let homeApps = [
+            { name: "Play Store", url: "market.html", icon: "market.png" },
+            { name: "時計", url: "clock.html", icon: "clock.png" }
+        ];
+        let runningTasks = []; // Recent running tasks stack
 
         // Realtime Clock Updater
         function updateClock() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('clock-widget').textContent = `${hours}:${minutes}`;
+            const clockStr = `${hours}:${minutes}`;
+            document.getElementById('clock-widget').textContent = clockStr;
+
+            // Update QS Clock & Date
+            const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+            const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+            document.getElementById('qs-time').textContent = now.toLocaleTimeString('en-US', timeOptions);
+            document.getElementById('qs-date').textContent = now.toLocaleDateString('en-US', dateOptions);
         }
         setInterval(updateClock, 1000);
         updateClock();
@@ -457,12 +995,197 @@
                     closeDrawer();
                     launchApp(app.url);
                 };
+                
+                // Add Long Press Event on Drawer Icon to add to Home
+                attachLongPress(appItem, () => {
+                    addAppToHome(app);
+                    closeDrawer();
+                });
+
                 appItem.innerHTML = `
                     <img src="${iconSrc}" alt="${app.name}" onerror="this.src='https://placehold.co/48x48/009688/fff?text=App'">
                     <span>${app.name}</span>
                 `;
                 appGrid.appendChild(appItem);
             });
+
+            renderHomeGrid();
+        }
+
+        // Render Home Screen Icons Grid
+        function renderHomeGrid() {
+            const homeGrid = document.getElementById('home-grid');
+            homeGrid.innerHTML = '';
+
+            homeApps.forEach((app, index) => {
+                const iconSrc = ICON_BASE_URL + app.icon;
+                const item = document.createElement('div');
+                item.className = 'home-icon-item';
+                item.setAttribute('data-index', index);
+                item.innerHTML = `
+                    <img src="${iconSrc}" alt="${app.name}" onerror="this.src='https://placehold.co/48x48/009688/fff?text=App'">
+                    <span>${app.name}</span>
+                `;
+
+                // Click handler to open app
+                item.onclick = (e) => {
+                    if (item.classList.contains('dragging')) return;
+                    launchApp(app.url);
+                };
+
+                // Attach Drag and Move handler to Home Icon
+                enableHomeIconDrag(item, index);
+
+                homeGrid.appendChild(item);
+            });
+        }
+
+        // Add App from Drawer to Home Grid
+        function addAppToHome(app) {
+            homeApps.push(app);
+            renderHomeGrid();
+        }
+
+        // Long Press Helper Function
+        function attachLongPress(element, callback) {
+            let timer = null;
+            const start = (e) => {
+                timer = setTimeout(() => {
+                    callback(e);
+                }, 500);
+            };
+            const cancel = () => {
+                if (timer) clearTimeout(timer);
+            };
+
+            element.addEventListener('mousedown', start);
+            element.addEventListener('touchstart', start, { passive: true });
+            element.addEventListener('mouseup', cancel);
+            element.addEventListener('mouseleave', cancel);
+            element.addEventListener('touchend', cancel);
+            element.addEventListener('touchcancel', cancel);
+        }
+
+        // Home Icon Dragging, Moving & Deleting System
+        function enableHomeIconDrag(element, index) {
+            let isDragging = false;
+            let longPressTimer = null;
+            const deleteZone = document.getElementById('delete-zone');
+            const ghost = document.getElementById('drag-ghost');
+            const ghostImg = document.getElementById('ghost-img');
+
+            const resetDragState = () => {
+                if (longPressTimer) clearTimeout(longPressTimer);
+                isDragging = false;
+                element.classList.remove('dragging');
+                deleteZone.classList.remove('active', 'hover');
+                ghost.style.display = 'none';
+
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+                window.removeEventListener('touchmove', onTouchMove);
+                window.removeEventListener('touchend', onTouchEnd);
+                window.removeEventListener('touchcancel', onTouchEnd);
+            };
+
+            const onStart = (clientX, clientY) => {
+                longPressTimer = setTimeout(() => {
+                    isDragging = true;
+                    element.classList.add('dragging');
+                    deleteZone.classList.add('active');
+
+                    const img = element.querySelector('img');
+                    ghostImg.src = img.src;
+                    ghost.style.display = 'flex';
+                    ghost.style.left = clientX + 'px';
+                    ghost.style.top = clientY + 'px';
+                }, 400);
+
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+                window.addEventListener('touchmove', onTouchMove, { passive: false });
+                window.addEventListener('touchend', onTouchEnd);
+                window.addEventListener('touchcancel', onTouchEnd);
+            };
+
+            const onMove = (clientX, clientY) => {
+                if (!isDragging) {
+                    if (longPressTimer) clearTimeout(longPressTimer);
+                    return;
+                }
+                ghost.style.left = clientX + 'px';
+                ghost.style.top = clientY + 'px';
+
+                // Check over delete zone
+                const rect = deleteZone.getBoundingClientRect();
+                if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+                    deleteZone.classList.add('hover');
+                } else {
+                    deleteZone.classList.remove('hover');
+                }
+            };
+
+            const onMouseMove = (e) => onMove(e.clientX, e.clientY);
+
+            const onTouchMove = (e) => {
+                if (isDragging) {
+                    e.preventDefault();
+                }
+                if (e.touches.length > 0) {
+                    onMove(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            };
+
+            const onEnd = (clientX, clientY) => {
+                if (longPressTimer) clearTimeout(longPressTimer);
+
+                if (isDragging) {
+                    // Check if dropped inside delete zone
+                    const rect = deleteZone.getBoundingClientRect();
+                    if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+                        homeApps.splice(index, 1);
+                        resetDragState();
+                        renderHomeGrid();
+                        return;
+                    } else {
+                        // Position reordering in grid
+                        const gridItems = Array.from(document.querySelectorAll('.home-icon-item'));
+                        let moved = false;
+                        gridItems.forEach((targetItem, targetIndex) => {
+                            if (targetIndex !== index && !moved) {
+                                const tRect = targetItem.getBoundingClientRect();
+                                if (clientX >= tRect.left && clientX <= tRect.right && clientY >= tRect.top && clientY <= tRect.bottom) {
+                                    const movedItem = homeApps.splice(index, 1)[0];
+                                    homeApps.splice(targetIndex, 0, movedItem);
+                                    moved = true;
+                                }
+                            }
+                        });
+                        resetDragState();
+                        if (moved) {
+                            renderHomeGrid();
+                        }
+                        return;
+                    }
+                }
+                resetDragState();
+            };
+
+            const onMouseUp = (e) => onEnd(e.clientX, e.clientY);
+
+            const onTouchEnd = (e) => {
+                const touch = e.changedTouches[0] || (e.touches && e.touches[0]);
+                const clientX = touch ? touch.clientX : 0;
+                const clientY = touch ? touch.clientY : 0;
+                onEnd(clientX, clientY);
+            };
+
+            // Touch & Mouse Events
+            element.addEventListener('mousedown', (e) => onStart(e.clientX, e.clientY));
+            element.addEventListener('touchstart', (e) => {
+                const t = e.touches[0];
+                onStart(t.clientX, t.clientY);
+            }, { passive: true });
         }
 
         // App Drawer Toggle
@@ -496,7 +1219,7 @@
             });
         }
 
-        // Launch App in iFrame & Adjust System Bars
+        // Launch App in iFrame & Adjust System Bars & Track Recents
         function launchApp(appUrl) {
             const fullUrl = APP_BASE_URL + appUrl;
             const iframe = document.getElementById('app-frame');
@@ -506,10 +1229,141 @@
             document.getElementById('status-bar').classList.add('app-active');
             document.getElementById('nav-bar').classList.add('app-active');
             isAppOpen = true;
+
+            // Track recent task
+            const appObj = APPS_DATA.find(a => a.url === appUrl) || { name: "App", url: appUrl, icon: "sysapp.png", color: "#37474f" };
+            runningTasks = runningTasks.filter(t => t.url !== appUrl);
+            runningTasks.unshift(appObj);
+
+            closeRecents();
+        }
+
+        // Navigation Hardware Handler for Recent Tasks
+        function handleTask() {
+            if (document.getElementById('recents-view').classList.contains('active')) {
+                closeRecents();
+                return;
+            }
+            renderRecents();
+            document.getElementById('recents-view').classList.add('active');
+        }
+
+        function closeRecents() {
+            document.getElementById('recents-view').classList.remove('active');
+        }
+
+        function closeRecentsOutside(event) {
+            if (event.target.id === 'recents-view') {
+                closeRecents();
+            }
+        }
+
+        // Render 3D Stack of Recent Tasks
+        function renderRecents() {
+            const stackContainer = document.getElementById('recents-stack');
+            stackContainer.innerHTML = '';
+
+            if (runningTasks.length === 0) {
+                stackContainer.innerHTML = `<div class="recents-empty">最近使用したアプリはありません</div>`;
+                return;
+            }
+
+            runningTasks.forEach((app, i) => {
+                const card = document.createElement('div');
+                card.className = 'recents-card';
+                
+                // Stack Transformation Formula (Android 7 3D Rolodex Effect)
+                const translateY = i * -32;
+                const scale = 1 - (i * 0.05);
+                const opacity = 1 - (i * 0.15);
+
+                card.style.transform = `translateY(${translateY}px) scale(${scale})`;
+                card.style.zIndex = 100 - i;
+                card.style.opacity = Math.max(opacity, 0.3);
+
+                const iconSrc = ICON_BASE_URL + app.icon;
+                const headerColor = app.color || '#37474f';
+
+                card.innerHTML = `
+                    <div class="recents-card-header" style="background-color: ${headerColor};">
+                        <div class="recents-card-title">
+                            <img src="${iconSrc}" onerror="this.src='https://placehold.co/20x20/fff/000?text=A'">
+                            <span>${app.name}</span>
+                        </div>
+                        <div class="recents-card-close" onclick="removeTask(event, '${app.url}')">
+                            <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+                        </div>
+                    </div>
+                    <div class="recents-card-body">
+                        <span class="material-symbols-outlined">web_asset</span>
+                        <span>${app.name}</span>
+                    </div>
+                `;
+
+                card.onclick = (e) => {
+                    launchApp(app.url);
+                };
+
+                stackContainer.appendChild(card);
+            });
+        }
+
+        function removeTask(e, appUrl) {
+            e.stopPropagation();
+            runningTasks = runningTasks.filter(t => t.url !== appUrl);
+            if (isAppOpen && document.getElementById('app-frame').src.includes(appUrl)) {
+                handleHome();
+            }
+            renderRecents();
+        }
+
+        // Quick Settings Overlay Handlers
+        function openQSPanel() {
+            document.getElementById('qs-overlay').classList.add('active');
+        }
+
+        function closeQSPanel() {
+            document.getElementById('qs-overlay').classList.remove('active');
+            document.getElementById('qs-card').classList.remove('expanded');
+            document.getElementById('qs-expand-icon').textContent = 'expand_more';
+        }
+
+        function closeQSOutside(event) {
+            if (event.target.id === 'qs-overlay') {
+                closeQSPanel();
+            }
+        }
+
+        function toggleQSExpand() {
+            const card = document.getElementById('qs-card');
+            card.classList.toggle('expanded');
+            const icon = document.getElementById('qs-expand-icon');
+            if (card.classList.contains('expanded')) {
+                icon.textContent = 'expand_less';
+            } else {
+                icon.textContent = 'expand_more';
+            }
+        }
+
+        function clearNotifs() {
+            const notifContainer = document.querySelector('.qs-notifications');
+            notifContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #9e9e9e; font-size: 13px;">通知はありません</div>';
         }
 
         // Hardware / Navigation Button Event Handlers
         function handleBack() {
+            const qs = document.getElementById('qs-overlay');
+            if (qs.classList.contains('active')) {
+                closeQSPanel();
+                return;
+            }
+
+            const recents = document.getElementById('recents-view');
+            if (recents.classList.contains('active')) {
+                closeRecents();
+                return;
+            }
+
             const drawer = document.getElementById('app-drawer');
             if (drawer.classList.contains('active')) {
                 closeDrawer();
@@ -521,21 +1375,14 @@
         }
 
         function handleHome() {
+            closeQSPanel();
+            closeRecents();
             closeDrawer();
             document.getElementById('app-frame-container').style.display = 'none';
             document.getElementById('app-frame').src = 'about:blank';
             document.getElementById('status-bar').classList.remove('app-active');
             document.getElementById('nav-bar').classList.remove('app-active');
             isAppOpen = false;
-        }
-
-        function handleTask() {
-            // Task view indicator / Home behavior
-            if (isAppOpen) {
-                handleHome();
-            } else {
-                openDrawer();
-            }
         }
 
         // Initialize Launcher on Window Load
