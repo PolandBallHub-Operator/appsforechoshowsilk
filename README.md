@@ -2,6 +2,8 @@
 Android™7.0のMaterialアプリを完全再現。FOSS
 <br>Androidの歴史的遺産を保存し、伝承するという目的でやっています。これはOSSプロジェクトであり、無収益です。
 <br>Echo ShowはEcho OSのまま使いましょう
+- Android7 ブラウザをタブレットにしよう
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/launcher/
 - EchoShowでローカルファイルを使おう
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsui/
 - EchoShowで天気アプリを使おう
