@@ -58,6 +58,8 @@ Android™7.0のMaterialアプリを完全再現。FOSS
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/memo.html
 - Android7Launcher3
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/launcher3.html
+- Android7Launcher3
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/keyguard.html
 - Android7Hangoutstyle PeerMessage
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/pmessage.html
 - Android7 Calendar β版
