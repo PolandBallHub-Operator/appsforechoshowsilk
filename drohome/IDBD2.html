@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IDBDrive - Android 7.1 Real File Manager</title>
+    <!-- Google Material Symbols & Material Icons CDN -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <!-- PeerJS CDN -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Marked.js for Markdown Rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- PDF.js for Real PDF Rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: "Roboto", "Noto Sans JP", sans-serif;
+            background-color: #f5f5f5;
+            color: #212121;
+        }
+
+        /* Android 7.1 (Nougat) Switch Component */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 14px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: #b0bec5;
+            transition: background-color 0.2s ease;
+            border-radius: 7px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: -2px;
+            bottom: -3px;
+            background-color: #eceff1;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background-color: #80cbd2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #009688;
+        }
+
+        /* Firefox Banner */
+        #firefox-warning {
+            display: none;
+            background-color: #d32f2f;
+            color: #ffffff;
+            padding: 8px 12px;
+            font-size: 12px;
+            text-align: center;
+            z-index: 99999;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+        }
+
+        /* View Containers */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            background-color: #f5f5f5;
+            z-index: 10;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Action Bar / Header */
+        .app-bar {
+            height: 56px;
+            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            z-index: 20;
+        }
+
+        .app-bar .icon-btn {
+            background: none;
+            border: none;
+            outline: none;
+            padding: 8px;
+            cursor: pointer;
+            color: #616161;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-bar .title {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 500;
+            margin-left: 12px;
+            color: #424242;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .app-bar-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        /* Drawer Overlay & Content */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 100;
+            display: none;
+        }
+
+        .drawer-overlay.active {
+            display: block;
+        }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 101;
+            transition: transform 0.25s ease-out;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer.active {
+            transform: translateX(280px);
+        }
+
+        .drawer-header {
+            background-color: #2a5699;
+            color: #ffffff;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .drawer-account-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .drawer-account-email {
+            font-size: 13px;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .drawer-menu {
+            padding: 8px 0;
+            flex: 1;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #424242;
+            cursor: pointer;
+            gap: 24px;
+            font-weight: 500;
+        }
+
+        .drawer-item.active {
+            background-color: #e8f0fe;
+            color: #1976d2;
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 8px 0;
+        }
+
+        /* Main File View Content */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            position: relative;
+        }
+
+        .section-header {
+            font-size: 13px;
+            color: #616161;
+            font-weight: 500;
+            margin: 12px 0 8px 4px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .grid-container.list-mode {
+            grid-template-columns: 1fr;
+        }
+
+        .folder-card, .file-card {
+            background-color: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+
+        .folder-card:active, .file-card:active {
+            background-color: #e3f2fd;
+        }
+
+        .card-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow: hidden;
+        }
+
+        .card-title {
+            font-size: 13px;
+            color: #333333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-info-btn {
+            color: #9e9e9e;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        /* FAB Button */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: #2196f3;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: none;
+            cursor: pointer;
+            z-index: 50;
+        }
+
+        /* Bottom Sheet Modal */
+        .bottom-sheet-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 200;
+            display: none;
+        }
+
+        .bottom-sheet-overlay.active {
+            display: block;
+        }
+
+        .bottom-sheet {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            width: 100%;
+            background-color: #ffffff;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            z-index: 201;
+            transition: bottom 0.25s ease-out;
+            padding: 16px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .bottom-sheet.active {
+            bottom: 0;
+        }
+
+        .sheet-title {
+            font-size: 14px;
+            color: #616161;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .sheet-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .sheet-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .sheet-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #616161;
+        }
+
+        .sheet-label {
+            font-size: 12px;
+            color: #333333;
+        }
+
+        /* Overflow Popup Menu */
+        .overflow-menu {
+            position: fixed;
+            top: 48px;
+            right: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            border-radius: 2px;
+            z-index: 300;
+            display: none;
+            width: 180px;
+            padding: 8px 0;
+        }
+
+        .overflow-menu.active {
+            display: block;
+        }
+
+        .overflow-item {
+            padding: 10px 16px;
+            font-size: 14px;
+            color: #333333;
+            cursor: pointer;
+        }
+
+        .overflow-item:hover {
+            background-color: #eeeeee;
+        }
+
+        /* File Viewer Container Styles */
+        .viewer-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            overflow: auto;
+            padding: 16px;
+        }
+
+        .pdf-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 8px;
+            background-color: #eceff1;
+            border-bottom: 1px solid #cfd8dc;
+        }
+
+        .pdf-canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow: auto;
+            background-color: #525659;
+            padding: 16px;
+        }
+
+        .pdf-canvas-container canvas {
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            background-color: #ffffff;
+            display: block;
+            max-width: none;
+            height: auto;
+        }
+
+        .media-preview-view {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #212121;
+            padding: 16px;
+        }
+
+        .media-preview-view video,
+        .media-preview-view audio {
+            width: min(100%, 900px);
+            max-height: 100%;
+        }
+
+        .unsupported-preview {
+            padding: 24px;
+            text-align: center;
+            color: #616161;
+            line-height: 1.6;
+        }
+
+        .unsupported-preview a {
+            display: inline-block;
+            margin-top: 12px;
+            color: #1976d2;
+        }
+
+        .markdown-rendered-view {
+            padding: 16px;
+            line-height: 1.6;
+            color: #212121;
+            font-family: system-ui, -apple-system, sans-serif;
+            overflow-y: auto;
+        }
+
+        .markdown-rendered-view h1, .markdown-rendered-view h2, .markdown-rendered-view h3 {
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 4px;
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .markdown-rendered-view code {
+            background: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .markdown-rendered-view pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .hex-viewer-text {
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre;
+            background-color: #1e1e1e;
+            color: #00ff66;
+            padding: 16px;
+            border-radius: 4px;
+            overflow: auto;
+            flex: 1;
+        }
+
+        /* Sub Activity Detail Screen */
+        .detail-header {
+            height: 160px;
+            background-color: #2a5699;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+            color: #ffffff;
+            position: relative;
+        }
+
+        .detail-preview-icon {
+            align-self: center;
+            margin-top: 10px;
+            font-size: 56px;
+            opacity: 0.9;
+        }
+
+        .detail-title-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .detail-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            padding: 16px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            gap: 16px;
+        }
+
+        .detail-action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            color: #616161;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .detail-settings-list {
+            background-color: #ffffff;
+            padding: 0 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .detail-row-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .detail-row-title {
+            font-size: 14px;
+            color: #212121;
+        }
+
+        .detail-row-sub {
+            font-size: 11px;
+            color: #757575;
+        }
+
+        /* Custom Dialog Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-card {
+            background-color: #ffffff;
+            width: 85%;
+            max-width: 320px;
+            border-radius: 4px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .modal-body {
+            font-size: 14px;
+            color: #616161;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .modal-input, .modal-select {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-bottom: 2px solid #2196f3;
+            outline: none;
+            font-size: 14px;
+            margin-top: 8px;
+            background-color: #fafafa;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            background: none;
+            border: none;
+            color: #2196f3;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 6px 12px;
+        }
+
+        /* Toast Message */
+        #transfer-toast {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #323232;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 900;
+            display: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Firefox Warning Banner -->
+    <div id="firefox-warning">
+        ※IDBDriveはFirefox非対応です。Chromium系ブラウザ（Chrome, Edge等）をご利用ください。
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="transfer-toast">通知メッセージ</div>
+
+    <!-- Screen: Main Drive Activity -->
+    <div id="screen-main" class="screen active">
+        <div class="app-bar">
+            <button class="icon-btn" id="nav-back-btn" onclick="handleNavBack()" style="display:none;">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <button class="icon-btn" id="menu-drawer-btn" onclick="openDrawer()">
+                <span class="material-icons">menu</span>
+            </button>
+            <div class="title" id="main-title">マイドライブ</div>
+            <div class="app-bar-actions">
+                <button class="icon-btn" onclick="openSearchScreen()">
+                    <span class="material-icons">search</span>
+                </button>
+                <button class="icon-btn" onclick="toggleLayoutMode()">
+                    <span class="material-icons" id="layout-icon">view_module</span>
+                </button>
+                <button class="icon-btn" onclick="toggleOverflowMenu()">
+                    <span class="material-icons">more_vert</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="main-content" id="main-content-list">
+            <div class="section-header" id="folder-section-header">フォルダ</div>
+            <div class="grid-container" id="folder-grid">
+                <!-- Folders rendered dynamically -->
+            </div>
+
+            <div class="section-header" id="file-section-header">ファイル</div>
+            <div class="grid-container" id="file-grid">
+                <!-- Files rendered dynamically -->
+            </div>
+        </div>
+
+        <!-- FAB Button -->
+        <button class="fab" onclick="openNewSheet()">
+            <span class="material-icons" style="font-size: 28px;">add</span>
+        </button>
+    </div>
+
+    <!-- Screen: Real File Viewer -->
+    <div id="screen-viewer" class="screen">
+        <div class="app-bar">
+            <button class="icon-btn" onclick="closeFileViewer()">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <div class="title" id="viewer-title">ファイル閲覧</div>
+            <div class="app-bar-actions">
+                <button class="icon-btn" onclick="downloadCurrentFile()">
+                    <span class="material-icons">file_download</span>
+                </button>
+                <button class="icon-btn" onclick="openItemSubActivityFromViewer()">
+                    <span class="material-icons">info_outline</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- PDF Toolbar Controls -->
+        <div id="pdf-controls" class="pdf-toolbar" style="display:none;">
+            <button class="modal-btn" style="padding:4px 8px;" onclick="changePdfPage(-1)">前へ</button>
+            <span id="pdf-page-num" style="font-size:13px; font-weight:bold;">1 / 1</span>
+            <button class="modal-btn" style="padding:4px 8px;" onclick="changePdfPage(1)">次へ</button>
+            <button class="modal-btn" style="padding:4px 8px;" onclick="zoomPdf(0.2)">+</button>
+            <button class="modal-btn" style="padding:4px 8px;" onclick="zoomPdf(-0.2)">-</button>
+        </div>
+
+        <div class="viewer-body" id="viewer-content">
+            <!-- Dynamic Real File Viewers Rendered Here -->
+        </div>
+    </div>
+
+    <!-- Screen: Search Screen -->
+    <div id="screen-search" class="screen">
+        <div class="app-bar" style="background-color: #fff;">
+            <button class="icon-btn" onclick="closeSearchScreen()">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <input type="text" id="search-input" placeholder="マイドライブ内を検索" style="flex:1; border:none; outline:none; font-size:16px; margin-left:12px;" oninput="onSearchInput(this.value)">
+        </div>
+        <div class="main-content" id="search-results">
+            <!-- Search Results -->
+        </div>
+    </div>
+
+    <!-- Screen: Settings Screen -->
+    <div id="screen-settings" class="screen">
+        <div class="app-bar">
+            <button class="icon-btn" onclick="showScreen('screen-main')">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <div class="title">設定</div>
+        </div>
+        <div class="main-content" style="padding:0; background:#fff;">
+            <div style="padding:16px; border-bottom:1px solid #e0e0e0;">
+                <div style="color:#2196f3; font-size:13px; font-weight:bold; margin-bottom:8px;">保存容量</div>
+                <div id="settings-storage-text" style="font-size:14px; color:#333; margin-bottom:12px;">読み込み中...</div>
+                <button style="background-color:#2196f3; color:#fff; border:none; padding:8px 16px; border-radius:2px; font-weight:bold; cursor:pointer;" onclick="alertModal('ストレージ情報', '端末ストレージの総容量の約60%がIDBDrive領域に割り当てられています。')">容量詳細</button>
+            </div>
+
+            <div style="padding:16px; border-bottom:1px solid #e0e0e0;">
+                <div style="color:#2196f3; font-size:13px; font-weight:bold; margin-bottom:8px;">MyPeerID (14桁固定ID)</div>
+                <div id="settings-peer-id" style="font-size:16px; font-family:monospace; color:#333; margin-bottom:8px; font-weight:bold;">生成中...</div>
+                <button style="background-color:#009688; color:#fff; border:none; padding:8px 16px; border-radius:2px; font-weight:bold; cursor:pointer;" onclick="copyMyPeerID()">MyPeerIDをコピー</button>
+            </div>
+
+            <div style="padding:16px; border-bottom:1px solid #e0e0e0;">
+                <div style="color:#2196f3; font-size:13px; font-weight:bold; margin-bottom:8px;">デバイス情報</div>
+                <div style="font-size:14px; color:#333;">デバイス名: <span style="font-weight:bold;">Echo show 5 gen3</span></div>
+                <div style="font-size:12px; color:#757575; margin-top:4px;">OS: Android 7.1 Drive Companion Environment</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen: Sub Activity Detail View -->
+    <div id="screen-detail" class="screen">
+        <div class="app-bar" style="background:transparent; position:absolute; top:0; left:0; width:100%; z-index:30;">
+            <button class="icon-btn" onclick="showScreen('screen-main')" style="color:#fff;">
+                <span class="material-icons">arrow_back</span>
+            </button>
+        </div>
+
+        <div class="detail-header" id="detail-header-bg">
+            <span class="material-icons detail-preview-icon" id="detail-main-icon">insert_drive_file</span>
+            <div class="detail-title-row">
+                <span class="material-icons" style="color:#2196f3;" id="detail-title-icon">description</span>
+                <span id="detail-file-name">ファイル名</span>
+            </div>
+        </div>
+
+        <div class="detail-actions-grid">
+            <button class="detail-action-btn" onclick="openFileViewerFromDetail()">
+                <span class="material-icons">visibility</span>
+                <span>実際に<br>開く</span>
+            </button>
+            <button class="detail-action-btn" onclick="generatePeerTempLink()">
+                <span class="material-icons">link</span>
+                <span>Peer<br>一時リンク</span>
+            </button>
+            <button class="detail-action-btn" onclick="toggleCurrentStar()">
+                <span class="material-icons" id="detail-star-icon">star_border</span>
+                <span>スターを<br>付ける</span>
+            </button>
+            <button class="detail-action-btn" onclick="promptMoveItem()">
+                <span class="material-icons">drive_file_move</span>
+                <span>移動</span>
+            </button>
+            <button class="detail-action-btn" onclick="promptSendPeerFile()">
+                <span class="material-icons">send</span>
+                <span>コピーを<br>送信</span>
+            </button>
+            <button class="detail-action-btn" onclick="downloadCurrentFile()">
+                <span class="material-icons">file_download</span>
+                <span>ダウンロー<br>ド</span>
+            </button>
+            <button class="detail-action-btn" onclick="renameCurrentItem()">
+                <span class="material-icons">edit</span>
+                <span>名前変更</span>
+            </button>
+            <button class="detail-action-btn" onclick="deleteCurrentItem()">
+                <span class="material-icons">delete</span>
+                <span>削除</span>
+            </button>
+        </div>
+
+        <div class="detail-settings-list">
+            <div class="detail-row">
+                <div class="detail-row-text">
+                    <div class="detail-row-title">オフラインで使用可</div>
+                    <div class="detail-row-sub">IndexedDBに保存され即時アクセス可能</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="offline-switch" onchange="toggleOfflineState(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-row-text">
+                    <div class="detail-row-title">種類</div>
+                    <div class="detail-row-sub" id="detail-meta-type">不明な種類</div>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-row-text">
+                    <div class="detail-row-title">サイズ</div>
+                    <div class="detail-row-sub" id="detail-meta-size">0 KB</div>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-row-text">
+                    <div class="detail-row-title">場所</div>
+                    <div class="detail-row-sub" id="detail-meta-location">マイドライブ</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Drawer Window -->
+    <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <div class="drawer-account-name">ゲストユーザー</div>
+            <div class="drawer-account-email">
+                <span id="drawer-email-text">user@idbdrive.local</span>
+            </div>
+        </div>
+        <div class="drawer-menu">
+            <div class="drawer-item active" onclick="selectDrawerCategory('マイドライブ')">
+                <span class="material-icons">folder</span>
+                <span>マイドライブ</span>
+            </div>
+            <div class="drawer-item" onclick="selectDrawerCategory('共有アイテム')">
+                <span class="material-icons">people</span>
+                <span>共有アイテム</span>
+            </div>
+            <div class="drawer-item" onclick="selectDrawerCategory('スター付き')">
+                <span class="material-icons">star</span>
+                <span>スター付き</span>
+            </div>
+            <div class="drawer-divider"></div>
+            <div class="drawer-item" onclick="showScreen('screen-settings')">
+                <span class="material-icons">settings</span>
+                <span>設定</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet: New Item Menu -->
+    <div class="bottom-sheet-overlay" id="new-sheet-overlay" onclick="closeNewSheet()"></div>
+    <div class="bottom-sheet" id="new-sheet">
+        <div class="sheet-title">新規作成・追加</div>
+        <div class="sheet-grid">
+            <div class="sheet-item" onclick="createNewFolderPrompt()">
+                <div class="sheet-icon"><span class="material-icons">create_new_folder</span></div>
+                <div class="sheet-label">フォルダ</div>
+            </div>
+            <div class="sheet-item" onclick="triggerFileUpload()">
+                <div class="sheet-icon"><span class="material-icons">file_upload</span></div>
+                <div class="sheet-label">アップロード</div>
+            </div>
+            <div class="sheet-item" onclick="createNewTextFile('markdown')">
+                <div class="sheet-icon"><span class="material-icons">article</span></div>
+                <div class="sheet-label">Markdown</div>
+            </div>
+            <div class="sheet-item" onclick="createNewTextFile('html')">
+                <div class="sheet-icon"><span class="material-icons">code</span></div>
+                <div class="sheet-label">HTML</div>
+            </div>
+            <div class="sheet-item" onclick="createNewTextFile('pdf')">
+                <div class="sheet-icon"><span class="material-icons">picture_as_pdf</span></div>
+                <div class="sheet-label">PDF作成</div>
+            </div>
+            <div class="sheet-item" onclick="createNewTextFile('text')">
+                <div class="sheet-icon"><span class="material-icons">description</span></div>
+                <div class="sheet-label">テキスト</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overflow Popup Bar -->
+    <div class="overflow-menu" id="overflow-menu">
+        <div class="overflow-item" onclick="createNewFolderPrompt()">フォルダ新規作成</div>
+        <div class="overflow-item" onclick="triggerFileUpload()">ファイルアップロード</div>
+        <div class="overflow-item" onclick="openFolderShareModal()">フォルダPeer共有</div>
+    </div>
+
+    <!-- Generic Input Modal -->
+    <div class="modal-overlay" id="input-modal">
+        <div class="modal-card">
+            <div class="modal-title" id="input-modal-title">入力</div>
+            <div class="modal-body" id="input-modal-body">情報を入力してください:</div>
+            <input type="text" class="modal-input" id="input-modal-field">
+            <div class="modal-actions" style="margin-top:20px;">
+                <button class="modal-btn" onclick="closeInputModal(false)">キャンセル</button>
+                <button class="modal-btn" onclick="closeInputModal(true)">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Move Item Dialog Modal -->
+    <div class="modal-overlay" id="move-modal">
+        <div class="modal-card">
+            <div class="modal-title">移動先のフォルダを選択</div>
+            <div class="modal-body">選択したアイテムの移動先フォルダを指定してください:</div>
+            <select class="modal-select" id="move-folder-select"></select>
+            <div class="modal-actions" style="margin-top:20px;">
+                <button class="modal-btn" onclick="closeMoveModal(false)">キャンセル</button>
+                <button class="modal-btn" onclick="closeMoveModal(true)">移動実行</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Native File Inputs -->
+    <input type="file" id="file-input-element" style="display:none;" onchange="handleNativeFileSelect(event)">
+
+    <script>
+        // PDF.js Worker Configuration
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Core Application State
+        let db = null;
+        let myPeerId = "";
+        let peer = null;
+        let activePeerConn = null;
+        let currentViewCategory = "マイドライブ";
+        let isListMode = false;
+        let activeSelectedItem = null;
+        let inputModalCallback = null;
+
+        // Folder Directory Navigation Stack State
+        let currentFolderId = "root"; // "root" or specific folder id
+        let folderBreadcrumbs = [{ id: "root", name: "マイドライブ" }];
+
+        // PDF Viewer State
+        let pdfDoc = null;
+        let pdfPageNum = 1;
+        let pdfScale = 1.25;
+        let pdfRendering = false;
+
+        function getFileExtension(name = '') {
+            const cleanName = String(name).split(/[?#]/)[0];
+            const dot = cleanName.lastIndexOf('.');
+            return dot >= 0 ? cleanName.slice(dot + 1).toLowerCase() : '';
+        }
+
+        function getFileKind(item) {
+            const type = String(item?.type || '').toLowerCase();
+            const mime = String(item?.mimeType || (type.includes('/') ? type : '')).toLowerCase();
+            const ext = getFileExtension(item?.name);
+            if (type === 'pdf' || mime === 'application/pdf' || ext === 'pdf') return 'pdf';
+            if (type === 'markdown' || mime === 'text/markdown' || ['md', 'markdown', 'mdown'].includes(ext)) return 'markdown';
+            if (type === 'html' || mime === 'text/html' || mime === 'application/xhtml+xml' || ['html', 'htm'].includes(ext)) return 'html';
+            if (mime.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'].includes(ext)) return 'image';
+            if (mime.startsWith('video/') || ['mp4', 'webm', 'ogv', 'mov', 'm4v', 'avi', 'mkv'].includes(ext)) return 'video';
+            if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac'].includes(ext)) return 'audio';
+            if (mime.startsWith('text/') || ['txt', 'json', 'js', 'mjs', 'css', 'xml', 'csv', 'log', 'yaml', 'yml'].includes(ext)) return 'text';
+            return 'unknown';
+        }
+
+        function getItemMimeType(item, kind = getFileKind(item)) {
+            if (item?.mimeType) return item.mimeType;
+            if (item?.type && String(item.type).includes('/')) return item.type;
+            const ext = getFileExtension(item?.name);
+            const byExtension = {
+                pdf: 'application/pdf', md: 'text/markdown', markdown: 'text/markdown',
+                html: 'text/html', htm: 'text/html', mp4: 'video/mp4', webm: 'video/webm',
+                mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
+                png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif'
+            };
+            if (byExtension[ext]) return byExtension[ext];
+            return { image: 'image/*', video: 'video/*', audio: 'audio/*', html: 'text/html', markdown: 'text/markdown', text: 'text/plain' }[kind] || 'application/octet-stream';
+        }
+
+        function itemContentToArrayBuffer(content) {
+            if (content instanceof ArrayBuffer) return content;
+            if (ArrayBuffer.isView(content)) return content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength);
+            return new TextEncoder().encode(String(content ?? '')).buffer;
+        }
+
+        function itemContentToText(content) {
+            if (typeof content === 'string') return content;
+            return new TextDecoder().decode(new Uint8Array(itemContentToArrayBuffer(content)));
+        }
+
+        function generate14DigitPeerID() {
+            const now = new Date();
+            const yyyy = now.getFullYear().toString();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            return `${yyyy}${mm}${dd}${hh}${min}${ss}`;
+        }
+
+        myPeerId = generate14DigitPeerID();
+
+        // Browser Detection
+        window.addEventListener('DOMContentLoaded', () => {
+            const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+            if (isFirefox) {
+                document.getElementById('firefox-warning').style.display = 'block';
+            }
+            initIndexedDB();
+            calculateAndDisplayStorage();
+            initPeerJS();
+        });
+
+        async function calculateAndDisplayStorage() {
+            let totalGB = 32.0;
+            let usedMB = 15.4;
+
+            if (navigator.storage && navigator.storage.estimate) {
+                try {
+                    const estimate = await navigator.storage.estimate();
+                    if (estimate.quota) totalGB = (estimate.quota / (1024 * 1024 * 1024)).toFixed(1);
+                    if (estimate.usage) usedMB = (estimate.usage / (1024 * 1024)).toFixed(1);
+                } catch (e) {
+                    console.warn("Storage estimate error", e);
+                }
+            }
+
+            const allottedGB = (totalGB * 0.60).toFixed(1);
+            document.getElementById('settings-storage-text').innerText = `${usedMB} MB / ${allottedGB} GB を使用中（総容量の60%割り当て）`;
+        }
+
+        // Helper to generate minimal valid PDF Uint8Array Data
+        function createValidMinimalPdfBuffer(titleText, contentText) {
+            const pdfString = `%PDF-1.4
+1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj
+2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj
+3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources <</Font <</F1 4 0 R>>>> /Contents 5 0 R>> endobj
+4 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj
+5 0 obj <</Length 100>> stream
+BT
+/F1 24 Tf
+50 720 Td
+(${titleText}) Tj
+/F1 12 Tf
+0 -30 Td
+(${contentText}) Tj
+ET
+endstream endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000062 00000 n 
+0000000117 00000 n 
+0000000242 00000 n 
+0000000305 00000 n 
+trailer <</Size 6 /Root 1 0 R>>
+startxref
+455
+%%EOF`;
+            return new TextEncoder().encode(pdfString).buffer;
+        }
+
+        function initIndexedDB() {
+            const request = indexedDB.open("IDBDriveDB_v2", 1);
+            request.onupgradeneeded = (e) => {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains("items")) {
+                    const store = db.createObjectStore("items", { keyPath: "id" });
+                    store.createIndex("parentId", "parentId", { unique: false });
+                    store.createIndex("category", "category", { unique: false });
+                }
+            };
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                seedDefaultItems();
+            };
+            request.onerror = (e) => console.error("IndexedDB Open Error", e);
+        }
+
+        function seedDefaultItems() {
+            const tx = db.transaction("items", "readwrite");
+            const store = tx.objectStore("items");
+            store.count().onsuccess = (e) => {
+                if (e.target.result === 0) {
+                    const pdfBuffer = createValidMinimalPdfBuffer("IDBDrive Document", "This is a real PDF rendered via PDF.js in IDBDrive.");
+                    const mdText = `# IDBDrive へようこそ\n\nこのMarkdown文書は**動的にレンダリング**されています。\n\n- PDF.jsによる本物のPDF描画\n- HTMLサンボックス閲覧\n- 実データフォルダ階層ナビゲーション`;
+                    const htmlText = `<!DOCTYPE html><html><body style="font-family:sans-serif; padding:20px; background:#e8f5e9;"><h2>IDBDrive HTML Preview</h2><p style="color:#2e7d32;">HTMLコードが実際に描画されています！</p></body></html>`;
+
+                    const defaults = [
+                        { id: "f1", parentId: "root", name: "ドキュメントフォルダ", isFolder: true, category: "マイドライブ", starred: false, size: 0, date: "2026-10-01" },
+                        { id: "f2", parentId: "root", name: "画像アーカイブ", isFolder: true, category: "マイドライブ", starred: false, size: 0, date: "2026-10-01" },
+                        { id: "f_sub1", parentId: "f1", name: "サブプロジェクト", isFolder: true, category: "マイドライブ", starred: false, size: 0, date: "2026-10-01" },
+                        { id: "file_pdf", parentId: "f1", name: "公式案内ガイド.pdf", isFolder: false, type: "pdf", category: "マイドライブ", starred: true, size: pdfBuffer.byteLength, date: "2026-10-01", content: pdfBuffer },
+                        { id: "file_md", parentId: "root", name: "概要説明.md", isFolder: false, type: "markdown", category: "マイドライブ", starred: false, size: new TextEncoder().encode(mdText).byteLength, date: "2026-10-01", content: mdText },
+                        { id: "file_html", parentId: "root", name: "サンプルページ.html", isFolder: false, type: "html", category: "マイドライブ", starred: false, size: new TextEncoder().encode(htmlText).byteLength, date: "2026-10-01", content: htmlText }
+                    ];
+                    defaults.forEach(item => store.put(item));
+                }
+                renderMainContent();
+            };
+        }
+
+        // PeerJS Connection Initialization
+        function initPeerJS() {
+            document.getElementById('settings-peer-id').innerText = myPeerId;
+            peer = new Peer(myPeerId, { debug: 1 });
+            
+            peer.on('open', (id) => {
+                console.log("PeerJS Connected ID:", id);
+                checkUrlPeerParameters();
+            });
+
+            peer.on('connection', (conn) => {
+                activePeerConn = conn;
+                conn.on('open', () => {
+                    showToast("他のPeerデバイスと接続しました");
+                });
+                conn.on('data', (data) => {
+                    handleIncomingPeerData(data, conn);
+                });
+                conn.on('error', (err) => {
+                    console.error("Peer connection error:", err);
+                    showToast("Peer通信エラーが発生しました");
+                });
+            });
+
+            peer.on('error', (err) => {
+                console.error("PeerJS Error:", err);
+            });
+        }
+
+        function checkUrlPeerParameters() {
+            const params = new URLSearchParams(window.location.search);
+            const targetPeer = params.get('peer');
+            const fileId = params.get('file');
+            const folderId = params.get('folder');
+
+            if (targetPeer && (fileId || folderId)) {
+                showToast("共有Peerノードに接続中...");
+                connectAndFetchPeerItem(targetPeer, fileId, folderId);
+            }
+        }
+
+        function connectAndFetchPeerItem(targetPeerId, fileId, folderId) {
+            const conn = peer.connect(targetPeerId);
+            conn.on('open', () => {
+                showToast("接続成功。データを要求中...");
+                if (fileId) {
+                    conn.send({ type: 'REQUEST_FILE', fileId: fileId });
+                } else if (folderId) {
+                    conn.send({ type: 'REQUEST_FOLDER', folderId: folderId });
+                }
+            });
+
+            conn.on('data', (data) => {
+                handleIncomingPeerData(data, conn);
+            });
+
+            conn.on('error', (err) => {
+                showToast("Peer接続に失敗しました。送信者がオンラインか確認してください。");
+            });
+        }
+
+        async function handleIncomingPeerData(data, conn) {
+            if (!data || !data.type) return;
+
+            // 1. Remote peer requested a file from local storage
+            if (data.type === 'REQUEST_FILE') {
+                const tx = db.transaction("items", "readonly");
+                tx.objectStore("items").get(data.fileId).onsuccess = (e) => {
+                    const item = e.target.result;
+                    if (item) {
+                        conn.send({ type: 'FILE_RESPONSE', file: item });
+                    } else {
+                        conn.send({ type: 'ERROR', message: 'ファイルが見つかりません' });
+                    }
+                };
+            }
+            // 2. Remote peer requested a folder from local storage
+            else if (data.type === 'REQUEST_FOLDER') {
+                const tx = db.transaction("items", "readonly");
+                const store = tx.objectStore("items");
+                store.get(data.folderId).onsuccess = (e) => {
+                    const folderItem = e.target.result;
+                    if (folderItem) {
+                        store.getAll().onsuccess = (ev) => {
+                            const allItems = ev.target.result;
+                            const children = allItems.filter(i => i.parentId === data.folderId);
+                            conn.send({ type: 'FOLDER_RESPONSE', folder: folderItem, files: children });
+                        };
+                    } else {
+                        conn.send({ type: 'ERROR', message: 'フォルダが見つかりません' });
+                    }
+                };
+            }
+            // 3. Received file data from remote peer
+            else if (data.type === 'FILE_RESPONSE' || data.type === 'SEND_FILE') {
+                const receivedFile = data.file;
+                if (!receivedFile) return;
+
+                receivedFile.category = "共有アイテム";
+                receivedFile.parentId = "root";
+                receivedFile.id = "shared_file_" + Date.now();
+
+                const tx = db.transaction("items", "readwrite");
+                tx.objectStore("items").put(receivedFile);
+                tx.oncomplete = () => {
+                    showToast(`"${receivedFile.name}" をPeer受信し「共有アイテム」に保存しました！`);
+                    selectDrawerCategory("共有アイテム");
+                };
+            }
+            // 4. Received folder data from remote peer
+            else if (data.type === 'FOLDER_RESPONSE' || data.type === 'SEND_FOLDER') {
+                const folder = data.folder;
+                const files = data.files || [];
+                if (!folder) return;
+
+                const newFolderId = "shared_folder_" + Date.now();
+                folder.id = newFolderId;
+                folder.category = "共有アイテム";
+                folder.parentId = "root";
+
+                const tx = db.transaction("items", "readwrite");
+                const store = tx.objectStore("items");
+                store.put(folder);
+
+                files.forEach(f => {
+                    f.id = "shared_file_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+                    f.category = "共有アイテム";
+                    f.parentId = newFolderId;
+                    store.put(f);
+                });
+
+                tx.oncomplete = () => {
+                    showToast(`フォルダ "${folder.name}" (${files.length}件) を受信しました！`);
+                    selectDrawerCategory("共有アイテム");
+                };
+            }
+            else if (data.type === 'ERROR') {
+                alertModal("Peerエラー", data.message || "転送エラーが発生しました");
+            }
+        }
+
+        function generatePeerTempLink() {
+            if (!activeSelectedItem) return;
+            const isFolder = activeSelectedItem.isFolder;
+            const paramKey = isFolder ? 'folder' : 'file';
+            const shareUrl = `${window.location.origin}${window.location.pathname}?peer=${myPeerId}&${paramKey}=${activeSelectedItem.id}`;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(shareUrl);
+            } else {
+                const dummy = document.createElement("input");
+                document.body.appendChild(dummy);
+                dummy.value = shareUrl;
+                dummy.select();
+                document.execCommand("copy");
+                document.body.removeChild(dummy);
+            }
+
+            alertModal("Peer一時共有リンクを作成・コピーしました", 
+                `リンク:\n${shareUrl}\n\n※受信者がこのリンクを開くと、あなたがこのページを開いている間にP2Pで直接ファイルが転送されます。`);
+        }
+
+        function promptSendPeerFile() {
+            if (!activeSelectedItem) return;
+            showInputModal("Peer直接送信", "相手の14桁 MyPeerID を入力してください:", "", (targetPeerId) => {
+                if (!targetPeerId) return;
+                targetPeerId = targetPeerId.trim();
+                
+                showToast(`Peer (${targetPeerId}) に接続中...`);
+                const conn = peer.connect(targetPeerId);
+
+                conn.on('open', () => {
+                    showToast("接続確立。データを送信中...");
+                    if (activeSelectedItem.isFolder) {
+                        const tx = db.transaction("items", "readonly");
+                        const store = tx.objectStore("items");
+                        store.getAll().onsuccess = (e) => {
+                            const children = e.target.result.filter(i => i.parentId === activeSelectedItem.id);
+                            conn.send({
+                                type: 'SEND_FOLDER',
+                                folder: activeSelectedItem,
+                                files: children
+                            });
+                            showToast(`フォルダ "${activeSelectedItem.name}" を送信しました！`);
+                        };
+                    } else {
+                        conn.send({
+                            type: 'SEND_FILE',
+                            file: activeSelectedItem
+                        });
+                        showToast(`ファイル "${activeSelectedItem.name}" を送信しました！`);
+                    }
+                });
+
+                conn.on('error', (err) => {
+                    alertModal("送信エラー", "相手のPeerに接続できませんでした。相手のMyPeerIDとページが開かれているか確認してください。");
+                });
+            });
+        }
+
+        function openFolderShareModal() {
+            closeOverflowMenu();
+            if (currentFolderId === "root") {
+                showInputModal("マイドライブ全体Peer送信", "相手の14桁 MyPeerID を入力してください:", "", (targetPeerId) => {
+                    if (!targetPeerId) return;
+                    targetPeerId = targetPeerId.trim();
+                    const tx = db.transaction("items", "readonly");
+                    tx.objectStore("items").getAll().onsuccess = (e) => {
+                        const items = e.target.result.filter(i => i.category === "マイドライブ");
+                        const conn = peer.connect(targetPeerId);
+                        conn.on('open', () => {
+                            items.forEach(item => {
+                                if (!item.isFolder) conn.send({ type: 'SEND_FILE', file: item });
+                            });
+                            showToast("マイドライブ内のファイルを全件送信しました");
+                        });
+                    };
+                });
+            } else {
+                const tx = db.transaction("items", "readonly");
+                tx.objectStore("items").get(currentFolderId).onsuccess = (e) => {
+                    activeSelectedItem = e.target.result;
+                    if (activeSelectedItem) {
+                        generatePeerTempLink();
+                    }
+                };
+            }
+        }
+
+        // Directory & Folder Navigation Logic
+        function navigateToFolder(folderId, folderName) {
+            currentFolderId = folderId;
+            folderBreadcrumbs.push({ id: folderId, name: folderName });
+            updateNavHeader();
+            renderMainContent();
+        }
+
+        function handleNavBack() {
+            if (folderBreadcrumbs.length > 1) {
+                folderBreadcrumbs.pop();
+                currentFolderId = folderBreadcrumbs[folderBreadcrumbs.length - 1].id;
+                updateNavHeader();
+                renderMainContent();
+            }
+        }
+
+        function updateNavHeader() {
+            const backBtn = document.getElementById('nav-back-btn');
+            const drawerBtn = document.getElementById('menu-drawer-btn');
+            const titleEl = document.getElementById('main-title');
+
+            if (currentFolderId === "root" || currentViewCategory !== "マイドライブ") {
+                backBtn.style.display = "none";
+                drawerBtn.style.display = "flex";
+                titleEl.innerText = currentViewCategory;
+            } else {
+                backBtn.style.display = "flex";
+                drawerBtn.style.display = "none";
+                titleEl.innerText = folderBreadcrumbs[folderBreadcrumbs.length - 1].name;
+            }
+        }
+
+        // Main List Content Renderer
+        function renderMainContent() {
+            if (!db) return;
+
+            const folderGrid = document.getElementById('folder-grid');
+            const fileGrid = document.getElementById('file-grid');
+            folderGrid.innerHTML = "";
+            fileGrid.innerHTML = "";
+
+            const tx = db.transaction("items", "readonly");
+            const store = tx.objectStore("items");
+
+            store.getAll().onsuccess = (e) => {
+                const items = e.target.result;
+                let filtered = [];
+
+                if (currentViewCategory === "スター付き") {
+                    filtered = items.filter(item => item.starred);
+                } else if (currentViewCategory === "共有アイテム") {
+                    filtered = items.filter(item => item.category === "共有アイテム");
+                } else {
+                    // "マイドライブ" category with folder hierarchy
+                    filtered = items.filter(item => (item.parentId || "root") === currentFolderId && item.category === "マイドライブ");
+                }
+
+                let folderCount = 0;
+                let fileCount = 0;
+
+                filtered.forEach(item => {
+                    if (item.isFolder) {
+                        folderCount++;
+                        folderGrid.appendChild(createFolderCard(item));
+                    } else {
+                        fileCount++;
+                        fileGrid.appendChild(createFileCard(item));
+                    }
+                });
+
+                document.getElementById('folder-section-header').style.display = folderCount > 0 ? "block" : "none";
+                document.getElementById('file-section-header').style.display = fileCount > 0 ? "block" : "none";
+            };
+        }
+
+        function createFolderCard(item) {
+            const div = document.createElement('div');
+            div.className = 'folder-card';
+            div.innerHTML = `
+                <div class="card-left">
+                    <span class="material-icons" style="color:#fbc02d; font-size:28px;">folder</span>
+                    <span class="card-title">${item.name}</span>
+                </div>
+                <button class="card-info-btn" onclick="openItemSubActivity('${item.id}', event)">
+                    <span class="material-icons" style="font-size:18px;">info_outline</span>
+                </button>
+            `;
+            // Actually open the folder hierarchy!
+            div.onclick = () => navigateToFolder(item.id, item.name);
+            return div;
+        }
+
+        function createFileCard(item) {
+            const div = document.createElement('div');
+            div.className = 'file-card';
+            let iconName = 'description';
+            let iconColor = '#2196f3';
+            const kind = getFileKind(item);
+
+            if (kind === 'pdf') { iconName = 'picture_as_pdf'; iconColor = '#e53935'; }
+            else if (kind === 'markdown') { iconName = 'article'; iconColor = '#00875a'; }
+            else if (kind === 'html') { iconName = 'code'; iconColor = '#ff9800'; }
+            else if (kind === 'image') { iconName = 'image'; iconColor = '#9c27b0'; }
+            else if (kind === 'video') { iconName = 'movie'; iconColor = '#7b1fa2'; }
+            else if (kind === 'audio') { iconName = 'music_note'; iconColor = '#1565c0'; }
+
+            div.innerHTML = `
+                <div class="card-left">
+                    <span class="material-icons" style="color:${iconColor}; font-size:28px;">${iconName}</span>
+                    <span class="card-title">${item.name}</span>
+                </div>
+                <button class="card-info-btn" onclick="openItemSubActivity('${item.id}', event)">
+                    <span class="material-icons" style="font-size:18px;">info_outline</span>
+                </button>
+            `;
+            // Open the real viewer on tap
+            div.onclick = () => openFileViewer(item);
+            return div;
+        }
+
+        // REAL FILE VIEWER IMPLEMENTATION
+        function openFileViewer(item) {
+            activeSelectedItem = item;
+            document.getElementById('viewer-title').innerText = item.name;
+            const container = document.getElementById('viewer-content');
+            const pdfControls = document.getElementById('pdf-controls');
+            const kind = getFileKind(item);
+            container.innerHTML = "";
+            pdfControls.style.display = "none";
+
+            showScreen('screen-viewer');
+
+            // 1. PDF Real Viewer via PDF.js
+            if (kind === 'pdf') {
+                pdfControls.style.display = "flex";
+                container.innerHTML = `<div class="pdf-canvas-container"><canvas id="pdf-render-canvas"></canvas></div>`;
+
+                const pdfData = itemContentToArrayBuffer(item.content);
+
+                pdfjsLib.getDocument({ data: pdfData }).promise.then(pdf => {
+                    pdfDoc = pdf;
+                    pdfPageNum = 1;
+                    pdfScale = 1.25;
+                    renderPdfPage(pdfPageNum);
+                }).catch(err => {
+                    container.innerHTML = `<div style="color:red; padding:20px;">PDFのレンダリングに失敗しました: ${err.message}</div>`;
+                });
+            }
+            // 2. Markdown Real Viewer via Marked.js
+            else if (kind === 'markdown') {
+                const textContent = itemContentToText(item.content);
+                const htmlContent = marked.parse(textContent);
+                container.innerHTML = `<div class="markdown-rendered-view">${htmlContent}</div>`;
+            }
+            // 3. HTML Real Preview
+            else if (kind === 'html') {
+                const textContent = itemContentToText(item.content);
+                const iframe = document.createElement('iframe');
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = 'none';
+                iframe.setAttribute('sandbox', 'allow-scripts');
+                iframe.srcdoc = textContent;
+                container.appendChild(iframe);
+            }
+            // 4. Image Real Preview
+            else if (kind === 'image') {
+                const blob = new Blob([itemContentToArrayBuffer(item.content)], { type: getItemMimeType(item, kind) });
+                const url = URL.createObjectURL(blob);
+                container.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; height:100%;"><img src="${url}" style="max-width:100%; max-height:100%; object-fit:contain;" /></div>`;
+            }
+            // 5. Video and audio viewers
+            else if (kind === 'video' || kind === 'audio') {
+                const blob = new Blob([itemContentToArrayBuffer(item.content)], { type: getItemMimeType(item, kind) });
+                const url = URL.createObjectURL(blob);
+                const media = document.createElement(kind === 'video' ? 'video' : 'audio');
+                media.controls = true;
+                media.autoplay = false;
+                media.playsInline = true;
+                media.src = url;
+                container.innerHTML = '<div class="media-preview-view"></div>';
+                container.firstElementChild.appendChild(media);
+            }
+            // 6. Text Viewer
+            else if (kind === 'text' || typeof item.content === 'string') {
+                const textContent = itemContentToText(item.content);
+                container.innerHTML = `<pre style="white-space:pre-wrap; font-family:monospace; font-size:13px; line-height:1.5;">${escapeHtml(textContent)}</pre>`;
+            }
+            // 7. Unknown binary: offer download instead of mislabeling supported files as HEX
+            else {
+                const blob = new Blob([itemContentToArrayBuffer(item.content)], { type: getItemMimeType(item, kind) });
+                const url = URL.createObjectURL(blob);
+                container.innerHTML = `<div class="unsupported-preview">このファイル形式の内蔵プレビューはありません。<br><a href="${url}" download="${escapeHtml(item.name || 'download')}">ファイルをダウンロード</a></div>`;
+            }
+        }
+
+        function closeFileViewer() {
+            showScreen('screen-main');
+        }
+
+        // PDF Page Rendering Engine
+        function renderPdfPage(num) {
+            if (!pdfDoc) return;
+            pdfRendering = true;
+            pdfDoc.getPage(num).then(page => {
+                const canvas = document.getElementById('pdf-render-canvas');
+                if (!canvas) { pdfRendering = false; return; }
+                const ctx = canvas.getContext('2d');
+                const viewport = page.getViewport({ scale: pdfScale });
+                const outputScale = Math.min(window.devicePixelRatio || 1, 3);
+
+                canvas.width = Math.floor(viewport.width * outputScale);
+                canvas.height = Math.floor(viewport.height * outputScale);
+                canvas.style.width = `${Math.floor(viewport.width)}px`;
+                canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport,
+                    transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null
+                };
+                page.render(renderContext).promise.then(() => {
+                    pdfRendering = false;
+                    document.getElementById('pdf-page-num').innerText = `${pdfPageNum} / ${pdfDoc.numPages}`;
+                }).catch(() => { pdfRendering = false; });
+            });
+        }
+
+        function changePdfPage(delta) {
+            if (!pdfDoc || pdfRendering) return;
+            if (pdfPageNum + delta >= 1 && pdfPageNum + delta <= pdfDoc.numPages) {
+                pdfPageNum += delta;
+                renderPdfPage(pdfPageNum);
+            }
+        }
+
+        function zoomPdf(delta) {
+            pdfScale = Math.max(0.5, Math.min(5.0, pdfScale + delta));
+            renderPdfPage(pdfPageNum);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+        }
+
+        // UI Navigation Helpers
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            if (screenId === 'screen-main') renderMainContent();
+        }
+
+        function openDrawer() {
+            document.getElementById('drawer-overlay').classList.add('active');
+            document.getElementById('drawer').classList.add('active');
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawer-overlay').classList.remove('active');
+            document.getElementById('drawer').classList.remove('active');
+        }
+
+        function selectDrawerCategory(cat) {
+            currentViewCategory = cat;
+            currentFolderId = "root";
+            folderBreadcrumbs = [{ id: "root", name: cat }];
+            updateNavHeader();
+            closeDrawer();
+            renderMainContent();
+        }
+
+        function toggleLayoutMode() {
+            isListMode = !isListMode;
+            document.getElementById('layout-icon').innerText = isListMode ? 'view_headline' : 'view_module';
+            document.getElementById('folder-grid').classList.toggle('list-mode', isListMode);
+            document.getElementById('file-grid').classList.toggle('list-mode', isListMode);
+        }
+
+        function toggleOverflowMenu() {
+            document.getElementById('overflow-menu').classList.toggle('active');
+        }
+
+        function closeOverflowMenu() {
+            document.getElementById('overflow-menu').classList.remove('active');
+        }
+
+        // Open Sub Activity Detail Screen
+        function openItemSubActivity(itemId, event) {
+            if (event) event.stopPropagation();
+            closeOverflowMenu();
+
+            const tx = db.transaction("items", "readonly");
+            tx.objectStore("items").get(itemId).onsuccess = (e) => {
+                const item = e.target.result;
+                if (!item) return;
+
+                activeSelectedItem = item;
+                document.getElementById('detail-file-name').innerText = item.name;
+                document.getElementById('detail-meta-type').innerText = item.isFolder ? 'フォルダ' : (item.type || 'データファイル');
+                
+                let byteSize = item.size || 0;
+                const kbSize = (byteSize / 1024).toFixed(1);
+                document.getElementById('detail-meta-size').innerText = `${kbSize} KB (${byteSize} bytes)`;
+                document.getElementById('detail-meta-location').innerText = item.category || 'マイドライブ';
+
+                document.getElementById('detail-star-icon').innerText = item.starred ? 'star' : 'star_border';
+                document.getElementById('offline-switch').checked = true;
+
+                showScreen('screen-detail');
+            };
+        }
+
+        function openFileViewerFromDetail() {
+            if (activeSelectedItem) {
+                if (activeSelectedItem.isFolder) {
+                    navigateToFolder(activeSelectedItem.id, activeSelectedItem.name);
+                    showScreen('screen-main');
+                } else {
+                    openFileViewer(activeSelectedItem);
+                }
+            }
+        }
+
+        function openItemSubActivityFromViewer() {
+            if (activeSelectedItem) openItemSubActivity(activeSelectedItem.id);
+        }
+
+        // Move Item Dialog & Real DB Hierarchy Update
+        function promptMoveItem() {
+            if (!activeSelectedItem) return;
+            const selectEl = document.getElementById('move-folder-select');
+            selectEl.innerHTML = `<option value="root">マイドライブ (ルート)</option>`;
+
+            const tx = db.transaction("items", "readonly");
+            tx.objectStore("items").getAll().onsuccess = (e) => {
+                const allItems = e.target.result;
+                allItems.filter(i => i.isFolder && i.id !== activeSelectedItem.id).forEach(f => {
+                    selectEl.innerHTML += `<option value="${f.id}">${f.name}</option>`;
+                });
+                document.getElementById('move-modal').classList.add('active');
+            };
+        }
+
+        function closeMoveModal(confirm) {
+            document.getElementById('move-modal').classList.remove('active');
+            if (confirm && activeSelectedItem) {
+                const targetFolderId = document.getElementById('move-folder-select').value;
+                activeSelectedItem.parentId = targetFolderId;
+
+                const tx = db.transaction("items", "readwrite");
+                tx.objectStore("items").put(activeSelectedItem);
+                tx.oncomplete = () => {
+                    showToast("アイテムを移動しました");
+                    showScreen('screen-main');
+                };
+            }
+        }
+
+        // Create New Real Files & Folders
+        function openNewSheet() {
+            document.getElementById('new-sheet-overlay').classList.add('active');
+            document.getElementById('new-sheet').classList.add('active');
+        }
+
+        function closeNewSheet() {
+            document.getElementById('new-sheet-overlay').classList.remove('active');
+            document.getElementById('new-sheet').classList.remove('active');
+        }
+
+        function createNewFolderPrompt() {
+            closeNewSheet();
+            closeOverflowMenu();
+            showInputModal("新規フォルダ", "フォルダ名を入力してください:", "新しいフォルダ", (folderName) => {
+                if (folderName) {
+                    const newFolder = {
+                        id: "f_" + Date.now(),
+                        parentId: currentFolderId,
+                        name: folderName,
+                        isFolder: true,
+                        category: "マイドライブ",
+                        starred: false,
+                        size: 0,
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                    const tx = db.transaction("items", "readwrite");
+                    tx.objectStore("items").put(newFolder);
+                    tx.oncomplete = () => renderMainContent();
+                }
+            });
+        }
+
+        function createNewTextFile(type) {
+            closeNewSheet();
+            let ext = '.txt';
+            if (type === 'markdown') ext = '.md';
+            if (type === 'html') ext = '.html';
+            if (type === 'pdf') ext = '.pdf';
+
+            showInputModal("新規ファイル作成", "ファイル名を入力してください:", "新規ドキュメント" + ext, (fileName) => {
+                if (!fileName) return;
+
+                let contentData = "";
+                if (type === 'markdown') {
+                    contentData = `# ${fileName}\n\nここにMarkdown本文を入力します。`;
+                } else if (type === 'html') {
+                    contentData = `<!DOCTYPE html>\n<html>\n<body style="font-family:sans-serif; padding:16px;">\n<h1>${fileName}</h1>\n<p>HTMLコンテンツ</p>\n</body>\n</html>`;
+                } else if (type === 'pdf') {
+                    contentData = createValidMinimalPdfBuffer(fileName, "Generated PDF Document Content in IDBDrive.");
+                } else {
+                    contentData = `テキストファイルの本文です。`;
+                }
+
+                let byteSize = typeof contentData === 'string' ? new TextEncoder().encode(contentData).byteLength : contentData.byteLength;
+
+                const newItem = {
+                    id: "file_" + Date.now(),
+                    parentId: currentFolderId,
+                    name: fileName,
+                    isFolder: false,
+                    type: type,
+                    category: "マイドライブ",
+                    starred: false,
+                    size: byteSize,
+                    date: new Date().toISOString().split('T')[0],
+                    content: contentData
+                };
+
+                const tx = db.transaction("items", "readwrite");
+                tx.objectStore("items").put(newItem);
+                tx.oncomplete = () => {
+                    showToast(`"${fileName}" を作成しました`);
+                    renderMainContent();
+                };
+            });
+        }
+
+        function triggerFileUpload() {
+            closeNewSheet();
+            closeOverflowMenu();
+            document.getElementById('file-input-element').click();
+        }
+
+        function handleNativeFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const fileType = getFileKind({ name: file.name, type: file.type, mimeType: file.type });
+
+                const newItem = {
+                    id: "file_" + Date.now(),
+                    parentId: currentFolderId,
+                    name: file.name,
+                    isFolder: false,
+                    type: fileType,
+                    mimeType: file.type || getItemMimeType({ name: file.name, type: fileType }, fileType),
+                    category: "マイドライブ",
+                    starred: false,
+                    size: file.size,
+                    date: new Date().toISOString().split('T')[0],
+                    content: e.target.result
+                };
+                const tx = db.transaction("items", "readwrite");
+                tx.objectStore("items").put(newItem);
+                tx.oncomplete = () => {
+                    showToast(`"${file.name}" をアップロードしました`);
+                    renderMainContent();
+                };
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = "";
+        }
+
+        // Item Operations
+        function toggleCurrentStar() {
+            if (!activeSelectedItem) return;
+            activeSelectedItem.starred = !activeSelectedItem.starred;
+
+            const tx = db.transaction("items", "readwrite");
+            tx.objectStore("items").put(activeSelectedItem);
+            tx.oncomplete = () => {
+                document.getElementById('detail-star-icon').innerText = activeSelectedItem.starred ? 'star' : 'star_border';
+                showToast(activeSelectedItem.starred ? "スターを付けました" : "スターを解除しました");
+                renderMainContent();
+            };
+        }
+
+        function downloadCurrentFile() {
+            if (!activeSelectedItem || activeSelectedItem.isFolder) return;
+            let blob = null;
+            const mimeType = getItemMimeType(activeSelectedItem);
+            if (activeSelectedItem.content instanceof ArrayBuffer || ArrayBuffer.isView(activeSelectedItem.content)) {
+                blob = new Blob([activeSelectedItem.content], { type: mimeType });
+            } else {
+                blob = new Blob([activeSelectedItem.content], { type: mimeType });
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = activeSelectedItem.name;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`"${activeSelectedItem.name}" をダウンロードしました`);
+        }
+
+        function renameCurrentItem() {
+            if (!activeSelectedItem) return;
+            showInputModal("名前変更", "新しい名前を入力:", activeSelectedItem.name, (newName) => {
+                if (newName) {
+                    activeSelectedItem.name = newName;
+                    const tx = db.transaction("items", "readwrite");
+                    tx.objectStore("items").put(activeSelectedItem);
+                    tx.oncomplete = () => {
+                        document.getElementById('detail-file-name').innerText = newName;
+                        renderMainContent();
+                    };
+                }
+            });
+        }
+
+        function deleteCurrentItem() {
+            if (!activeSelectedItem) return;
+            const tx = db.transaction("items", "readwrite");
+            tx.objectStore("items").delete(activeSelectedItem.id);
+            tx.oncomplete = () => {
+                showToast("削除しました");
+                showScreen('screen-main');
+            };
+        }
+
+        function toggleOfflineState(checked) {
+            showToast(checked ? "IndexedDBでオフライン保持中" : "オフライン保存を解除しました");
+        }
+
+        function copyMyPeerID() {
+            navigator.clipboard.writeText(myPeerId);
+            alertModal("コピー完了", `MyPeerID (${myPeerId}) をクリップボードにコピーしました。`);
+        }
+
+        function openSearchScreen() { showScreen('screen-search'); }
+        function closeSearchScreen() { showScreen('screen-main'); }
+
+        function onSearchInput(query) {
+            const container = document.getElementById('search-results');
+            container.innerHTML = "";
+            if (!query.trim()) return;
+
+            const tx = db.transaction("items", "readonly");
+            tx.objectStore("items").getAll().onsuccess = (e) => {
+                const items = e.target.result;
+                const matched = items.filter(i => i.name.toLowerCase().includes(query.toLowerCase()));
+                matched.forEach(item => {
+                    const card = item.isFolder ? createFolderCard(item) : createFileCard(item);
+                    container.appendChild(card);
+                });
+            };
+        }
+
+        // Generic Toast and Custom Input Modal Utilities
+        function showToast(msg) {
+            const toast = document.getElementById('transfer-toast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        function alertModal(title, text) {
+            document.getElementById('input-modal-title').innerText = title;
+            document.getElementById('input-modal-body').innerText = text;
+            document.getElementById('input-modal-field').style.display = 'none';
+            inputModalCallback = null;
+            document.getElementById('input-modal').classList.add('active');
+        }
+
+        function showInputModal(title, text, defaultValue, callback) {
+            document.getElementById('input-modal-title').innerText = title;
+            document.getElementById('input-modal-body').innerText = text;
+            const field = document.getElementById('input-modal-field');
+            field.style.display = 'block';
+            field.value = defaultValue || '';
+            inputModalCallback = callback;
+            document.getElementById('input-modal').classList.add('active');
+        }
+
+        function closeInputModal(confirm) {
+            document.getElementById('input-modal').classList.remove('active');
+            if (inputModalCallback) {
+                const val = document.getElementById('input-modal-field').value;
+                inputModalCallback(confirm ? val : null);
+            }
+        }
+    </script>
+</body>
+</html>
