@@ -67,3 +67,5 @@ Android™7.0のMaterialアプリを完全再現。FOSS
 - Android7 Calendar β版
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/calendar.html
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/PAINTAPK.html
+- Android7クラウドドライブスタイルのidbdrive
+- https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/IDBD2.html
