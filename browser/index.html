@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Devtangle milk Browser</title>
+    <meta name="theme-color" content="#0043aa">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Devtangle%20milk%20Browser%22%2C%22short_name%22%3A%22milk%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230043aa%22%2C%22theme_color%22%3A%22%230043aa%22%7D">
+    
+    <style>
+        :root {
+            --milk-header-bg: #0042a9;
+            --milk-header-gradient: linear-gradient(to right, #003a98, #0044b3);
+            --milk-pill-bg: rgba(255, 255, 255, 0.18);
+            --milk-pill-hover: rgba(255, 255, 255, 0.25);
+            --milk-pill-focus: rgba(255, 255, 255, 0.28);
+            --milk-icon-color: #ffffff;
+            --milk-icon-disabled: rgba(255, 255, 255, 0.35);
+            --milk-text-color: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #0b1526;
+            color: var(--milk-text-color);
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+        }
+
+        .milk-header {
+            height: 60px;
+            background: var(--milk-header-bg);
+            background: var(--milk-header-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            gap: 12px;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        .milk-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        .milk-nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+
+        .milk-btn {
+            background: transparent;
+            border: none;
+            color: var(--milk-icon-color);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+            padding: 0;
+        }
+
+        .milk-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .milk-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .milk-btn:disabled {
+            color: var(--milk-icon-disabled);
+            opacity: 0.5;
+            cursor: default;
+            background: transparent;
+        }
+
+        .milk-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .milk-url-capsule {
+            flex: 1;
+            max-width: 580px;
+            height: 42px;
+            background-color: var(--milk-pill-bg);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            gap: 10px;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .milk-url-capsule:hover {
+            background-color: var(--milk-pill-hover);
+        }
+
+        .milk-url-capsule:focus-within {
+            background-color: var(--milk-pill-focus);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+        }
+
+        .milk-lock-icon {
+            width: 18px;
+            height: 18px;
+            fill: #ffffff;
+            flex-shrink: 0;
+            opacity: 0.95;
+        }
+
+        .milk-url-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 500;
+            outline: none;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            letter-spacing: 0.2px;
+        }
+
+        .milk-url-input::placeholder {
+            color: rgba(255, 255, 255, 0.65);
+            font-weight: 400;
+        }
+
+        .milk-reload-btn {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s;
+        }
+
+        .milk-reload-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .milk-reload-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 2.3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .milk-logo {
+            display: flex;
+            align-items: center;
+            color: #ffffff;
+            font-size: 18px;
+            letter-spacing: -0.3px;
+            margin-left: 4px;
+            user-select: none;
+        }
+
+        .milk-logo-Devtangle-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding-bottom: 2px;
+        }
+
+        .milk-logo-Devtangle {
+            font-weight: 800;
+            font-size: 19px;
+            line-height: 1;
+            letter-spacing: -0.5px;
+        }
+
+        .milk-logo-smile {
+            width: 48px;
+            height: 6px;
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            margin-top: -1px;
+        }
+
+        .milk-logo-milk {
+            font-weight: 400;
+            font-size: 19px;
+            margin-left: 6px;
+            opacity: 0.95;
+        }
+
+        .milk-viewport {
+            flex: 1;
+            position: relative;
+            background-color: #0b1526;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #browser-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: #ffffff;
+        }
+
+        .milk-homepage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0d1e38 0%, #050d18 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px 20px;
+            overflow-y: auto;
+            z-index: 10;
+            transition: opacity 0.25s ease;
+        }
+
+        .milk-homepage.hidden {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+
+        .home-logo-large {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 28px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .home-logo-large span {
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+        .grid-tiles {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 720px;
+            padding: 10px;
+        }
+
+        .tile {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 16px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .tile:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .tile-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        .tile-title {
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: #0f2444;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            width: 90%;
+            max-width: 420px;
+            padding: 24px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 24px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .app-grid-menu {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .app-grid-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 14px 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            color: #fff;
+            font-size: 13px;
+        }
+
+        .app-grid-item:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .app-grid-icon {
+            font-size: 24px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #003a98;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 3000;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .loading-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: #ffffff;
+            width: 0%;
+            transition: width 0.3s ease;
+            z-index: 1500;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="milk-header">
+        <div class="milk-nav-left">
+            <!-- App Menu Grid Button (3x3 Squares) -->
+            <button class="milk-btn" id="btn-menu" title="メニュー">
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
+                </svg>
+            </button>
+
+            <!-- Back Button (Left Arrow) -->
+            <button class="milk-btn" id="btn-back" title="戻る" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </button>
+
+            <!-- Forward Button (Right Arrow) -->
+            <button class="milk-btn" id="btn-forward" title="進む" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Center Address Capsule Bar -->
+        <div class="milk-url-capsule">
+            <svg class="milk-lock-icon" viewBox="0 0 24 24">
+                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+            </svg>
+            <input type="text" class="milk-url-input" id="url-input" value="m.youtube.com" placeholder="検索またはWebアドレスを入力" autocomplete="off" autocapitalize="off">
+            <button class="milk-reload-btn" id="btn-reload" title="再読み込み">
+                <svg viewBox="0 0 24 24">
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.65-5.65"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="milk-nav-right">
+            <!-- Bookmark Ribbon Icon -->
+            <button class="milk-btn" id="btn-bookmark" title="ブックマーク">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
+            </button>
+
+            <!-- Display / Fullscreen Icon -->
+            <button class="milk-btn" id="btn-fullscreen" title="全画面表示">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+            </button>
+
+            <!-- Devtangle milk Brand Logo -->
+            <div class="milk-logo">
+                <div class="milk-logo-Devtangle-container">
+                    <span class="milk-logo-Devtangle">Devtangle</span>
+                    <svg class="milk-logo-smile" viewBox="0 0 50 10">
+                        <path d="M 3 3 Q 25 12 47 3" fill="none"/>
+                        <path d="M 43 1 L 47 3 L 44 7" fill="none"/>
+                    </svg>
+                </div>
+                <span class="milk-logo-milk">milk</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="milk-viewport">
+        <div class="loading-bar" id="loading-bar"></div>
+        
+        <!-- Default milk Homepage Tile Screen -->
+        <div class="milk-homepage" id="milk-homepage">
+            <div class="home-logo-large">
+                Devtangle <span>milk</span>
+            </div>
+
+            <div class="grid-tiles" id="grid-tiles">
+                <div class="tile" data-url="https://m.youtube.com">
+                    <div class="tile-icon" style="color: #ff0000;"></div>
+                    <div class="tile-title">YouTube</div>
+                </div>
+                <div class="tile" data-url="https://www.Devtangle.co.jp">
+                    <div class="tile-icon" style="color: #ff9900;"></div>
+                    <div class="tile-title">Devtangle</div>
+                </div>
+                <div class="tile" data-url="https://www.google.com">
+                    <div class="tile-icon" style="color: #4285f4;"></div>
+                    <div class="tile-title">Google</div>
+                </div>
+                <div class="tile" data-url="https://ja.wikipedia.org">
+                    <div class="tile-icon" style="color: #ffffff;"></div>
+                    <div class="tile-title">Wikipedia</div>
+                </div>
+                <div class="tile" data-url="https://news.yahoo.co.jp">
+                    <div class="tile-icon" style="color: #ff0033;"></div>
+                    <div class="tile-title">Yahoo!ニュース</div>
+                </div>
+                <div class="tile" data-url="https://www.twitch.tv">
+                    <div class="tile-icon" style="color: #9146ff;"></div>
+                    <div class="tile-title">Twitch</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Browser iFrame Canvas -->
+        <iframe id="browser-frame" src="https://m.youtube.com" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+    </div>
+
+    <div class="modal-overlay" id="menu-modal">
+        <div class="modal-content">
+            <div class="modal-title">
+                <span>milk メニュー</span>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="app-grid-menu">
+                <div class="app-grid-item" id="menu-home">
+                    <div class="app-grid-icon"></div>
+                    <span>ホーム</span>
+                </div>
+                <div class="app-grid-item" onclick="loadUrl('https://m.youtube.com')">
+                    <div class="app-grid-icon"></div>
+                    <span>YouTube</span>
+                </div>
+                <div class="app-grid-item" onclick="loadUrl('https://www.Devtangle.co.jp')">
+                    <div class="app-grid-icon"></div>
+                    <span>Devtangle</span>
+                </div>
+                <div class="app-grid-item" onclick="loadUrl('https://ja.wikipedia.org')">
+                    <div class="app-grid-icon"></div>
+                    <span>Wikipedia</span>
+                </div>
+                <div class="app-grid-item" onclick="toggleFullscreen()">
+                    <div class="app-grid-icon"></div>
+                    <span>全画面</span>
+                </div>
+                <div class="app-grid-item" onclick="showToast('閲覧データを削除しました')">
+                    <div class="app-grid-icon"></div>
+                    <span>クリア</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">メッセージ</div>
+
+    <script>
+        const urlInput = document.getElementById('url-input');
+        const browserFrame = document.getElementById('browser-frame');
+        const milkHomepage = document.getElementById('milk-homepage');
+        const loadingBar = document.getElementById('loading-bar');
+        
+        const btnBack = document.getElementById('btn-back');
+        const btnForward = document.getElementById('btn-forward');
+        const btnReload = document.getElementById('btn-reload');
+        const btnBookmark = document.getElementById('btn-bookmark');
+        const btnFullscreen = document.getElementById('btn-fullscreen');
+        const btnMenu = document.getElementById('btn-menu');
+        const menuHome = document.getElementById('menu-home');
+        
+        const menuModal = document.getElementById('menu-modal');
+        const modalClose = document.getElementById('modal-close');
+        const toast = document.getElementById('toast');
+
+        let historyStack = ['https://m.youtube.com'];
+        let historyIndex = 0;
+        let currentUrl = 'https://m.youtube.com';
+
+        // Initialize display
+        milkHomepage.classList.add('hidden');
+
+        document.querySelectorAll('.tile').forEach(tile => {
+            tile.addEventListener('click', () => {
+                const url = tile.getAttribute('data-url');
+                loadUrl(url);
+            });
+        });
+
+        urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                let val = urlInput.value.trim();
+                if (!val) return;
+                processInput(val);
+                urlInput.blur();
+            }
+        });
+
+        function processInput(val) {
+            let targetUrl = val;
+            if (!val.startsWith('http://') && !val.startsWith('https://')) {
+                if (val.includes('.') && !val.includes(' ')) {
+                    targetUrl = 'https://' + val;
+                } else {
+                    targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(val);
+                }
+            }
+            loadUrl(targetUrl);
+        }
+
+        function navigateHome() {
+            closeMenu();
+            milkHomepage.classList.remove('hidden');
+            browserFrame.src = 'about:blank';
+            urlInput.value = '';
+            currentUrl = '';
+            updateNavButtons();
+            showToast('ホーム画面');
+        }
+
+        function loadUrl(url) {
+            milkHomepage.classList.add('hidden');
+            startLoading();
+            currentUrl = url;
+            
+            // Format URL display in capsule (e.g., m.youtube.com)
+            try {
+                const urlObj = new URL(url);
+                urlInput.value = urlObj.hostname + urlObj.pathname;
+            } catch (e) {
+                urlInput.value = url;
+            }
+
+            browserFrame.src = url;
+            
+            if (historyIndex === -1 || historyStack[historyIndex] !== url) {
+                historyStack = historyStack.slice(0, historyIndex + 1);
+                historyStack.push(url);
+                historyIndex = historyStack.length - 1;
+            }
+            updateNavButtons();
+        }
+
+        function startLoading() {
+            loadingBar.style.width = '30%';
+            setTimeout(() => { loadingBar.style.width = '70%'; }, 200);
+        }
+
+        browserFrame.addEventListener('load', () => {
+            loadingBar.style.width = '100%';
+            setTimeout(() => {
+                loadingBar.style.width = '0%';
+            }, 300);
+        });
+
+        btnBack.addEventListener('click', () => {
+            if (historyIndex > 0) {
+                historyIndex--;
+                let url = historyStack[historyIndex];
+                currentUrl = url;
+                milkHomepage.classList.add('hidden');
+                browserFrame.src = url;
+                try {
+                    const urlObj = new URL(url);
+                    urlInput.value = urlObj.hostname + urlObj.pathname;
+                } catch (e) {
+                    urlInput.value = url;
+                }
+                updateNavButtons();
+            } else if (currentUrl !== '') {
+                navigateHome();
+            }
+        });
+
+        btnForward.addEventListener('click', () => {
+            if (historyIndex < historyStack.length - 1) {
+                historyIndex++;
+                let url = historyStack[historyIndex];
+                currentUrl = url;
+                milkHomepage.classList.add('hidden');
+                browserFrame.src = url;
+                try {
+                    const urlObj = new URL(url);
+                    urlInput.value = urlObj.hostname + urlObj.pathname;
+                } catch (e) {
+                    urlInput.value = url;
+                }
+                updateNavButtons();
+            }
+        });
+
+        btnReload.addEventListener('click', () => {
+            if (currentUrl) {
+                startLoading();
+                browserFrame.src = currentUrl;
+            } else {
+                navigateHome();
+            }
+        });
+
+        btnBookmark.addEventListener('click', () => {
+            showToast('ブックマークに追加しました ');
+        });
+
+        btnFullscreen.addEventListener('click', toggleFullscreen);
+
+        function toggleFullscreen() {
+            closeMenu();
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {
+                    showToast('全画面表示に対応していません');
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        btnMenu.addEventListener('click', () => {
+            menuModal.classList.add('active');
+        });
+
+        menuHome.addEventListener('click', navigateHome);
+
+        modalClose.addEventListener('click', closeMenu);
+        menuModal.addEventListener('click', (e) => {
+            if (e.target === menuModal) closeMenu();
+        });
+
+        function closeMenu() {
+            menuModal.classList.remove('active');
+        }
+
+        function updateNavButtons() {
+            btnBack.disabled = (historyIndex <= 0 && currentUrl === '');
+            btnForward.disabled = (historyIndex >= historyStack.length - 1);
+        }
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
