@@ -4,6 +4,7 @@ Android™7.0のMaterialアプリを完全再現。FOSS
 <br>Echo ShowはEcho OSのまま使いましょう
 - Android7 ブラウザをタブレットにしよう
 - https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/launcher/droid.html
+- https://polandballhub-operator.github.io/appsforechoshowsilk/androidlauncher.html
 - EchoShowでローカルファイルを使おう
 - https://polandballhub-operator.github.io/appsforechoshowsilk/documentsui/
 - EchoShowで天気アプリを使おう
