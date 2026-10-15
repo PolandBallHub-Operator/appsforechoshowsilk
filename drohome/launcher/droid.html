@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HTMLOS Launcher3 - Android 7.1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+<style>
+:root{--accent:#009688;--icon:48px;--cols:6;--dock-a:0;--qsw:320px;--fs:1;--ir:0}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;font-family:Roboto,"Helvetica Neue",Arial,sans-serif}
+html,body{width:100vw;height:100vh;overflow:hidden;background:#000;position:relative}
+.material-symbols-outlined{font-size:22px}
+button{font:inherit;cursor:pointer}
+#launcher{position:absolute;inset:0;background:center/cover no-repeat}
+#dim{position:fixed;inset:0;background:#000;opacity:.14;pointer-events:none;z-index:30000}
+#toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:8px 18px;border-radius:2px;font-size:13px;z-index:30001;display:none}
+/* icons */
+.ic img,.ic .sym-ico{width:var(--icon);height:var(--icon);border-radius:var(--ir);object-fit:contain;pointer-events:none}
+.sym-ico{display:flex;align-items:center;justify-content:center;color:#fff}
+.sym-ico .material-symbols-outlined{font-size:calc(var(--icon)*.58)}
+.lbl{font-size:calc(11px*var(--fs));color:#fff;margin-top:4px;text-shadow:0 1px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:84px;text-align:center;pointer-events:none}
+body.nolabel .home-icon-item .lbl{display:none}
+/* home */
+#home-pager{position:absolute;top:84px;left:0;right:0;bottom:calc(var(--navh,52px) + 72px + 44px);overflow:hidden;z-index:2;touch-action:none}
+#home-track{display:flex;height:100%}
+.home-page{height:100%;flex-shrink:0;display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr);padding:0 16px}
+#page-dots{position:absolute;left:0;right:0;bottom:calc(var(--navh,52px) + 72px + 32px);display:flex;justify-content:center;gap:8px;z-index:2;pointer-events:none}
+#page-dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.45)}#page-dots i.on{background:#fff}
+.home-icon-item{min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;touch-action:none}
+.home-icon-item.dragging{opacity:.3}
+.search-widget{position:absolute;top:32px;left:16px;right:16px;width:auto;height:40px;background:#f5f5f5;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;gap:10px;padding:0 14px;color:#757575;font-size:15px;z-index:2;cursor:pointer}
+#dock{position:absolute;left:0;right:0;bottom:0;height:calc(72px + var(--navh,52px));padding-bottom:var(--navh,52px);display:flex;justify-content:center;align-items:center;gap:22px;background:var(--dock-bg,transparent);z-index:2}
+.dock-icon{display:flex;cursor:pointer}.dock-icon:active{transform:scale(.9)}
+.drawer-trigger{position:absolute;bottom:calc(var(--navh,52px) + 72px);left:50%;transform:translateX(-50%);color:#fff;z-index:3;cursor:pointer;padding:0 20px}
+.drawer-trigger .material-symbols-outlined{font-size:30px;text-shadow:0 1px 2px #000}
+#delete-zone{position:absolute;top:28px;left:50%;transform:translate(-50%,-80px);background:rgba(229,57,53,.92);color:#fff;padding:8px 32px;border-radius:20px;display:flex;align-items:center;gap:8px;font-size:14px;z-index:3000;transition:transform .25s;pointer-events:none}
+#delete-zone.active{transform:translate(-50%,0)}#delete-zone.hover{background:#b71c1c}
+#drag-ghost{position:fixed;pointer-events:none;z-index:99999;display:none;transform:translate(-50%,-50%);opacity:.9}
+/* status/nav */
+#status-bar{position:fixed;top:0;left:0;width:100%;height:24px;display:flex;justify-content:flex-end;align-items:center;gap:6px;padding:0 12px;color:#fff;font-size:13px;z-index:9999;transition:background-color .25s;cursor:pointer}
+#status-bar .material-symbols-outlined{font-size:16px}
+#nav-bar{position:fixed;bottom:0;left:0;width:100%;height:var(--navh,52px);display:flex;justify-content:center;align-items:center;gap:72px;z-index:9999;transition:background-color .25s}
+#nav-bar.app-active,#nav-bar.navblack{background:#000}
+.nav-btn{height:55px;cursor:pointer;opacity:.9;padding:4px}.nav-btn:active{opacity:.5}.nav-btn img{height:100%}
+/* QS (Nougat tablet) */
+#qs-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:10000;display:flex;justify-content:center;align-items:flex-start;padding-top:24px;opacity:0;pointer-events:none;transition:opacity .25s}
+#qs-overlay.active{opacity:1;pointer-events:auto}
+.qs-card{position:relative;width:var(--qsw);max-width:94vw;max-height:calc(100vh - 56px);overflow-y:auto;background:#fff;border-radius:var(--qs-r,0);box-shadow:0 8px 24px rgba(0,0,0,.5);transform:translateY(-50px);transition:transform .3s cubic-bezier(0,0,.2,1)}
+#qs-overlay.active .qs-card{transform:none}
+.qs-top{background:var(--qs-bg,#263238);color:#fff}
+.qs-head{display:flex;align-items:center;padding:14px 14px 10px;font-size:12px;gap:16px}
+.qs-head .sp{flex:1}.qs-head .material-symbols-outlined{font-size:18px;cursor:pointer}
+#qs-user-btn{color:#4fc3f7}
+.qs-bright{display:flex;padding:8px 18px 4px}.qs-bright input{flex:1;accent-color:var(--qs-on,#fff);height:4px}
+#qs-grid{display:grid;grid-template-columns:repeat(var(--qs-cols,3),1fr);padding:6px 10px 12px}
+.qs-top.collapsed .qs-bright,.qs-top.collapsed #qs-grid,.qs-top.collapsed #qs-avail{display:none}
+.qs-tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 4px;cursor:pointer;color:var(--qs-off,#78909c);background:var(--qs-tile-bg,transparent);border-radius:var(--qs-tile-r,0)}
+.qs-tile span:last-of-type{font-size:10px;text-align:center}
+.qs-tile.on{color:var(--qs-on,#fff)}
+.qs-tile .rm{position:absolute;top:4px;right:10px;background:#e53935;color:#fff;border-radius:50%;width:16px;height:16px;font-size:13px;display:flex;align-items:center;justify-content:center}
+#qs-avail{padding:0 14px 12px;font-size:12px;color:#b0bec5;display:none}
+#qs-avail.show{display:block}
+#qs-avail .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+#qs-avail .chip{background:#37474f;color:#fff;border-radius:14px;padding:5px 10px;cursor:pointer}
+.qs-reset{color:#80cbc4;cursor:pointer;font-weight:500}
+#qs-users{display:none;position:absolute;top:44px;left:10px;width:230px;background:#fff;color:#212121;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:5;font-size:14px}
+#qs-users.show{display:block}
+#qs-users div{padding:12px 16px;cursor:pointer;display:flex;gap:10px;align-items:center}
+#qs-users div:active{background:#e0e0e0}#qs-users .cur{font-weight:600;color:var(--accent)}
+.notif{padding:10px 14px;background:var(--qs-notif,#fff);border-bottom:1px solid #eee;color:#212121}
+.notif .h{display:flex;gap:6px;align-items:center;font-size:11px;color:#616161;margin-bottom:4px}.notif .h .material-symbols-outlined{font-size:14px}
+.notif b{font-size:13px;display:block}.notif p{font-size:12px;color:#757575;margin-top:2px}
+.notif .shot{margin-top:8px;height:70px;background:linear-gradient(#9e9e9e,#cfd8dc);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center}
+.notif .acts{margin-top:8px;display:flex;gap:18px;font-size:12px;color:#546e7a;font-weight:600}
+.qs-foot{padding:8px 16px;text-align:right;font-size:12px;font-weight:600;color:#546e7a;background:#eceff1;cursor:pointer}
+/* drawer */
+#app-drawer{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:5000;display:flex;justify-content:center;align-items:center;opacity:0;pointer-events:none;transition:opacity .25s}
+#app-drawer.active{opacity:1;pointer-events:auto}
+.drawer-card{width:80%;max-width:700px;height:84%;background:#f2f2f2;box-shadow:0 8px 24px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden;transform:translateY(30px) scale(.95);transition:transform .28s cubic-bezier(0,0,.2,1)}
+#app-drawer.active .drawer-card{transform:none}
+.d-bar{position:relative;display:flex;justify-content:center;align-items:center;padding:12px 44px;margin:0 10px;border-bottom:1px solid var(--accent);color:var(--accent)}
+.d-s{display:flex;align-items:center;gap:6px}.d-s .material-symbols-outlined{font-size:18px}
+.d-bar input{width:110px;border:0;outline:0;background:transparent;font-size:13px;font-weight:500;color:var(--accent);transition:width .2s}.d-bar input:focus{width:220px}
+.d-bar input::placeholder{color:var(--accent);opacity:.9}.d-add{position:absolute;right:0;cursor:pointer}
+.app-grid{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:max-content;gap:16px 8px;padding:18px 14px;overflow-y:auto}
+.app-item{display:flex;flex-direction:column;align-items:center;cursor:pointer}.app-item:active{opacity:.7}
+.app-item .lbl{color:#424242;text-shadow:none;font-size:11px}
+/* apps */
+#app-frame-container{position:fixed;inset:0;z-index:4000;display:none;background:#fff}
+#app-frame-container.in{animation:aIn .38s cubic-bezier(0,0,.2,1) forwards}
+#app-frame-container.out{animation:aOut .28s cubic-bezier(.4,0,1,1) forwards}
+@keyframes aIn{from{transform:translateY(100%);opacity:.4}to{transform:none;opacity:1}}
+@keyframes aOut{from{transform:none;opacity:1}to{transform:translateY(100%);opacity:.4}}
+#app-frame-container[data-anim=fade].in{animation:fIn .3s forwards}
+#app-frame-container[data-anim=fade].out,#app-frame-container[data-anim=zoom].out{animation:fOut .25s forwards}
+#app-frame-container[data-anim=zoom].in{animation:zIn .3s cubic-bezier(0,0,.2,1) forwards}
+#app-frame-container[data-anim=none].in,#app-frame-container[data-anim=none].out{animation:none}
+@keyframes fIn{from{opacity:0}to{opacity:1}}@keyframes fOut{to{opacity:0}}
+@keyframes zIn{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
+#ff-bar{display:none;position:absolute;top:0;left:0;right:0;height:24px;background:#212121;color:#fff;font-size:12px;align-items:center;justify-content:space-between;padding:0 8px;z-index:2;cursor:move;touch-action:none}
+#app-frame-container.ff{inset:auto;box-shadow:0 10px 30px rgba(0,0,0,.6);overflow:hidden}
+.ff #ff-bar{display:flex}.ff #app-frame,.ff #sys-view{padding:24px 0 0}
+.tb{flex-shrink:0;color:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);z-index:2}
+.tb-r{display:flex;align-items:center;height:56px;padding:0 16px;gap:24px;font-size:20px;font-weight:500}.tb-r .t{flex:1}.tb-r .material-symbols-outlined{cursor:pointer;font-size:24px}
+.tb-tabs{display:flex;overflow-x:auto}.tb-tabs div{padding:14px 20px;font-size:14px;font-weight:500;text-transform:uppercase;opacity:.7;white-space:nowrap;border-bottom:2px solid transparent;cursor:pointer}
+.tb-tabs div.on{opacity:1;border-color:#fff}
+.pop{position:absolute;right:8px;top:30px;background:#fff;color:#212121;box-shadow:0 4px 14px rgba(0,0,0,.4);min-width:180px;z-index:9}
+.pop div{padding:13px 16px;font-size:14px;cursor:pointer}.pop div:active{background:#e0e0e0}
+.card{background:#fff;margin:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.3);border-radius:2px;overflow:hidden}
+.card .h{padding:14px 16px 2px;font-size:13px;font-weight:700;color:#757575;text-transform:uppercase}
+.stat{height:160px;display:flex;align-items:center;justify-content:center}.stat-t{padding:12px 16px;text-align:center;font-weight:700;font-size:14px}
+.fw{display:flex;align-items:center;gap:28px;padding:14px 16px;font-size:15px;color:#212121}.fw .material-symbols-outlined{color:#757575;font-size:28px}
+#app-frame{width:100%;height:100%;border:0;padding:24px 0 var(--navh,52px)}
+#sys-view{position:absolute;inset:0;padding:24px 0 var(--navh,52px);display:none;flex-direction:column;background:#fafafa;color:#212121}
+.sbar{height:48px;flex-shrink:0;display:flex;align-items:center;padding:0 16px;color:#fff;font-size:18px;font-weight:500;box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.sbody{flex:1;overflow-y:auto}
+.sec{padding:14px 16px 6px;font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 16px;border-bottom:1px solid #e0e0e0;background:#fff;font-size:14px}
+.row small{display:block;color:#757575;font-size:12px;margin-top:2px}
+.row input[type=range]{width:180px;accent-color:var(--accent)}
+.row input[type=text],.row input[type=url],.row textarea,.row select{border:0;border-bottom:2px solid var(--accent);outline:0;font-size:14px;padding:4px 0;background:transparent;width:240px}
+.row textarea{width:100%;height:90px;border:1px solid #ccc;font-family:monospace;font-size:12px}
+.sw{position:relative;width:36px;height:14px;flex-shrink:0}.sw input{opacity:0;width:0;height:0}
+.sw i{position:absolute;inset:0;background:#b0bec5;border-radius:7px;transition:.2s}
+.sw i:before{content:"";position:absolute;width:20px;height:20px;left:-2px;top:-3px;background:#eceff1;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:.2s}
+.sw input:checked+i{background:color-mix(in srgb,var(--accent) 45%,#fff)}.sw input:checked+i:before{transform:translateX(20px);background:var(--accent)}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}.swatches b{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #bbb}
+.mbtn{background:var(--accent);color:#fff;border:0;padding:8px 16px;border-radius:2px;font-size:13px;font-weight:500;text-transform:uppercase;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.mbtn.flat{background:#d6d6d6;color:#212121}
+/* recents */
+#recents-view{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:8000;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+#recents-view.active{opacity:1;pointer-events:auto}
+.recents-empty{color:#fff;font-size:16px}
+.recents-stack{position:relative;width:340px;height:380px;display:flex;justify-content:center;align-items:center}
+.r-card{position:absolute;width:320px;height:250px;background:#fff;border-radius:4px;box-shadow:0 10px 25px rgba(0,0,0,.5);overflow:hidden;cursor:pointer;display:flex;flex-direction:column}
+.r-head{height:38px;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:12px;font-weight:500}
+.r-head div{display:flex;gap:8px;align-items:center}.r-head .ic{display:flex;--icon:22px}
+.r-body{flex:1;background:#fafafa;display:flex;align-items:center;justify-content:center;color:#bdbdbd}
+/* dialog */
+.dlg-o{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20000;display:flex;align-items:center;justify-content:center}
+.dlg{background:#ededed;width:88%;max-width:420px;max-height:92vh;overflow-y:auto;padding:20px 22px 12px;box-shadow:0 11px 15px -7px rgba(0,0,0,.2),0 24px 38px 3px rgba(0,0,0,.14);color:#212121}
+.dlg h3{font-size:19px;font-weight:500;margin-bottom:14px}.dlg-b{font-size:14px;margin-bottom:12px}
+.dlg-a{display:flex;justify-content:flex-end;gap:4px}
+.dlg-a button,.wz-n button{background:0;border:0;color:var(--accent);font-size:13px;font-weight:600;padding:8px 10px;text-transform:uppercase}
+.dlg label{display:flex;gap:10px;align-items:center;padding:8px 0}
+.dlg input[type=text],.dlg input[type=url]{width:100%;border:0;border-bottom:2px solid var(--accent);background:transparent;outline:0;padding:6px 0;font-size:15px;margin:6px 0}
+.pick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}
+.pick div{height:42px;border-radius:6px;background:#cfd8dc;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid transparent}
+.pick div.sel{border-color:var(--accent);background:#b2dfdb}
+.wz-n{display:flex;justify-content:flex-end;margin-top:8px}
+.dui{flex:1;display:flex;flex-direction:column;min-height:0;position:relative;background:#fafafa;color:#212121}
+.dui-tb{height:56px;background:#263238;color:#fff;display:flex;align-items:center;padding:0 16px;gap:20px;flex-shrink:0;box-shadow:0 2px 4px rgba(0,0,0,.4);z-index:2}
+.dui-tb .t{font-size:18px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dui-tb .material-symbols-outlined{cursor:pointer;font-size:24px}
+.dui-tb button{background:0;border:0;color:#80cbc4;font-weight:600;font-size:14px}
+.dui-sr{display:flex;align-items:center;gap:6px;background:#6b7378;height:40px;padding:0 8px;width:260px;max-width:50%}
+.dui-sr input{flex:1;min-width:0;background:0;border:0;outline:0;color:#fff;font-size:16px;user-select:text;-webkit-user-select:text}
+.dui-sr input::placeholder{color:#cfd8dc}
+.dui-body{flex:1;display:flex;min-height:0}
+.dui-side{width:190px;background:#eee;flex-shrink:0;overflow-y:auto;padding-top:6px}
+.dui-side hr{border:0;border-top:1px solid #d0d0d0;margin:8px 0}
+.dui-sd{display:flex;align-items:center;gap:20px;height:52px;padding:0 20px;font-size:15px;cursor:pointer}.dui-sd .material-symbols-outlined{color:#757575}.dui-sd.on{background:#e0e0e0}
+.dui-main{flex:1;overflow-y:auto;background:#fafafa}
+.dui-it{display:flex;align-items:center;gap:20px;padding:0 24px;height:56px;cursor:pointer;font-size:15px}.dui-it:active{background:#e0e0e0}
+.dui-it .ic,.dui-gc .ic{color:#607d8b}.dui-it.sel,.dui-gc.sel{background:#b2dfdb}.dui-it.dis,.dui-gc.dis{opacity:.4;pointer-events:none}
+.nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nm small{display:block;font-size:11px;color:#757575}
+.dui-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;padding:12px}
+.dui-gc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:100px;padding:6px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);border-radius:3px;cursor:pointer;font-size:12px;text-align:center}
+.dui-gc .nm{max-width:100%;flex:none}
+.dui .pop{top:50px}
+.dui-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:15000;display:flex;align-items:center;justify-content:center}
+.dui-box{width:min(860px,94vw);height:min(420px,86vh);display:flex;flex-direction:column;box-shadow:0 12px 32px rgba(0,0,0,.6);overflow:hidden}
+.dui-pk{max-height:220px;overflow:auto}.dui-pk .r{display:flex;gap:12px;align-items:center;padding:10px 4px;cursor:pointer}.dui-pk .r:active{background:#d6d6d6}
+.dui-ta{width:100%;height:200px;font-family:monospace;font-size:12px;border:1px solid #bbb;padding:6px;background:#fff;resize:none;user-select:text;-webkit-user-select:text}
+.dlg input[type=text],.dlg textarea{user-select:text;-webkit-user-select:text}
+@media(max-width:600px){.dui-side{width:56px}.dui-side .lb{display:none}.dui-sd{padding:0 16px}}
+#recents-ext{max-width:100%}
+.r-row{display:flex;gap:14px;overflow-x:auto;max-width:96vw;padding:10px 16px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.r-fcard{flex:0 0 200px;height:140px;background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden;cursor:pointer;scroll-snap-align:center}
+.r-fh{height:34px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 8px;color:#fff;font-size:12px;font-weight:500}
+.r-fh .ic{display:flex;--icon:20px}.r-fh .t{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.r-fh .material-symbols-outlined{font-size:18px;cursor:pointer}
+.r-fb{flex:1;background:#fafafa;display:flex;align-items:center;justify-content:center}.r-fb .ic{display:flex;--icon:48px;opacity:.5}
+#recents-view.has-ext .recents-stack{height:210px}#recents-view.has-ext .r-card{height:170px}
+</style>
+</head>
+<body>
+<div id="launcher">
+  <div id="delete-zone"><span class="material-symbols-outlined">delete</span><span>削除</span></div>
+  <div id="status-bar" onclick="openQS()">
+    <span class="material-symbols-outlined">signal_wifi_4_bar</span><span class="material-symbols-outlined">network_cell</span><span class="material-symbols-outlined">battery_full</span><span id="clock">00:00</span>
+  </div>
+  <div class="search-widget" onclick="launch('searchbox.html')"><span class="material-symbols-outlined">search</span>検索</div>
+  <div id="home-pager"><div id="home-track"></div></div><div id="page-dots"></div>
+  <div class="drawer-trigger" onclick="openDrawer()"><span class="material-symbols-outlined">expand_less</span></div>
+  <div id="dock"></div>
+</div>
+
+<div id="qs-overlay" onclick="if(event.target.id==='qs-overlay')closeQS()">
+  <div class="qs-card" onclick="event.stopPropagation();$('#qs-users').classList.remove('show')">
+    <div class="qs-top" id="qs-top">
+      <div class="qs-head">
+        <span id="qs-time">12:34・12月7日(水)</span><span class="sp"></span>
+        <span class="material-symbols-outlined" id="qs-user-btn" title="ユーザー" onclick="event.stopPropagation();toggleUsers()">account_circle</span>
+        <span class="material-symbols-outlined" title="編集" onclick="toggleEdit()">edit</span>
+        <span class="material-symbols-outlined" title="設定" onclick="launch('setting.html');closeQS()">settings</span>
+        <span class="material-symbols-outlined" title="閉じる" id="qs-chev" onclick="$('#qs-top').classList.toggle('collapsed');this.textContent=$('#qs-top').classList.contains('collapsed')?'expand_more':'expand_less'">expand_less</span>
+      </div>
+      <div id="qs-users" onclick="event.stopPropagation()"></div>
+      <div class="qs-bright"><input type="range" id="bright" min="10" max="100" value="80"></div>
+      <div id="qs-grid"></div>
+      <div id="qs-avail"></div>
+    </div>
+    <div id="notifs">
+      <div class="notif"><div class="h"><span class="material-symbols-outlined">image</span>Androidシステム・現在</div><b>スクリーンショットを保存</b><p>タップするとスクリーンショットが表示されます。</p><div class="shot" id="shot">12:34</div><div class="acts"><span>共有</span><span>削除</span></div></div>
+      <div class="notif"><div class="h"><span class="material-symbols-outlined">android</span>Androidシステム</div><b>USBでこのデバイスを充電中</b><p>タップしてその他のオプションを表示します。</p></div>
+    </div>
+    <div class="qs-foot" onclick="$('#notifs').innerHTML='<div class=notif style=text-align:center;color:#9e9e9e>通知はありません</div>'">すべて消去</div>
+  </div>
+</div>
+
+<div id="recents-view" onclick="if(event.target.id==='recents-view')closeRecents()"><div id="recents-ext"></div><div class="recents-stack" id="recents-stack"></div></div>
+<div id="drag-ghost" class="ic"></div>
+
+<div id="app-drawer" onclick="if(event.target.id==='app-drawer')closeDrawer()">
+  <div class="drawer-card" onclick="event.stopPropagation()">
+    <div class="d-bar"><div class="d-s"><span class="material-symbols-outlined">search</span><input id="app-search" placeholder="Search Apps" oninput="filterApps()"></div><span class="material-symbols-outlined d-add" title="アプリを追加" onclick="addWizard()">add_box</span></div>
+    <div class="app-grid" id="app-grid"></div>
+  </div>
+</div>
+
+<div id="app-frame-container"><div id="ff-bar"><span id="ff-t"></span><span class="material-symbols-outlined" style="font-size:16px;cursor:pointer" onclick="handleHome()">close</span></div><iframe id="app-frame" src="about:blank"></iframe><div id="sys-view"></div></div>
+
+<div id="nav-bar"></div>
+<div id="dim"></div><div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
+const BASE="https://polandballhub-operator.github.io/appsforechoshowsilk/drohome/";
+const ICON="https://raw.githubusercontent.com/PolandBallHub-Operator/Android_7_icon_repo/refs/heads/main/";
+const WALL="https://raw.githubusercontent.com/PolandBallHub-Operator/appsforechoshowsilk/refs/heads/main/drohome/launcher/wallp.png";
+const MEDIA_HTML=`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="htmlos:handles" content="audio/*,video/*,image/*,.pdf,.m4a">
+<style>*{box-sizing:border-box;margin:0;font-family:Roboto,Arial,sans-serif}html,body{height:100%;background:#212121;color:#fff;overflow:hidden}
+#bar{height:48px;background:#ff5722;display:flex;align-items:center;padding:0 16px;font-size:18px;font-weight:500;gap:12px;box-shadow:0 2px 4px rgba(0,0,0,.4)}
+#t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button{background:#fff;color:#ff5722;border:0;padding:7px 14px;border-radius:2px;font-weight:500;font-size:13px}
+#v{height:calc(100% - 48px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:12px}
+#v>*{max-width:100%;max-height:100%}audio{width:80%}iframe{width:100%;height:100%;border:0;background:#fff}.m{color:#9e9e9e;text-align:center}</style></head>
+<body><div id="bar"><span id="t">メディアプレイヤー</span><button id="b">ファイルを選択</button></div>
+<div id="v"><div class="m">ファイルアプリからメディアを開いてください<br>(mp3 / mp4 / m4a / wav / png / svg / jpg / pdf)</div></div>
+<script>
+var v=document.getElementById('v'),t=document.getElementById('t'),url=null;
+function show(f){
+ if(url)URL.revokeObjectURL(url);
+ var b=f.blob instanceof Blob?f.blob:new Blob([f.blob],{type:f.mime});
+ url=URL.createObjectURL(b);t.textContent=f.name;v.innerHTML='';
+ var m=f.mime||'',n=(f.name||'').toLowerCase(),e;
+ if(m.indexOf('audio/')==0||/\\.(mp3|m4a|wav|ogg)$/.test(n)){var ic=document.createElement('div');ic.style.fontSize='64px';ic.textContent='\\u266B';v.appendChild(ic);e=document.createElement('audio');e.controls=true;e.autoplay=true}
+ else if(m.indexOf('video/')==0){e=document.createElement('video');e.controls=true;e.autoplay=true}
+ else if(m.indexOf('image/')==0){e=document.createElement('img')}
+ else{e=document.createElement('iframe')}
+ e.src=url;v.appendChild(e);
+}
+addEventListener('message',function(ev){var d=ev.data;if(d&&d.type==='htmlos:open'&&d.files&&d.files[0])show(d.files[0])});
+document.getElementById('b').onclick=function(){
+ try{parent.HTMLOS.pickFile({accept:['audio/*','video/*','image/*','.pdf']}).then(function(r){if(r&&r[0])show(r[0])})}catch(x){}
+};
+parent.postMessage({type:'htmlos:ready'},'*');
+<\/script></body></html>`;
+
+const SYS=[
+ {name:"設定",url:"setting.html",icon:"setting.png",dock:1,color:"#000"},
+ {name:"ギャラリー",url:"gallery.html",icon:"gallery.png",dock:1,color:"#000"},
+ {name:"カメラ",url:"camera.html",icon:"camera.png",dock:1,color:"#212121"},
+ {name:"連絡先",url:"contact.html",icon:"contact.png",dock:1,color:"#0377BD"},
+ {name:"電話",url:"dialer.html",icon:"dialer.png",dock:1,color:"#0377BD"},
+ {name:"メッセージ",url:"message.html",icon:"message.png",dock:1,color:"#0377BD"},
+ {name:"Market",url:"market.html",icon:"market.png",color:"#0D7E46"},
+ {name:"Dev Tools",url:"devtool.html",icon:"devtool.png",color:"#000"},
+ {name:"API Demo",url:"apidemo.html",icon:"apidemo.png",color:"#000"},
+ {name:"時計",url:"clock.html",icon:"clock.png",color:"#1565c0"},
+ {name:"Music",url:"gpmusic.html",icon:"aospm.png",color:"#ff5722"},
+ {name:"Books",url:"gpbooks.html",icon:"books.png",color:"#0288d1"},
+ {name:"ブラウザ",url:"brow.html",icon:"brow.png",color:"#12141A"},
+ {name:"ピアアウト",url:"pmessage.html",icon:"pm.png",color:"#12141A"},
+ {name:"カレンダー",url:"calendar.html",icon:"calendar.png",color:"#12141A"},
+ {name:"検索",url:"searchbox.html",icon:"searchbox.png",color:"#12141A"},
+ {name:"セットアップ",url:"setup.html",icon:"sysapp.png",color:"#0082FD"}
+].map(a=>({...a,id:a.url,type:'web'}));
+SYS.push({id:'mediaplay',name:'メディアプレイヤー',type:'html',icon:'sysapp.png',color:'#ff5722',bar:'#ff5722',html:MEDIA_HTML,handles:['audio/*','video/*','image/*','.pdf','.m4a']},{id:'dui',name:'ファイル',type:'sys',icon:'dui.png',color:'#263238',bar:'#263238',open:openDUI},{id:'pwadroid',name:'PWADROID',type:'sys',sym:'tune',color:'#009688',bar:'#009688',open:openPWA},
+         {id:'xposed',name:'Xposed',type:'sys',icon:'xposed.png',color:'#c62828',bar:'#c62828',open:openXposed});
+
+/* ---------- state / storage ---------- */
+const DEF={accent:'#009688',icon:48,labels:true,cols:6,rows:3,dockColor:'#000000',dock:0,qsw:320,fs:1,shape:'0',nav:'transparent',wall:''};
+const M=f=>'('+f.toString()+')(Launcher)';
+const DEFEXT=[
+ {id:'tuner',name:'System UI Tuner',desc:'ナビバーのアイコン・ボタン・配置を調整（UIあり）',enabled:true,code:M(L=>{
+  const BT=['back','home','task'],NAMES={back:'戻る',home:'ホーム',task:'履歴'};
+  const D=()=>({icons:{},order:['back','home','task'],gap:72,align:'center',h:52,extra:[]});
+  let C=D();
+  const act=e=>{const s=L.system,m={home:s.home,back:s.back,recents:s.recents,qs:s.qs,drawer:s.drawer,app:()=>L.launch(e.target)};(m[e.act]||(()=>L.toast(e.name)))()};
+  const apply=()=>{
+   L.nav.reset();L.nav.configure({gap:C.gap,align:C.align,h:C.h});L.nav.setIcons(C.icons);
+   C.extra.forEach(e=>L.nav.addButton({id:e.id,icon:e.sym||'circle',iconUrl:e.url,onClick:()=>act(e)}));
+   L.nav.setLayout(C.order.filter(id=>BT.includes(id)||C.extra.some(e=>e.id===id)));
+  };
+  const sv=()=>{L.store.set('cfg',C);apply()};
+  L.store.get('cfg').then(v=>{if(v){C={...D(),...v};apply()}});
+  L.app({name:'System UI Tuner',icon:'sysapp.png',color:'#37474f',open(root,UI){
+   const t=UI.topbar(root,'System UI Tuner',{color:'#37474f',nav:'back',menu:[{t:'リセット',fn:()=>{C=D();sv();draw()}}]});
+   const b=t.body,mk=(tag,css)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;return e};
+   const LN='border:0;border-bottom:2px solid #009688;outline:0;font-size:13px;padding:4px 0;background:transparent;user-select:text;-webkit-user-select:text;';
+   const inp=(val,ph,fn,w)=>{const i=mk('input',LN+'width:'+(w||200)+'px');i.type='text';i.value=val||'';i.placeholder=ph||'';i.onchange=()=>fn(i.value.trim());return i};
+   const sel=(opts,val,fn)=>{const s=mk('select','border:0;border-bottom:2px solid #009688;font-size:13px;background:transparent');opts.forEach(([v,l])=>{const o=mk('option');o.value=v;o.textContent=l;if(v===val)o.selected=true;s.appendChild(o)});s.onchange=()=>fn(s.value);return s};
+   const nb={name:'',ic:'',act:'qs',target:''};
+   const draw=()=>{
+    b.innerHTML='';
+    b.append(UI.section('ナビバーアイコン（URL入力）'));
+    BT.forEach(id=>{const w=mk('span','display:flex;gap:8px;align-items:center');
+     w.append(inp(C.icons[id],'アイコンURL（空欄で標準）',v=>{if(v)C.icons[id]=v;else delete C.icons[id];sv()},170),
+      UI.button('選択',async()=>{const r=await L.pickFile({accept:['image/*']});if(r&&r[0]){C.icons[id]=await L.readFile(r[0].blob);sv();draw()}},true));
+     b.append(UI.row(NAMES[id],null,w))});
+    b.append(UI.section('レイアウト・間隔'));
+    b.append(UI.slider('ボタン間隔',0,160,C.gap,v=>{C.gap=v;sv()},4),UI.slider('バーの高さ',36,80,C.h,v=>{C.h=v;sv()}),
+     UI.row('配置',null,sel([['left','左'],['center','中央'],['right','右']],C.align,v=>{C.align=v;sv()})));
+    b.append(UI.section('ボタンの並び順'));
+    C.order.forEach((id,i)=>{const e=C.extra.find(x=>x.id===id),w=mk('span','display:flex;gap:12px');
+     [['arrow_back',-1],['arrow_forward',1]].forEach(([ic,d])=>{const s=mk('span','cursor:pointer');s.className='material-symbols-outlined';s.textContent=ic;s.onclick=()=>{const j=i+d;if(j<0||j>=C.order.length)return;[C.order[i],C.order[j]]=[C.order[j],C.order[i]];sv();draw()};w.append(s)});
+     if(e){const s=mk('span','cursor:pointer;color:#e53935');s.className='material-symbols-outlined';s.textContent='delete';s.onclick=()=>{C.extra=C.extra.filter(x=>x!==e);C.order=C.order.filter(x=>x!==id);sv();draw()};w.append(s)}
+     b.append(UI.row((i+1)+'. '+(e?e.name:NAMES[id]),null,w))});
+    b.append(UI.section('ボタンを追加'));
+    b.append(UI.row('名前',null,inp(nb.name,'例: 通知',v=>nb.name=v,160)),UI.row('アイコン',null,inp(nb.ic,'シンボル名 または 画像URL',v=>nb.ic=v,200)),
+     UI.row('動作',null,sel([['qs','通知パネル'],['home','ホーム'],['back','戻る'],['recents','履歴'],['drawer','ドロワー'],['app','アプリを起動']],nb.act,v=>{nb.act=v;draw()})));
+    if(nb.act==='app')b.append(UI.row('アプリ',null,sel(allApps().map(a=>[a.id,a.name]),nb.target||allApps()[0].id,v=>nb.target=v)));
+    const w=mk('div','padding:12px 16px');
+    w.append(UI.button('追加',()=>{
+     const e={id:'x'+Date.now(),name:nb.name||'Button',act:nb.act,target:nb.target||allApps()[0].id};
+     if(/^(https?:|data:)/.test(nb.ic))e.url=nb.ic;else e.sym=nb.ic||'circle';
+     C.extra.push(e);C.order.push(e.id);nb.name='';nb.ic='';sv();draw();L.toast('ボタンを追加しました')}));
+    b.append(w);
+   };
+   draw();
+  }});
+ })},
+ {id:'ff7',name:'Freeform Window (Android 7)',desc:'アプリをフローティングウィンドウ化。履歴画面の上段にウィンドウ一覧を表示',enabled:true,code:M(L=>{
+  const wins=[];let zc=0,cn=0;
+  const mk=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
+  L.addCSS(`.ffw{position:fixed;z-index:4500;display:flex;flex-direction:column;background:#fff;box-shadow:0 8px 28px rgba(0,0,0,.55);overflow:hidden;min-width:220px;min-height:160px}
+.ffw .h{height:32px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 4px 0 8px;color:#fff;font-size:12px;font-weight:500;touch-action:none;cursor:move}
+.ffw .h .ic{display:flex;--icon:20px}.ffw .h .t{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ffw .h .material-symbols-outlined{font-size:18px;cursor:pointer;padding:4px}
+.ffw .b{flex:1;position:relative;display:flex;flex-direction:column;min-height:0;background:#fafafa;color:#212121}
+.ffw iframe{flex:1;border:0;width:100%;background:#fff}
+.ffw .rz{position:absolute;right:0;bottom:0;width:24px;height:24px;touch-action:none;cursor:nwse-resize;z-index:3}
+.ffw .sh{position:absolute;left:0;right:0;top:32px;bottom:0;z-index:2;display:none}.ffw:not(.top) .sh{display:block}`);
+  const front=w=>{w.el.style.zIndex=4500+(++zc%400);wins.forEach(x=>x.el.classList.toggle('top',x===w))};
+  const close=w=>{w.el.remove();const i=wins.indexOf(w);if(i>=0)wins.splice(i,1)};
+  const maxi=w=>{const id=w.id;close(w);launch(id)};
+  function wire(w){
+   const e=w.el,h=e.querySelector('.h'),rz=e.querySelector('.rz');let d=null,s=null;
+   e.addEventListener('pointerdown',()=>front(w),true);
+   h.onpointerdown=ev=>{if(ev.target.dataset.a)return;h.setPointerCapture(ev.pointerId);const r=e.getBoundingClientRect();d={x:ev.clientX-r.left,y:ev.clientY-r.top}};
+   h.onpointermove=ev=>{if(!d)return;e.style.left=Math.min(Math.max(ev.clientX-d.x,80-e.offsetWidth),innerWidth-80)+'px';e.style.top=Math.min(Math.max(ev.clientY-d.y,24),innerHeight-60)+'px'};
+   h.onpointerup=()=>d=null;
+   h.onclick=ev=>{const a=ev.target.dataset.a;if(a==='x')close(w);if(a==='max')maxi(w)};
+   rz.onpointerdown=ev=>{rz.setPointerCapture(ev.pointerId);const r=e.getBoundingClientRect();s={w:r.width-ev.clientX,h:r.height-ev.clientY}};
+   rz.onpointermove=ev=>{if(!s)return;e.style.width=Math.max(220,ev.clientX+s.w)+'px';e.style.height=Math.max(160,ev.clientY+s.h)+'px'};
+   rz.onpointerup=()=>s=null;
+  }
+  function open(id){
+   const a=find(id);if(!a)return;
+   let w=wins.find(x=>x.id===id);if(w){front(w);return w}
+   const e=mk('div','ffw'),i=cn++%5,W=Math.min(Math.round(innerWidth*.6),460),H=Math.min(Math.round(innerHeight*.58),300);
+   e.style.cssText=`left:${40+i*28}px;top:${40+i*28}px;width:${W}px;height:${H}px`;
+   e.innerHTML=`<div class="h" style="background:${a.bar||a.color||'#37474f'}"><span class="ic">${ico(a)}</span><span class="t"></span><span class="material-symbols-outlined" data-a="max" title="全画面">crop_square</span><span class="material-symbols-outlined" data-a="x" title="閉じる">close</span></div><div class="b"></div><div class="rz"></div><div class="sh"></div>`;
+   e.querySelector('.t').textContent=a.name;
+   const body=e.querySelector('.b');
+   if(a.type==='sys')a.open(body,a);
+   else{const f=mk('iframe');body.appendChild(f);if(a.type==='html')f.srcdoc=a.html;else f.src=a.type==='url'?a.url:BASE+a.url;emit('frame',{iframe:f,app:a})}
+   document.body.appendChild(e);
+   w={id,el:e};wins.push(w);tasks=tasks.filter(t=>t!==id);front(w);wire(w);return w;
+  }
+  L.recents.addAction({icon:'picture_in_picture_alt',title:'フローティング',fn:id=>{const top=isAppOpen&&tasks[0]===id;open(id);closeRecents();if(top)handleHome()}});
+  L.appMenu.add({label:'フローティングで開く',icon:'picture_in_picture_alt',fn:a=>open(a.id)});
+  L.recents.addSection(c=>{
+   if(!wins.length)return false;
+   const row=mk('div','r-row');row.onwheel=e=>{row.scrollLeft+=e.deltaY};
+   wins.forEach(w=>{
+    const a=find(w.id),card=mk('div','r-fcard');
+    card.innerHTML=`<div class="r-fh" style="background:${a.bar||a.color||'#37474f'}"><span class="ic">${ico(a)}</span><span class="t"></span><span class="material-symbols-outlined" data-a="max">fullscreen</span><span class="material-symbols-outlined" data-a="x">close</span></div><div class="r-fb"><span class="ic">${ico(a)}</span></div>`;
+    card.querySelector('.t').textContent=a.name;
+    card.onclick=e=>{const k=e.target.dataset.a;if(k==='x'){close(w);renderRecents();return}if(k==='max'){maxi(w);return}front(w);closeRecents()};
+    row.appendChild(card)});
+   c.appendChild(row);
+  });
+  L.onUnload(()=>wins.slice().forEach(close));
+ })},
+ {id:'fontmgr',name:'Font Manager (GUI)',desc:'/system/fonts の ttf を適用（同一オリジンの iframe アプリにも反映）',enabled:true,code:M(L=>{
+  let cur=null,css='',sty=null;
+  const EXT=/\.(ttf|otf|woff2?)$/i;
+  const fcss=d=>"@font-face{font-family:'HTMLOSFont';src:url("+d+")}*:not([class*='material']){font-family:'HTMLOSFont',Roboto,Arial,sans-serif!important}";
+  const inject=f=>{try{const a=f._fa;if(a&&a.type==='url')return;const d=f.contentDocument;if(!d||!d.head)return;let s=d.getElementById('htmlos-font');
+   if(!css){if(s)s.remove();return}if(!s){s=d.createElement('style');s.id='htmlos-font';d.head.appendChild(s)}s.textContent=css}catch(e){}};
+  const applyAll=()=>{if(sty){sty.remove();sty=null}if(css)sty=L.addCSS(css);inject(L.window.frame())};
+  const setFont=async p=>{
+   if(!p){css='';cur=null}else{const b=await L.fs.read(p);if(!b){L.toast('読み込めません');return}css=fcss(await L.readFile(b));cur=p}
+   L.store.set('font',cur);applyAll();
+  };
+  L.store.get('font').then(p=>{if(p)setFont(p)});
+  L.on('frame',({iframe,app})=>{iframe._fa=app;if(!iframe._fm){iframe._fm=1;iframe.addEventListener('load',()=>inject(iframe))}});
+  L.onUnload(()=>{css='';inject(L.window.frame())});
+  L.app({name:'Font Manager',sym:'font_download',color:'#6a1b9a',open(root,UI){
+   const t=UI.topbar(root,'Font Manager',{color:'#6a1b9a',nav:'back',menu:[{t:'更新',fn:()=>draw()}]});
+   const b=t.body;let sel=cur;
+   const draw=()=>{
+    b.innerHTML='';b.append(UI.section('/system/fonts'));
+    const fonts=L.fs.ls('/system/fonts').filter(p=>EXT.test(p)).sort();
+    if(!fonts.length)b.append(UI.row('フォントがありません','ファイルアプリで /system/fonts に ttf を置いてください'));
+    fonts.forEach(p=>{
+     const r=UI.row(L.fs.base(p),cur===p?'適用中':null,'<span class="material-symbols-outlined" style="color:'+(sel===p?'#6a1b9a':'#9e9e9e')+'">'+(sel===p?'radio_button_checked':'radio_button_unchecked')+'</span>');
+     r.style.cursor='pointer';r.onclick=()=>{sel=p;draw()};b.append(r)});
+    const w=document.createElement('div');w.style.cssText='padding:16px;display:flex;gap:10px';
+    w.append(UI.button('適用',async()=>{if(!sel)return L.toast('フォントを選択してください');await setFont(sel);L.toast('フォントを適用しました');draw()}),
+     UI.button('標準に戻す',async()=>{sel=null;await setFont(null);draw()},true));
+    b.append(w,UI.row('現在のフォント',cur?L.fs.base(cur):'標準'));
+   };
+   draw();
+  }});
+ })},
+ {id:'nbar',name:'Black Nav Bar',desc:'ナビバーを常に黒にする',enabled:false,code:M(L=>{L.addCSS('#nav-bar{background:#000!important}')})},
+ {id:'round',name:'Round Icons',desc:'アイコンを円形にする',enabled:false,code:M(L=>{L.addCSS('.ic img,.ic .sym-ico{border-radius:50%!important}')})},
+ {id:'night',name:'Night Light Tile',desc:'QSにタイルを追加',enabled:false,code:M(L=>{L.addQSTile({id:'night',label:'ナイトライト',icon:'bedtime',on:false,onToggle:s=>{document.getElementById('launcher').style.filter=s?'sepia(.55)':''}})})},
+ {id:'qsdark',name:'QS Theme: Material Dark',desc:'QSのテーマ変更 (QS API)',enabled:false,code:M(L=>{L.qs.setTheme({bg:'#101418',on:'#80cbc4',off:'#546e7a',tileBg:'rgba(255,255,255,.05)',tileR:'8px',r:'6px',notif:'#eceff1',cols:3})})},
+ {id:'navleft',name:'Nav Layout: Left + Screenshot',desc:'ナビバーを左寄せ＋ボタン追加 (Nav API)',enabled:false,code:M(L=>{L.nav.configure({align:'left',gap:40});L.nav.addButton({id:'ss',icon:'screenshot',onClick:()=>L.toast('スクリーンショットを保存しました')})})},
+ {id:'hello',name:'Hello Module',desc:'UIを持つモジュール（ドロワーにアプリとして追加）',enabled:false,code:M(L=>{
+  L.app({name:'Hello Module',sym:'extension',color:'#3f51b5',open(root,UI){
+   const t=UI.topbar(root,'Hello Module',{color:'#3f51b5',menu:[{t:'About',fn:()=>L.toast('Hello Module v1')}]});
+   t.body.append(UI.section('Material 1 toolkit'),UI.toggle('Sample toggle','UI.toggle()',true,v=>L.toast('toggle: '+v)),UI.slider('Slider',0,100,40,v=>L.log('slider '+v)));
+   const w=document.createElement('div');w.style.padding='16px';w.appendChild(UI.button('Dialog',()=>UI.dialog('Hello','Material 1 dialog',[['OK']])));t.body.appendChild(w)}})})}
+];
+const DEFTILES=['wifi','bt','nfc','rot','dnd','air','loc','cast','usb'];
+let S={...DEF},homeApps=['market.html','clock.html','pwadroid','dui'],custom=[],exts=JSON.parse(JSON.stringify(DEFEXT)),tilesOn=[...DEFTILES],tileSt={},users=[{n:'オーナー',g:0}],cu=0,bright=80,extApps=[],tasks=[],isAppOpen=false,xpOn=true,xlog=[];
+const KV={db:null,init(){return new Promise(r=>{try{const q=indexedDB.open('HTMLOS_v2',1);q.onupgradeneeded=e=>e.target.result.createObjectStore('kv');q.onsuccess=e=>{this.db=e.target.result;r()};q.onerror=()=>r()}catch(e){r()}})},
+ get(k){return new Promise(r=>{if(!this.db)return r();try{const q=this.db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r()}catch(e){r()}})},
+ set(k,v){if(!this.db)return;try{this.db.transaction('kv','readwrite').objectStore('kv').put(v,k)}catch(e){}},
+ del(k){if(!this.db)return;try{this.db.transaction('kv','readwrite').objectStore('kv').delete(k)}catch(e){}}};
+const save=()=>KV.set('state',{S,homeApps,custom,exts,tilesOn,tileSt,users,cu,bright,xpOn});
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2000)};
+
+/* ---------- apps ---------- */
+const allApps=()=>[...SYS,...custom,...extApps];
+const find=id=>allApps().find(a=>a.id===id);
+function ico(a){
+ if(/^(data:|https?:)/.test(a.icon||''))return `<img src="${a.icon}">`;
+ if(a.sym)return `<div class="sym-ico" style="background:${a.color||'#607d8b'}"><span class="material-symbols-outlined">${a.sym}</span></div>`;
+ return `<img src="${ICON+a.icon}" onerror="this.src='https://placehold.co/48x48/009688/fff?text=App'">`;
+}
+function renderApps(){
+ const dock=$('#dock'),grid=$('#app-grid');dock.innerHTML='';grid.innerHTML='';
+ dockIds().forEach(id=>{const a=find(id);const d=el('div','dock-icon ic');d.title=a.name;d.innerHTML=ico(a);d.onclick=()=>launch(a.id);dock.appendChild(d)});
+ allApps().forEach(a=>{
+  const d=el('div','app-item');d.dataset.name=a.name.toLowerCase();
+  d.innerHTML=`<div class="ic">${ico(a)}</div><span class="lbl">${a.name}</span>`;
+  d.onclick=()=>{if(d._lp){d._lp=false;return}closeDrawer();launch(a.id)};
+  longPress(d,()=>{d._lp=true;appMenu(a)});
+  grid.appendChild(d);
+ });
+ renderHome();
+}
+function longPress(e,cb){let t;const s=()=>{t=setTimeout(cb,500)},c=()=>clearTimeout(t);
+ e.addEventListener('mousedown',s);e.addEventListener('touchstart',s,{passive:true});
+ ['mouseup','mouseleave','touchend','touchcancel','touchmove'].forEach(n=>e.addEventListener(n,c))}
+function appMenu(a){
+ const b=el('div'),isC=custom.includes(a);
+ b.innerHTML=`<label data-k="home"><span class="material-symbols-outlined">add_to_home_screen</span>ホーム画面に追加</label>`+(isC?`<label data-k="del"><span class="material-symbols-outlined">delete</span>アンインストール</label>`:'');
+ const o=dlg(a.name,b,[['閉じる']]);
+ b.querySelector('[data-k=home]').onclick=()=>{addToHome(a.id);o.remove();closeDrawer()};
+ if(isC)b.querySelector('[data-k=del]').onclick=()=>{custom=custom.filter(x=>x!==a);homeApps=homeApps.filter(i=>i.id!==a.id);renderApps();save();o.remove()};
+ MX.items.forEach(m=>{const l=el('label');l.innerHTML=`<span class="material-symbols-outlined">${m.icon||'apps'}</span>${esc(m.label)}`;l.onclick=()=>{o.remove();closeDrawer();m.fn(a)};b.appendChild(l)});
+}
+function filterApps(){const q=$('#app-search').value.toLowerCase();$$('.app-item').forEach(i=>i.style.display=i.dataset.name.includes(q)?'flex':'none')}
+function openDrawer(){$('#app-drawer').classList.add('active');$('#app-search').value='';filterApps()}
+function closeDrawer(){$('#app-drawer').classList.remove('active')}
+
+/* ---------- home: pages + free placement (cols x rows grid) ---------- */
+let curPage=0,swiped=false;
+const pgCount=()=>Math.max(1,...homeApps.map(h=>h.p+1));
+function addToHome(id){
+ const used=new Set(homeApps.map(h=>h.p+','+h.c+','+h.r));
+ for(let p=curPage;;p++)for(let r=0;r<S.rows;r++)for(let c=0;c<S.cols;c++)if(!used.has(p+','+c+','+r)){homeApps.push({id,p,c,r});renderHome();save();return}
+}
+function relayoutHome(){
+ const per=S.cols*S.rows,L=[...homeApps].sort((a,b)=>a.p-b.p||a.r-b.r||a.c-b.c);
+ homeApps=L.map((h,i)=>({id:h.id,p:Math.floor(i/per),c:i%S.cols,r:Math.floor(i/S.cols)%S.rows}));save();
+}
+function clampHome(){if(homeApps.some(h=>h.c>=S.cols||h.r>=S.rows))relayoutHome();renderHome()}
+function renderHome(){
+ homeApps=homeApps.filter(h=>find(h.id));
+ const track=$('#home-track'),n=Math.max(pgCount(),curPage+1);
+ track.innerHTML='';track.style.width=n*100+'%';
+ for(let p=0;p<n;p++){
+  const pg=el('div','home-page');pg.style.width=(100/n)+'%';
+  homeApps.filter(h=>h.p===p).forEach(h=>{
+   const a=find(h.id),d=el('div','home-icon-item');d.style.gridColumn=h.c+1;d.style.gridRow=h.r+1;
+   d.innerHTML=`<div class="ic">${ico(a)}</div><span class="lbl">${esc(a.name)}</span>`;d._h=h;
+   d.onclick=()=>{if(swiped)return;launch(h.id)};pg.appendChild(d)});
+  track.appendChild(pg)}
+ $('#page-dots').innerHTML=n>1?Array.from({length:n},()=>'<i></i>').join(''):'';
+ goPage(Math.min(curPage,n-1),false);
+}
+function goPage(i,anim=true){
+ const t=$('#home-track'),n=t.children.length;curPage=Math.max(0,Math.min(i,n-1));
+ t.style.transition=anim?'transform .25s cubic-bezier(0,0,.2,1)':'none';
+ t.style.transform=`translateX(${-curPage*100/n}%)`;
+ $$('#page-dots i').forEach((d,j)=>d.classList.toggle('on',j===curPage));
+}
+function stepPage(d){
+ const n=$('#home-track').children.length;
+ if(d>0&&curPage>=n-1){curPage++;renderHome()}else goPage(curPage+d);
+}
+function initPager(){
+ const pg=$('#home-pager'),dz=$('#delete-zone'),gh=$('#drag-ghost');let st=null,edgeT=null;
+ const hit=(r,x,y)=>x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;
+ pg.addEventListener('pointerdown',e=>{
+  if(e.button>0)return;const item=e.target.closest('.home-icon-item');
+  st={x:e.clientX,y:e.clientY,cx:e.clientX,cy:e.clientY,item,mode:null};
+  if(item)st.t=setTimeout(()=>{if(st&&!st.mode){st.mode='drag';swiped=true;item.classList.add('dragging');dz.classList.add('active');
+   gh.innerHTML=item.querySelector('.ic').innerHTML;gh.style.display='flex';gh.style.left=st.cx+'px';gh.style.top=st.cy+'px'}},400);
+ });
+ window.addEventListener('pointermove',e=>{
+  if(!st)return;st.cx=e.clientX;st.cy=e.clientY;const dx=e.clientX-st.x,dy=e.clientY-st.y;
+  if(!st.mode&&(Math.abs(dx)>10||Math.abs(dy)>10)){clearTimeout(st.t);st.mode=Math.abs(dx)>Math.abs(dy)?'swipe':'none';if(st.mode==='swipe')swiped=true}
+  if(st.mode==='swipe'){const t=$('#home-track'),w=pg.clientWidth,n=t.children.length;t.style.transition='none';
+   t.style.transform=`translateX(${Math.max(Math.min(-curPage*w+dx,w*.25),-(n-1)*w-w*.25)}px)`}
+  if(st.mode==='drag'){gh.style.left=e.clientX+'px';gh.style.top=e.clientY+'px';dz.classList.toggle('hover',hit(dz.getBoundingClientRect(),e.clientX,e.clientY));
+   const r=pg.getBoundingClientRect(),edge=e.clientX<r.left+28?-1:e.clientX>r.right-28?1:0;
+   if(edge&&!edgeT)edgeT=setTimeout(()=>{edgeT=null;stepPage(edge)},600);else if(!edge&&edgeT){clearTimeout(edgeT);edgeT=null}}
+ });
+ const end=e=>{
+  if(!st)return;const s=st;st=null;clearTimeout(s.t);clearTimeout(edgeT);edgeT=null;
+  const inDz=s.mode==='drag'&&hit(dz.getBoundingClientRect(),e.clientX,e.clientY);
+  dz.classList.remove('active','hover');gh.style.display='none';
+  if(s.mode==='swipe'){const dx=e.clientX-s.x;goPage(Math.abs(dx)>50?curPage+(dx<0?1:-1):curPage)}
+  if(s.mode==='drag'){
+   const h=s.item._h;
+   if(inDz)homeApps=homeApps.filter(i=>i!==h);
+   else{const r=pg.getBoundingClientRect(),cw=(r.width-32)/S.cols,ch=r.height/S.rows;
+    const c=Math.max(0,Math.min(S.cols-1,Math.floor((e.clientX-r.left-16)/cw))),rr=Math.max(0,Math.min(S.rows-1,Math.floor((e.clientY-r.top)/ch)));
+    const o=homeApps.find(i=>i!==h&&i.p===curPage&&i.c===c&&i.r===rr);
+    if(o){o.p=h.p;o.c=h.c;o.r=h.r}
+    h.p=curPage;h.c=c;h.r=rr}
+   save();renderHome()}
+  setTimeout(()=>swiped=false,80);
+ };
+ window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+}
+
+/* ---------- recents (card stack + extension sections/actions) ---------- */
+const RX={actions:[],sections:[]},MX={items:[]};
+function renderRecents(){
+ const rv=$('#recents-view'),ext=$('#recents-ext'),s=$('#recents-stack');ext.innerHTML='';s.innerHTML='';
+ let has=false;
+ RX.sections.forEach(x=>{const c=el('div');let ok=false;try{ok=x.fn(c)!==false}catch(e){}if(ok){ext.appendChild(c);has=true}});
+ rv.classList.toggle('has-ext',has);tasks=tasks.filter(find);
+ if(!tasks.length){if(!has)s.innerHTML='<div class="recents-empty">最近使用したアプリはありません</div>';return}
+ tasks.forEach((id,i)=>{
+  const a=find(id),c=el('div','r-card');
+  c.style.cssText=`transform:translateY(${i*-30}px) scale(${1-i*.05});z-index:${100-i};opacity:${Math.max(1-i*.15,.3)}`;
+  c.innerHTML=`<div class="r-head" style="background:${a.bar||a.color||'#37474f'}"><div><span class="ic">${ico(a)}</span>${esc(a.name)}</div><span style="display:flex;gap:10px;align-items:center">${RX.actions.map((x,j)=>`<span class="material-symbols-outlined" data-x="${j}" title="${esc(x.title||'')}" style="font-size:18px;cursor:pointer">${x.icon}</span>`).join('')}<span class="material-symbols-outlined" data-c="1" style="font-size:18px;cursor:pointer">close</span></span></div><div class="r-body"><span class="material-symbols-outlined" style="font-size:48px">web_asset</span></div>`;
+  c.onclick=()=>launch(id);
+  c.querySelectorAll('[data-x]').forEach(b=>b.onclick=e=>{e.stopPropagation();RX.actions[+b.dataset.x].fn(id)});
+  c.querySelector('[data-c]').onclick=e=>{e.stopPropagation();tasks=tasks.filter(t=>t!==id);if(isAppOpen&&!tasks.length)handleHome();else renderRecents()};
+  s.appendChild(c)});
+}
+
+/* ---------- launch / nav ---------- */
+function launch(id){
+ const a=find(id);if(!a)return;sysBackFn=null;if(pendingOpen&&pendingOpen.appId!==id)pendingOpen=null;
+ const fr=$('#app-frame'),sv=$('#sys-view'),box=$('#app-frame-container'),sb=$('#status-bar');
+ $('#ff-t').textContent=a.name;
+ if(a.type==='sys'){fr.style.display='none';fr.removeAttribute('srcdoc');fr.src='about:blank';sv.style.cssText='display:flex';sv.innerHTML='';a.open(sv,a)}
+ else{sv.style.display='none';sv.innerHTML='';fr.style.display='block';
+  WIN.sandbox!=null?fr.setAttribute('sandbox',WIN.sandbox):fr.removeAttribute('sandbox');WIN.allow?fr.setAttribute('allow',WIN.allow):fr.removeAttribute('allow');
+  if(a.type==='html'){fr.srcdoc=a.html}else{fr.removeAttribute('srcdoc');fr.src=a.type==='url'?a.url:BASE+a.url}
+  fr.onload=()=>sendOpen();emit('frame',{iframe:fr,app:a})}
+ sb.style.backgroundColor=a.bar||a.color||'#000';$('#nav-bar').classList.add('app-active');
+ box.classList.remove('out');box.style.display='block';box.classList.add('in');
+ isAppOpen=true;tasks=tasks.filter(t=>t!==id);tasks.unshift(id);closeRecents();closeQS();closeDrawer();emit('launch',a);
+}
+function handleHome(){
+ closeQS();closeRecents();closeDrawer();pendingOpen=null;
+ const box=$('#app-frame-container');
+ if(isAppOpen){box.classList.remove('in');box.classList.add('out');
+  setTimeout(()=>{if(isAppOpen)return;box.style.display='none';box.classList.remove('out');$('#app-frame').removeAttribute('srcdoc');$('#app-frame').src='about:blank';$('#sys-view').innerHTML=''},290)}
+ $('#status-bar').style.backgroundColor='';$('#nav-bar').classList.remove('app-active');isAppOpen=false;emit('home');
+}
+function handleBack(){
+ const po=$('.dui-ov');if(po&&po._cancel){po._cancel();return}
+ if($('#qs-overlay').classList.contains('active'))return closeQS();
+ if($('#recents-view').classList.contains('active'))return closeRecents();
+ if($('#app-drawer').classList.contains('active'))return closeDrawer();
+
+ if(isAppOpen&&sysBackFn&&sysBackFn())return;
+ if(isAppOpen)handleHome();
+}
+function handleTask(){const r=$('#recents-view');if(r.classList.contains('active'))return closeRecents();renderRecents();r.classList.add('active')}
+function closeRecents(){$('#recents-view').classList.remove('active')}
+/* ---------- Quick settings (Nougat tablet) ---------- */
+const TILES={
+ wifi:{label:'Wi-Fi',icon:'wifi',on:true},bt:{label:'Bluetooth',icon:'bluetooth',on:false},nfc:{label:'NFC',icon:'nfc',on:false},
+ rot:{label:'自動回転',icon:'screen_rotation',on:true},dnd:{label:'通知の割り込み制限',icon:'do_not_disturb_on',on:false},air:{label:'機内モード',icon:'flight',on:false},
+ loc:{label:'位置情報',icon:'location_on',on:true},cast:{label:'キャスト',icon:'cast',on:false},usb:{label:'USB機器を検出',icon:'usb',on:true},
+ flash:{label:'フラッシュライト',icon:'flashlight_on',on:false},hot:{label:'テザリング',icon:'wifi_tethering',on:false},batt:{label:'バッテリーセーバー',icon:'battery_saver',on:false}
+};
+let editing=false;
+const tOn=id=>tileSt[id]!==undefined?tileSt[id]:TILES[id].on;
+function renderQS(){
+ const g=$('#qs-grid');g.innerHTML='';
+ tilesOn.filter(i=>TILES[i]).forEach(id=>{const t=TILES[id],d=el('div','qs-tile'+(tOn(id)?' on':''));
+  d.innerHTML=`<span class="material-symbols-outlined">${t.icon}</span><span>${t.label}</span>${editing?'<b class="rm">−</b>':''}`;
+  d.onclick=()=>{if(editing){tilesOn=tilesOn.filter(x=>x!==id)}else{tileSt[id]=!tOn(id);t.onToggle&&t.onToggle(tileSt[id])}save();renderQS()};g.appendChild(d)});
+ const av=$('#qs-avail');av.classList.toggle('show',editing);
+ if(editing){const rest=Object.keys(TILES).filter(i=>!tilesOn.includes(i));
+  av.innerHTML=`ドラッグ代わりにタップして追加<div class="chips">${rest.map(i=>`<span class="chip" data-i="${i}">＋ ${TILES[i].label}</span>`).join('')||'（追加できるツールはありません）'}</div><span class="qs-reset">リセット</span>`;
+  av.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{tilesOn.push(c.dataset.i);save();renderQS()});
+  av.querySelector('.qs-reset').onclick=()=>{tilesOn=[...DEFTILES];tileSt={};save();renderQS()}}
+}
+function toggleEdit(){editing=!editing;$('#qs-top').classList.remove('collapsed');renderQS()}
+function toggleUsers(){
+ const u=$('#qs-users');u.classList.toggle('show');
+ u.innerHTML=users.map((x,i)=>`<div class="${i===cu?'cur':''}" data-u="${i}"><span class="material-symbols-outlined">${x.g?'person_outline':'account_circle'}</span>${x.n}</div>`).join('')+
+  (users.some(x=>x.g)?'<div data-a="rm">ゲストを削除</div>':'<div data-a="add">ゲストを追加</div>')+'<div data-a="set">詳細設定</div>';
+ u.querySelectorAll('[data-u]').forEach(d=>d.onclick=()=>{cu=+d.dataset.u;save();toast(users[cu].n+' に切り替えました');u.classList.remove('show')});
+ u.querySelectorAll('[data-a]').forEach(d=>d.onclick=()=>{const a=d.dataset.a;
+  if(a==='add')users.push({n:'ゲスト',g:1});if(a==='rm'){users=users.filter(x=>!x.g);cu=0}
+  if(a==='set'){launch('setting.html');closeQS();return}save();u.classList.remove('show')});
+}
+function openQS(){$('#qs-overlay').classList.add('active');renderQS()}
+function closeQS(){$('#qs-overlay').classList.remove('active');$('#qs-users').classList.remove('show');editing=false}
+$('#bright').oninput=e=>{bright=+e.target.value;applyBright();save()};
+const applyBright=()=>{$('#dim').style.opacity=((100-bright)/100*.75).toFixed(2);$('#bright').value=bright};
+function clock(){const n=new Date(),p=v=>String(v).padStart(2,'0'),w='日月火水木金土'[n.getDay()];
+ $('#clock').textContent=p(n.getHours())+':'+p(n.getMinutes());
+ $('#qs-time').textContent=`${n.getHours()}:${p(n.getMinutes())}・${n.getMonth()+1}月${n.getDate()}日(${w})`;
+ $('#shot').textContent=n.getHours()+':'+p(n.getMinutes())}
+setInterval(clock,1000);
+
+/* ---------- dialog / add-app wizard ---------- */
+function dlg(title,body,btns){
+ const o=el('div','dlg-o');o.innerHTML=`<div class="dlg"><h3>${title}</h3><div class="dlg-b"></div><div class="dlg-a"></div></div>`;
+ const b=o.querySelector('.dlg-b');typeof body==='string'?b.innerHTML=body:b.appendChild(body);
+ btns.forEach(([t,f])=>{const x=el('button');x.textContent=t;x.onclick=()=>{if(f&&f(o)===false)return;o.remove()};o.querySelector('.dlg-a').appendChild(x)});
+ o.onclick=e=>{if(e.target===o)o.remove()};document.body.appendChild(o);return o}
+const readF=(f,as)=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);as==='text'?fr.readAsText(f):fr.readAsDataURL(f)});
+const PRESETS=['apps','public','sports_esports','music_note','movie','photo_camera','calculate','edit_note','language','rocket_launch'];
+function addWizard(){
+ const d={kind:'html',html:'',url:'',icon:null,sym:'apps',color:'#009688',name:''};let step=0;
+ const body=el('div'),o=dlg('アプリを追加',body,[]);
+ const draw=()=>{
+  let h='';
+  if(step===0)h=`<b>① アプリの種類</b><label><input type="radio" name="k" value="html" ${d.kind==='html'?'checked':''}>HTMLファイルを選択</label><label><input type="radio" name="k" value="url" ${d.kind==='url'?'checked':''}>iframe URL を指定</label>`+
+   (d.kind==='html'?`<input type="file" id="wf" accept=".html,.htm"><div style="font-size:12px;color:#757575">${d.html?'読み込み済み ('+d.html.length+' 文字)':''}</div>`:`<input type="url" id="wu" placeholder="https://example.com/app.html" value="${d.url}">`);
+  if(step===1)h=`<b>② アイコン</b><div style="margin:8px 0"><input type="file" id="wi" accept="image/*"> ${d.icon?'<span style="font-size:12px;color:#009688">画像選択済み</span>':''}</div><div style="font-size:12px;color:#757575">または内蔵アイコン</div><div class="pick">${PRESETS.map(s=>`<div data-s="${s}" class="${!d.icon&&d.sym===s?'sel':''}"><span class="material-symbols-outlined">${s}</span></div>`).join('')}</div><label>背景色 <input type="color" id="wc" value="${d.color}"></label>`;
+  if(step===2)h=`<b>③ アプリ名</b><input type="text" id="wn" placeholder="アプリ名" value="${d.name}"><div style="display:flex;justify-content:center;margin-top:10px"><div class="ic" style="display:flex;flex-direction:column;align-items:center;color:#212121">${ico(d)}<span style="font-size:12px;margin-top:4px">${d.name||'アプリ名'}</span></div></div>`;
+  body.innerHTML=h+`<div class="wz-n"><button id="wx">キャンセル</button>${step?'<button id="wb">戻る</button>':''}<button id="wnx">${step===2?'追加':'次へ'}</button></div>`;
+  body.querySelectorAll('[name=k]').forEach(r=>r.onchange=()=>{d.kind=r.value;draw()});
+  const wf=body.querySelector('#wf');if(wf)wf.onchange=async()=>{const f=wf.files[0];if(!f)return;d.html=await readF(f,'text');d.name=d.name||f.name.replace(/\.html?$/i,'');draw()};
+  const wi=body.querySelector('#wi');if(wi)wi.onchange=async()=>{const f=wi.files[0];if(f){d.icon=await readF(f);draw()}};
+  body.querySelectorAll('[data-s]').forEach(p=>p.onclick=()=>{d.sym=p.dataset.s;d.icon=null;draw()});
+  const wc=body.querySelector('#wc');if(wc)wc.oninput=()=>d.color=wc.value;
+  body.querySelector('#wx').onclick=()=>o.remove();
+  const wb=body.querySelector('#wb');if(wb)wb.onclick=()=>{step--;draw()};
+  body.querySelector('#wnx').onclick=()=>{
+   if(step===0){if(d.kind==='url')d.url=(body.querySelector('#wu').value||'').trim();if(d.kind==='html'?!d.html:!/^https?:\/\//.test(d.url))return toast(d.kind==='html'?'HTMLファイルを選択してください':'http(s)のURLを入力してください')}
+   if(step===2){d.name=body.querySelector('#wn').value.trim()||'App';
+    const a={id:'c'+Date.now(),name:d.name,type:d.kind,color:d.color,icon:d.icon||undefined,sym:d.icon?undefined:d.sym};
+    if(d.kind==='html'){a.html=d.html;const mt=d.html.match(/<meta[^>]*htmlos:handles[^>]*>/i),cm=mt&&mt[0].match(/content=["']([^"']*)/i);if(cm)a.handles=cm[1].split(',').map(x=>x.trim()).filter(Boolean)}else a.url=d.url;
+    custom.push(a);renderApps();save();o.remove();return toast(d.name+' をドロワーに追加しました')}
+   if(step===2-0)return;step++;draw()};
+  const wn=body.querySelector('#wn');if(wn)wn.oninput=()=>d.name=wn.value;
+ };
+ draw();
+}
+
+/* ---------- PWADROID (UI customizer, Material 1) ---------- */
+function apply(){
+ const r=document.documentElement.style;
+ r.setProperty('--accent',S.accent);r.setProperty('--icon',S.icon+'px');r.setProperty('--cols',S.cols);r.setProperty('--rows',S.rows);{const h=(S.dockColor||'#000000').replace('#','');r.setProperty('--dock-bg','rgba('+[0,2,4].map(i=>parseInt(h.substr(i,2),16)||0).join(',')+','+S.dock/100+')')}
+ r.setProperty('--qsw',S.qsw+'px');r.setProperty('--fs',S.fs);r.setProperty('--ir',S.shape);
+ document.body.classList.toggle('nolabel',!S.labels);
+ $('#launcher').style.backgroundImage=`url("${S.wall||WALL}")`;
+ $('#nav-bar').classList.toggle('navblack',S.nav==='black');
+}
+function openPWA(sv,a){
+ const b=sysShell(sv,'PWADROID — UIカスタマイズ',a.bar);
+ const rg=(k,l,min,max,step)=>`<div class="row"><span>${l}</span><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step||1}" value="${S[k]}"></div>`;
+ const sw=(k,l)=>`<div class="row"><span>${l}</span><label class="sw"><input type="checkbox" data-k="${k}" ${S[k]?'checked':''}><i></i></label></div>`;
+ b.innerHTML=`<div class="sec">テーマ</div><div class="row"><span>アクセントカラー</span><div class="swatches">${['#009688','#2196f3','#e91e63','#ff5722','#673ab7','#4caf50','#ffc107','#607d8b'].map(c=>`<b data-c="${c}" style="background:${c}"></b>`).join('')}</div></div>
+ <div class="row"><span>壁紙</span><span><input type="file" id="pw" accept="image/*" style="width:110px"> <button class="mbtn flat" id="pw2">ファイルから選択</button></span></div>
+ <div class="row"><span>壁紙URL</span><input type="text" data-k="wall" placeholder="https://…" value="${S.wall.startsWith('data:')?'':S.wall}"></div>
+ <div class="sec">アイコン</div>${rg('icon','アイコンサイズ',36,72)}${rg('fs','ラベル文字倍率',.8,1.5,.05)}${sw('labels','ホームのラベルを表示')}
+ <div class="row"><span>アイコンの形</span><select data-k="shape"><option value="0">四角</option><option value="22%">角丸</option><option value="50%">円形</option></select></div>
+ <div class="sec">ホーム / ドック</div>${rg('cols','ホームの列数',4,8)}${rg('rows','ホームの行数',2,6)}${rg('dock','ドック背景の濃さ',0,90)}<div class="row"><span>ドック背景色</span><input type="color" data-k="dockColor" value="${S.dockColor||'#000000'}"></div><div class="sec">ドックのアプリ（並び順・個数）</div><div id="dk"></div>
+ <div class="row"><span>ナビバー</span><select data-k="nav"><option value="transparent">透明</option><option value="black">黒</option></select></div>
+ <div class="sec">クイック設定</div>${rg('qsw','パネル幅',280,420,10)}
+ <div class="row"><span><button class="mbtn flat" id="pr">すべてリセット</button></span></div>`;
+ b.querySelector('[data-k=shape]').value=S.shape;dockEditor(b);b.querySelector('[data-k=nav]').value=S.nav;
+ b.querySelectorAll('[data-k]').forEach(i=>i.addEventListener('input',()=>{S[i.dataset.k]=i.type==='checkbox'?i.checked:i.type==='range'?+i.value:i.value;apply();save();if(['cols','rows'].includes(i.dataset.k))clampHome()}));
+ b.querySelectorAll('[data-c]').forEach(s=>s.onclick=()=>{S.accent=s.dataset.c;a.bar=S.accent;sv.querySelector('.tb').style.background=S.accent;apply();save()});
+ b.querySelector('#pw').onchange=async e=>{const f=e.target.files[0];if(f){S.wall=await readF(f);apply();save()}};
+ b.querySelector('#pw2').onclick=async()=>{const r=await pickFile({accept:['image/*'],title:'壁紙を選択'});if(r&&r[0]){S.wall=await readF(r[0].blob);apply();save()}};
+ b.querySelector('#pr').onclick=()=>{S={...DEF};apply();save();openPWA(sv,a)};
+}
+
+/* ---------- Module framework (Xposed) : QS theme / Window / Nav / UI toolkit ---------- */
+const hooks={},rt={};
+const emit=(e,d)=>(hooks[e]||[]).slice().forEach(h=>{try{h.fn(d)}catch(x){console.warn(x)}});
+const xl=m=>{xlog.push(new Date().toTimeString().slice(0,8)+'  '+m);if(xlog.length>200)xlog.shift()};
+const NAV0={order:['back','home','task'],gap:72,align:'center',h:52,bg:null,hide:false,extra:{},icons:{}};
+const WIN0={anim:'slide',radius:0,freeform:false,w:72,h:76,sandbox:null,allow:null};
+let NAV={...NAV0,extra:{},icons:{}},WIN={...WIN0};
+const QSMAP={bg:'--qs-bg',on:'--qs-on',off:'--qs-off',cols:'--qs-cols',notif:'--qs-notif',r:'--qs-r',tileBg:'--qs-tile-bg',tileR:'--qs-tile-r'};
+const NIMG=n=>`https://raw.githubusercontent.com/PolandBallHub-Operator/appsforechoshowsilk/refs/heads/main/drohome/launcher/${n}.png`;
+function renderNav(){
+ const n=$('#nav-bar');n.innerHTML='';
+ n.style.justifyContent={left:'flex-start',right:'flex-end',center:'center'}[NAV.align]||'center';
+ n.style.gap=NAV.gap+'px';n.style.padding=NAV.align==='center'?'0':'0 24px';n.style.height=NAV.h+'px';
+ n.style.display=NAV.hide?'none':'flex';n.style.backgroundColor=NAV.bg||'';
+ document.documentElement.style.setProperty('--navh',NAV.hide?'0px':NAV.h+'px');
+ const fn={back:handleBack,home:handleHome,task:handleTask};
+ NAV.order.forEach(id=>{const b=el('div','nav-btn');
+  if(fn[id]){b.innerHTML=`<img src="${NAV.icons[id]||NIMG(id)}" alt="${id}">`;b.onclick=fn[id]}
+  else{const e=NAV.extra[id];if(!e)return;b.innerHTML=e.iconUrl?`<img src="${e.iconUrl}" alt="">`:`<span class="material-symbols-outlined" style="color:#fff;font-size:28px">${e.icon}</span>`;b.onclick=()=>e.onClick&&e.onClick()}
+  n.appendChild(b)});
+}
+function applyWin(){
+ const c=$('#app-frame-container');c.dataset.anim=WIN.anim;c.classList.toggle('ff',!!WIN.freeform);c.style.borderRadius=WIN.radius+'px';
+ if(WIN.freeform){c.style.width=WIN.w+'vw';c.style.height=WIN.h+'vh';if(!c.style.left){c.style.left=(100-WIN.w)/2+'vw';c.style.top='30px'}}
+ else c.style.width=c.style.height=c.style.left=c.style.top='';
+}
+function applyQS(q){const s=$('#qs-overlay').style;Object.values(QSMAP).forEach(v=>s.removeProperty(v));Object.entries(q).forEach(([k,v])=>QSMAP[k]&&s.setProperty(QSMAP[k],String(v)))}
+function recompute(){
+ NAV={...NAV0,order:[...NAV0.order],extra:{},icons:{}};WIN={...WIN0};const qv={};
+ Object.values(rt).forEach(r=>{const c=r.cfg;
+  if(c.nav.order)NAV.order=[...c.nav.order];
+  ['gap','align','h','bg','hide'].forEach(k=>{if(c.nav[k]!==undefined)NAV[k]=c.nav[k]});
+  Object.assign(NAV.extra,c.nav.extra||{});Object.assign(NAV.icons,c.nav.icons||{});(c.nav.add||[]).forEach(id=>{if(!NAV.order.includes(id))NAV.order.push(id)});
+  Object.assign(WIN,c.win);Object.assign(qv,c.qs)});
+ renderNav();applyWin();applyQS(qv);
+}
+function runExt(x){
+ if(rt[x.id]||!xpOn)return;
+ const r=rt[x.id]={un:[],st:[],tl:[],ap:[],hk:[],cfg:{nav:{},win:{},qs:{}}};x.ui=false;
+ const L={version:'2.0',settings:S,toast,launch,ui:null,log:m=>xl(x.name+': '+m),fs:VFS,pickFile,readFile:readF,device:()=>({...DEV}),
+  system:{home:handleHome,back:handleBack,recents:handleTask,qs:openQS,drawer:openDrawer},
+  store:{get:k=>KV.get('m:'+x.id+':'+k),set:(k,v)=>KV.set('m:'+x.id+':'+k,v)},
+  onUnload:f=>r.un.push(f),recents:{addAction(d){RX.actions.push({...d,o:x.id})},addSection(fn){RX.sections.push({fn,o:x.id})}},appMenu:{add(d){MX.items.push({...d,o:x.id})}},
+  addCSS(c){const s=document.createElement('style');s.textContent=c;document.head.appendChild(s);r.st.push(s);return s},
+  addQSTile(t){TILES[t.id]=t;r.tl.push(t.id);if(!tilesOn.includes(t.id))tilesOn.push(t.id);if(t.onToggle&&tOn(t.id))t.onToggle(true);renderQS()},
+  addApp(a){a.id=a.id||('ext_'+x.id+'_'+a.name);a.type=a.type||'url';extApps.push(a);r.ap.push(a.id);renderApps()},
+  on(e,fn){const h={fn};(hooks[e]=hooks[e]||[]).push(h);r.hk.push([e,h])},
+  setSetting(k,v){S[k]=v;apply();if(k==='dockApps')renderApps();save()},
+  /* UI module: calling app() declares that this module HAS a UI. open(root,UI,app) receives the Material 1 toolkit. Headless modules never get UI. */
+  app(def){x.ui=true;const a={id:'xm_'+x.id,name:def.name||x.name,type:'sys',sym:def.icon?undefined:(def.sym||'extension'),icon:def.icon,color:def.color||'#607d8b',bar:def.bar||def.color,open:sv=>def.open&&def.open(sv,UI,a)};
+   extApps.push(a);r.ap.push(a.id);L.ui=UI;renderApps();return a},
+  qs:{setTheme(o){Object.assign(r.cfg.qs,o);recompute()},addTile:t=>L.addQSTile(t)},
+  window:{config(o){Object.assign(r.cfg.win,o);recompute()},setFreeform(b){L.window.config({freeform:b})},frame:()=>$('#app-frame'),get:()=>({...WIN})},
+  nav:{configure(o){Object.assign(r.cfg.nav,o);recompute()},setIcons(m){r.cfg.nav.icons=m;recompute()},reset(){r.cfg.nav={};recompute()},setLayout(order){r.cfg.nav.order=order;recompute()},
+   addButton(b){(r.cfg.nav.extra=r.cfg.nav.extra||{})[b.id]=b;(r.cfg.nav.add=r.cfg.nav.add||[]).push(b.id);recompute()}}};
+ try{new Function('Launcher',x.code)(L);xl('loaded '+x.name+(x.ui?' [APP]':' [headless]'))}catch(e){xl('ERROR '+x.name+': '+e.message);toast('モジュールエラー: '+x.name)}
+ recompute();save();
+}
+function stopExt(x){
+ const r=rt[x.id];if(!r)return;
+ r.un.forEach(f=>{try{f()}catch(e){}});RX.actions=RX.actions.filter(a=>a.o!==x.id);RX.sections=RX.sections.filter(a=>a.o!==x.id);MX.items=MX.items.filter(a=>a.o!==x.id);
+ r.st.forEach(s=>s.remove());r.tl.forEach(i=>{const t=TILES[i];if(t&&t.onToggle&&tOn(i))t.onToggle(false);delete TILES[i]});
+ extApps=extApps.filter(a=>!r.ap.includes(a.id));r.hk.forEach(([e,h])=>hooks[e]=(hooks[e]||[]).filter(y=>y!==h));
+ delete rt[x.id];recompute();renderApps();renderQS();xl('unloaded '+x.name);
+}
+/* Material 1 UI toolkit (exposed to UI modules; used by the built-in apps too) */
+const UI={
+ topbar(root,title,o={}){
+  root.innerHTML=`<div class="tb" style="background:${o.color||S.accent}"><div class="tb-r"><span class="material-symbols-outlined tb-n">${o.nav==='back'?'arrow_back':'menu'}</span><span class="t"></span>${o.menu?'<span class="material-symbols-outlined tb-m">more_vert</span>':''}</div>${o.tabs?'<div class="tb-tabs"></div>':''}</div><div class="sbody"></div>`;
+  const q=s=>root.querySelector(s);q('.t').textContent=title;
+  q('.tb-n').onclick=()=>o.onNav?o.onNav():(o.nav==='back'&&handleBack());
+  if(o.nav===null)q('.tb-n').style.display='none';
+  root.onclick=()=>{const p=q('.pop');p&&p.remove()};
+  if(o.menu)q('.tb-m').onclick=e=>{e.stopPropagation();const old=q('.pop');if(old)return old.remove();const p=el('div','pop');
+   o.menu.forEach(i=>{const d=el('div');d.textContent=i.t;d.onclick=()=>{p.remove();i.fn&&i.fn()};p.appendChild(d)});root.appendChild(p)};
+  const T={root,body:q('.sbody'),bar:q('.tb'),setTitle:t=>q('.t').textContent=t,
+   select(i){[...root.querySelectorAll('.tb-tabs div')].forEach((d,j)=>d.classList.toggle('on',i===j));o.onTab&&o.onTab(i)}};
+  if(o.tabs){const tb=q('.tb-tabs');o.tabs.forEach((t,i)=>{const d=el('div',i?'':'on');d.textContent=t;d.onclick=()=>T.select(i);tb.appendChild(d)})}
+  return T;
+ },
+ section(t){const d=el('div','sec');d.textContent=t;return d},
+ row(t,s,right){const r=el('div','row'),d=el('div'),a=el('span');d.style.flex=1;a.textContent=t;d.appendChild(a);
+  if(s){const m=el('small');m.textContent=s;d.appendChild(m)}r.appendChild(d);
+  if(right)typeof right==='string'?r.insertAdjacentHTML('beforeend',right):r.appendChild(right);return r},
+ toggle(t,s,v,fn){const l=el('label','sw');l.innerHTML=`<input type="checkbox" ${v?'checked':''}><i></i>`;l.firstChild.onchange=e=>fn&&fn(e.target.checked);return UI.row(t,s,l)},
+ slider(t,min,max,v,fn,step){const i=el('input');i.type='range';i.min=min;i.max=max;i.step=step||1;i.value=v;i.oninput=()=>fn&&fn(+i.value);return UI.row(t,null,i)},
+ button(t,fn,flat){const b=el('button','mbtn'+(flat?' flat':''));b.textContent=t;b.onclick=fn;return b},
+ card(html){const c=el('div','card');c.innerHTML=html||'';return c},
+ dialog:(t,b,btns)=>dlg(t,b,btns),toast
+};
+function sysShell(sv,title,color){return UI.topbar(sv,title,{color}).body}
+
+/* ---------- Xposed Installer (built-in) ---------- */
+function openXposed(sv,a){
+ sv.style.setProperty('--accent','#2196f3');let cur=0;
+ const T=UI.topbar(sv,'Xposed Installer',{color:'#2196f3',tabs:['Xposed Status','Modules','Install','Log'],onTab:i=>show(i),
+  onNav:()=>UI.dialog('Xposed Installer','HTMLOS Framework 87.3<br>モジュール: '+exts.filter(e=>e.enabled).length+' / '+exts.length+' 有効',[['OK']]),
+  menu:[{t:'更新',fn:()=>show(cur)},{t:'全モジュールを無効化',fn:()=>{exts.forEach(x=>{x.enabled=false;stopExt(x)});save();show(cur)}},{t:'ログを消去',fn:()=>{xlog.length=0;show(cur)}}]});
+ const b=T.body;b.style.background='#ededed';
+ function show(i){
+  cur=i;b.innerHTML='';
+  if(i===0){
+   const s=UI.toggle('Xposed Status',null,xpOn,v=>{xpOn=v;v?exts.filter(e=>e.enabled).forEach(runExt):exts.forEach(stopExt);save();show(0)});
+   s.style.cssText='background:#fff;padding:20px 16px;font-size:18px;border:0;box-shadow:0 1px 3px rgba(0,0,0,.3)';b.appendChild(s);
+   const col=xpOn?'#4caf50':'#f44336';
+   b.appendChild(UI.card(`<div class="stat" style="background:${col}"><svg width="130" height="130" viewBox="0 0 140 140"><circle cx="70" cy="70" r="70" fill="#fff"/>${xpOn?'<path d="M38 72l22 22 44-46" stroke="#4caf50" stroke-width="13" fill="none"/>':'<path d="M46 46l48 48M94 46L46 94" stroke="#f44336" stroke-width="13" fill="none"/>'}</svg></div><div class="stat-t" style="color:${col}">Xposed Framework version 87.3 (HTMLOS) is ${xpOn?'active':'not active'}.</div>`));
+   b.appendChild(UI.card(`<div class="h">Framework</div><div class="fw"><span class="material-symbols-outlined">android</span>Android ${DEV.release} (API ${DEV.sdk})</div><div class="fw"><span class="material-symbols-outlined">architecture</span>${DEV.manufacturer} ${DEV.model} (HTMLOS)</div><div class="fw"><span class="material-symbols-outlined">memory</span>${navigator.hardwareConcurrency||'?'} cores · ${navigator.platform||'web'}<br>有効モジュール ${Object.keys(rt).length} / ${exts.length}</div>`));
+  }
+  if(i===1){
+   if(!exts.length)b.appendChild(UI.card('<div class="fw">モジュールがありません</div>'));
+   const c=UI.card();
+   exts.forEach(x=>{
+    const w=el('div');w.style.cssText='display:flex;align-items:center;gap:14px';
+    const del=el('span','material-symbols-outlined');del.textContent='delete';del.style.color='#9e9e9e';
+    del.onclick=()=>{stopExt(x);exts=exts.filter(y=>y!==x);save();show(1)};
+    const l=el('label','sw');l.innerHTML=`<input type="checkbox" ${x.enabled?'checked':''}><i></i>`;
+    l.firstChild.onchange=e=>{x.enabled=e.target.checked;if(x.enabled&&!xpOn)toast('Xposedが無効です');x.enabled?runExt(x):stopExt(x);save();show(1)};
+    w.append(del,l);
+    const r=UI.row(x.name,(x.desc||'ユーザーモジュール')+(x.ui===undefined?'':x.ui?' · APP（タップで起動）':' · UIなし'),w);
+    r.firstChild.onclick=()=>{if(x.ui&&rt[x.id])launch('xm_'+x.id)};c.appendChild(r)});
+   b.appendChild(c);
+  }
+  if(i===2){
+   const c=UI.card(`<div class="row"><span>モジュール名</span><input type="text" id="xn" placeholder="My Module"></div><div class="row"><span>.js ファイル</span><span><input type="file" id="xf" accept=".js,text/javascript" style="width:110px"> <button class="mbtn flat" id="xf2">ファイルから選択</button></span></div><div class="row" style="display:block"><textarea id="xc" placeholder="// Launcher.app({...}) でUIを持つ / 呼ばなければUIなし&#10;// Launcher.qs / Launcher.window / Launcher.nav / Launcher.addCSS"></textarea><div style="text-align:right;margin-top:8px"></div></div>`);
+   c.querySelector('div[style*=right]').appendChild(UI.button('インストール',()=>{
+    const code=c.querySelector('#xc').value.trim();if(!code)return toast('コードが空です');
+    try{new Function('Launcher',code)}catch(e){return toast('構文エラー: '+e.message)}
+    exts.push({id:'u'+Date.now(),name:c.querySelector('#xn').value||'Module',code,enabled:false});save();xl('installed module');show(1);T.select(1)}));
+   c.querySelector('#xf').onchange=async e=>{const f=e.target.files[0];if(f){c.querySelector('#xc').value=await readF(f,'text');if(!c.querySelector('#xn').value)c.querySelector('#xn').value=f.name.replace(/\.js$/,'')}};
+   c.querySelector('#xf2').onclick=async()=>{const r=await pickFile({accept:['.js'],title:'モジュールを選択'});if(r&&r[0]){c.querySelector('#xc').value=await r[0].blob.text();if(!c.querySelector('#xn').value)c.querySelector('#xn').value=r[0].name.replace(/\.js$/,'')}};
+   b.appendChild(c);
+  }
+  if(i===3){const c=UI.card();c.innerHTML='<pre style="padding:12px 16px;font-size:11px;white-space:pre-wrap;color:#424242;user-select:text"></pre>';c.firstChild.textContent=xlog.join('\n')||'(ログなし)';b.appendChild(c)}
+ }
+ T.select(0);
+}
+
+/* ---------- Virtual file system (/data, /system, /storage/emulated/0) ---------- */
+const BP='/system/build.prop',DUI_ROOT='/storage/emulated/0',DUI_DL=DUI_ROOT+'/Download';
+let DEV={model:'Echo Show 5',manufacturer:'Amazon',release:'7.1.2',sdk:'25'},sysBackFn=null;
+const MIME={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',bmp:'image/bmp',mp4:'video/mp4',webm:'video/webm',mkv:'video/x-matroska',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',m4a:'audio/mp4',txt:'text/plain',md:'text/markdown',json:'application/json',js:'text/javascript',html:'text/html',htm:'text/html',css:'text/css',xml:'application/xml',prop:'text/plain',pdf:'application/pdf',zip:'application/zip'};
+const guess=n=>MIME[(n.split('.').pop()||'').toLowerCase()]||'application/octet-stream';
+const isText=m=>m.startsWith('text/')||/json|javascript|xml/.test(m);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtSize=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':n<1073741824?(n/1048576).toFixed(1)+' MB':(n/1073741824).toFixed(2)+' GB';
+const fmtDate=t=>new Date(t).toLocaleString('ja-JP');
+function parseProp(t){const m={};t.split('\n').forEach(l=>{l=l.trim();if(!l||l[0]==='#')return;const i=l.indexOf('=');if(i>0)m[l.slice(0,i).trim()]=l.slice(i+1).trim()});
+ DEV={model:m['ro.product.model']||'Android',manufacturer:m['ro.product.manufacturer']||'',release:m['ro.build.version.release']||'7.1.2',sdk:m['ro.build.version.sdk']||'25'};
+ document.title=DEV.model+' - HTMLOS';xl('build.prop: model='+DEV.model)}
+const VFS={nodes:{'/':{t:'d',m:Date.now(),s:0}},mem:{},_t:null,
+ norm(p){const a=[];String(p).split('/').forEach(x=>{if(!x||x==='.')return;x==='..'?a.pop():a.push(x)});return '/'+a.join('/')},
+ dir:p=>p.replace(/\/[^/]*$/,'')||'/',base:p=>p.split('/').pop(),
+ join:(d,n)=>VFS.norm(d+'/'+n),
+ save(){clearTimeout(this._t);this._t=setTimeout(()=>KV.set('vfs',this.nodes),250)},
+ ls(d){d=this.norm(d);const pre=d==='/'?'/':d+'/';return Object.keys(this.nodes).filter(k=>k!==d&&k.startsWith(pre)&&k.indexOf('/',pre.length)<0)},
+ uniq(d,n){let t=VFS.join(d,n);if(!VFS.nodes[t])return t;const i=n.lastIndexOf('.'),b=i>0?n.slice(0,i):n,e=i>0?n.slice(i):'';for(let c=1;;c++){t=VFS.join(d,`${b} (${c})${e}`);if(!VFS.nodes[t])return t}},
+ mkdir(p){p=this.norm(p);let c='';p.split('/').filter(Boolean).forEach(s=>{c+='/'+s;if(!this.nodes[c])this.nodes[c]={t:'d',m:Date.now(),s:0}});this.save()},
+ nid:()=>'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+ put(id,b){KV.db?KV.set('blob:'+id,b):this.mem[id]=b},drop(id){KV.db?KV.del('blob:'+id):delete this.mem[id]},
+ write(p,data,mime){p=this.norm(p);this.mkdir(this.dir(p));const b=data instanceof Blob?data:new Blob([data],{type:mime||guess(p)});
+  const old=this.nodes[p];if(old&&old.id)this.drop(old.id);const id=this.nid();this.put(id,b);
+  this.nodes[p]={t:'f',m:Date.now(),s:b.size,mime:mime||b.type||guess(p),id};this.save();if(p===BP)b.text().then(parseProp)},
+ async read(p){const n=this.nodes[this.norm(p)];if(!n||n.t!=='f')return null;return KV.db?await KV.get('blob:'+n.id):this.mem[n.id]},
+ async text(p){const b=await this.read(p);return b?b.text():null},
+ rm(p){p=this.norm(p);if(p==='/')return;Object.keys(this.nodes).forEach(k=>{if(k===p||k.startsWith(p+'/')){const n=this.nodes[k];if(n.id)this.drop(n.id);delete this.nodes[k]}});this.save();if(p===BP||BP.startsWith(p+'/'))parseProp('')},
+ mv(a,b){a=this.norm(a);b=this.norm(b);if(!this.nodes[a]||this.nodes[b]||b.startsWith(a+'/'))return false;this.mkdir(this.dir(b));
+  Object.keys(this.nodes).filter(k=>k===a||k.startsWith(a+'/')).forEach(k=>{this.nodes[b+k.slice(a.length)]=this.nodes[k];delete this.nodes[k]});this.save();if(b===BP)this.reloadProp();return true},
+ async cp(a,b){a=this.norm(a);b=this.norm(b);if(!this.nodes[a]||b.startsWith(a+'/'))return false;this.mkdir(this.dir(b));
+  for(const k of Object.keys(this.nodes).filter(k=>k===a||k.startsWith(a+'/'))){const n=this.nodes[k],t=b+k.slice(a.length);
+   if(n.t==='d')this.nodes[t]={...n,m:Date.now()};else{const bl=await this.read(k),id=this.nid();this.put(id,bl);this.nodes[t]={...n,id,m:Date.now()}}}
+  this.save();if(b===BP)this.reloadProp();return true},
+ async reloadProp(){parseProp(await this.text(BP)||'')},
+ async load(){const n=await KV.get('vfs');if(n)this.nodes=n;else this.seed();await this.reloadProp()},
+ seed(){['/data/app','/data/data','/data/local','/system/app','/system/etc','/system/fonts'].forEach(d=>this.mkdir(d));
+  ['Alarms','Android','DCIM','Download','Movies','Music','Notifications','Pictures','Podcasts','Ringtones'].forEach(d=>this.mkdir(DUI_ROOT+'/'+d));
+  this.write(BP,'# HTMLOS build.prop  (ro.product.model を変更するとデバイス名が変わります)\nro.build.version.release=7.1.2\nro.build.version.sdk=25\nro.product.manufacturer=Amazon\nro.product.model=Echo Show 5\nro.product.device=htmlos\nro.build.display.id=HTMLOS 7.1.2\n','text/plain')}
+};
+
+/* ---------- File picker API ---------- */
+function matchAccept(acc,k,n){if(!acc||!acc.length)return true;const nm=VFS.base(k).toLowerCase();return acc.some(a=>a.endsWith('/*')?n.mime.startsWith(a.slice(0,-1)):a[0]==='.'?nm.endsWith(a.toLowerCase()):n.mime===a)}
+function pickFile(o={}){return new Promise(res=>{
+ const ov=el('div','dui-ov'),box=el('div','dui-box');ov.appendChild(box);document.body.appendChild(ov);
+ const done=async p=>{ov.remove();if(!p)return res(null);res(await Promise.all(p.map(async k=>{const n=VFS.nodes[k];return{path:k,name:VFS.base(k),mime:n.mime,size:n.s,blob:await VFS.read(k)}})))};
+ ov._cancel=()=>done(null);ov.onclick=e=>{if(e.target===ov)done(null)};
+ docsUI(box,{picker:true,accept:o.accept,multiple:o.multiple,title:o.title,startPath:o.startPath,onDone:done});
+})}
+window.addEventListener('message',async e=>{const d=e.data;if(d&&d.type==='htmlos:ready'){sendOpen();return}if(!d||d.type!=='htmlos:pickFile')return;const r=await pickFile(d.options||{});
+ const files=r&&await Promise.all(r.map(async f=>({name:f.name,path:f.path,mime:f.mime,size:f.size,dataURL:await readF(f.blob)})));
+ e.source&&e.source.postMessage({type:'htmlos:pickFile:result',id:d.id,files},'*')});
+window.HTMLOS={pickFile,openFile:p=>openFile(p),openWith,fs:VFS,device:()=>({...DEV})};
+
+/* ---------- DocumentsUI ---------- */
+function chooseFolder(start,title){return new Promise(res=>{
+ let cur=start;const body=el('div');
+ const o=dlg(title,body,[['キャンセル',()=>res(null)],['ここを選択',()=>res(cur)]]);
+ const pv=o.onclick;o.onclick=e=>{if(e.target===o)res(null);pv(e)};
+ const draw=()=>{body.innerHTML=`<div style="font-size:12px;color:#757575;margin-bottom:6px;word-break:break-all">${esc(cur)}</div><div class="dui-pk"></div>`;
+  const l=body.querySelector('.dui-pk');
+  const add=(ic,t,fn)=>{const r=el('div','r');r.innerHTML=`<span class="material-symbols-outlined" style="color:#607d8b">${ic}</span>${esc(t)}`;r.onclick=fn;l.appendChild(r)};
+  if(cur!=='/')add('arrow_upward','..',()=>{cur=VFS.dir(cur);draw()});
+  VFS.ls(cur).filter(k=>VFS.nodes[k].t==='d').sort().forEach(k=>add('folder',VFS.base(k),()=>{cur=k;draw()}));
+ };draw()})}
+function infoDlg(k){
+ const n=VFS.nodes[k];const rows=[['名前',VFS.base(k)||'/'],['パス',k],['種類',n.t==='d'?'フォルダ':n.mime],['更新日時',fmtDate(n.m)]];
+ if(n.t==='f')rows.push(['サイズ',fmtSize(n.s)+` (${n.s} B)`]);
+ else{const sub=Object.keys(VFS.nodes).filter(x=>x!==k&&x.startsWith((k==='/'?'':k)+'/'));
+  rows.push(['内容',sub.filter(x=>VFS.nodes[x].t==='f').length+' ファイル / '+sub.filter(x=>VFS.nodes[x].t==='d').length+' フォルダ'],['サイズ',fmtSize(sub.reduce((s,x)=>s+(VFS.nodes[x].s||0),0))])}
+ dlg('情報','<table style="width:100%;font-size:13px">'+rows.map(([a,b])=>`<tr><td style="color:#757575;padding:4px 10px 4px 0;vertical-align:top;white-space:nowrap">${a}</td><td style="word-break:break-all;user-select:text">${esc(b)}</td></tr>`).join('')+'</table>',[['閉じる']]);
+}
+let pendingOpen=null;
+function sendOpen(){const fr=$('#app-frame');if(pendingOpen&&fr.contentWindow)try{fr.contentWindow.postMessage({type:'htmlos:open',files:pendingOpen.files},'*')}catch(e){}}
+async function openWith(k,appId){const n=VFS.nodes[k],b=await VFS.read(k);pendingOpen={appId,files:[{name:VFS.base(k),path:k,mime:n.mime,size:n.s,blob:b}]};launch(appId)}
+function openFile(k,done){
+ const n=VFS.nodes[k],C=allApps().filter(a=>a.type==='html'&&a.handles&&matchAccept(a.handles,k,n));
+ if(!C.length)return openBuiltin(k,done);
+ const b=el('div','dui-pk');const o=dlg('アプリで開く',b,[['キャンセル']]);
+ const add=(ic,t,fn)=>{const r=el('div','r');r.innerHTML=ic+esc(t);r.onclick=()=>{o.remove();fn()};b.appendChild(r)};
+ add('<span class="material-symbols-outlined" style="color:#607d8b">visibility</span>','標準ビューア',()=>openBuiltin(k,done));
+ C.forEach(a=>add(`<span class="ic" style="display:flex;--icon:32px">${ico(a)}</span>`,a.name,()=>openWith(k,a.id)));
+}
+async function openBuiltin(k,done){
+ const n=VFS.nodes[k],b=await VFS.read(k);if(!b)return toast('読み込めません');const nm=VFS.base(k);
+ if(/^(image|video|audio)\//.test(n.mime)){const u=URL.createObjectURL(b),t=n.mime.split('/')[0];
+  dlg(nm,t==='image'?`<img src="${u}" style="max-width:100%;max-height:50vh;display:block;margin:auto">`:`<${t} src="${u}" controls autoplay style="width:100%;max-height:50vh"></${t}>`,[['閉じる',()=>URL.revokeObjectURL(u)]]);return}
+ if(isText(n.mime)){const ta=el('textarea','dui-ta');ta.value=await b.text();
+  dlg(nm,ta,[['閉じる'],['保存',()=>{VFS.write(k,ta.value,n.mime);toast('保存しました'+(k===BP?'（デバイス名を更新）':''));done&&done()}]]);return}
+ infoDlg(k);
+}
+function docsUI(root,o){
+ const st={root:'store',path:o.startPath||DUI_ROOT,view:'list',sort:'name',asc:true,q:'',search:false,sel:new Set()};
+ root.innerHTML='<div class="dui"><div class="dui-tb"></div><div class="dui-body"><div class="dui-side"></div><div class="dui-main"></div></div></div>';
+ const D=root.querySelector('.dui'),tb=D.querySelector('.dui-tb'),side=D.querySelector('.dui-side'),main=D.querySelector('.dui-main');
+ const LBL={images:'画像',videos:'動画',audio:'音楽',recent:'最近'},MR={images:'image/',videos:'video/',audio:'audio/'};
+ const virt=()=>!!LBL[st.root],top=()=>st.root==='fs'?'/':DUI_ROOT,canUp=()=>!virt()&&st.path!==top();
+ const title=()=>o.picker?(o.title||'ファイルを選択'):virt()?LBL[st.root]:st.root==='store'&&st.path===DUI_ROOT?DEV.model:VFS.base(st.path)||'/';
+ const cmp=([ka,na],[kb,nb])=>{if(na.t!==nb.t)return na.t==='d'?-1:1;const r=st.sort==='date'?na.m-nb.m:st.sort==='size'?na.s-nb.s:VFS.base(ka).localeCompare(VFS.base(kb),'ja',{numeric:true});return st.asc?r:-r};
+ function items(){
+  const ql=st.q.toLowerCase(),all=Object.keys(VFS.nodes);let K;
+  if(ql){const base=virt()?'/':st.path;K=all.filter(k=>k!==base&&(base==='/'||k.startsWith(base+'/'))&&VFS.base(k).toLowerCase().includes(ql))}
+  else if(MR[st.root])K=all.filter(k=>VFS.nodes[k].t==='f'&&VFS.nodes[k].mime.startsWith(MR[st.root]));
+  else if(st.root==='recent')K=all.filter(k=>VFS.nodes[k].t==='f').sort((a,b)=>VFS.nodes[b].m-VFS.nodes[a].m).slice(0,50);
+  else K=VFS.ls(st.path);
+  const L=K.map(k=>[k,VFS.nodes[k]]);if(st.root!=='recent'||ql)L.sort(cmp);return L;
+ }
+ const draw=()=>{drawTb();drawSide();drawList()};
+ function drawTb(){
+  const n=st.sel.size,I=(a,i,t)=>`<span class="material-symbols-outlined" data-a="${a}"${t?` title="${t}"`:''}>${i}</span>`;let h;
+  if(n)h=I('clr','close')+`<span class="t">${n} 件選択</span>`+(o.picker?'<button data-a="pick">選択</button>':I('move','drive_file_move','移動')+I('copy','content_copy','コピー')+(n===1?(VFS.nodes[[...st.sel][0]].t==='f'?I('open','open_in_new','アプリで開く'):'')+I('ren','edit','名前の変更')+I('info','info','情報'):'')+I('del','delete','削除'));
+  else h=(canUp()?I('up','arrow_back'):o.picker?I('cancel','close'):'')+`<span class="t">${esc(title())}</span>`+(st.search?`<div class="dui-sr"><input id="dq" placeholder="検索…" value="${esc(st.q)}">${I('sx','close')}</div>`:I('sr','search'))+I('view',st.view==='list'?'grid_view':'view_list')+I('sort','sort')+I('more','more_vert');
+  tb.innerHTML=h;const q=tb.querySelector('#dq');if(q){q.focus();q.oninput=()=>{st.q=q.value;drawList()}}
+ }
+ const ROOTS=[['images','image','画像'],['videos','movie','動画'],['audio','headphones','音楽'],['recent','schedule','最近'],null,['dl','download','ダウンロード'],['store','smartphone','内部ストレージ'],['fs','storage','ファイルシステム']];
+ function drawSide(){const cur=virt()||st.root==='fs'?st.root:st.path===DUI_DL?'dl':'store';
+  side.innerHTML=ROOTS.map(r=>r?`<div class="dui-sd${r[0]===cur?' on':''}" data-r="${r[0]}"><span class="material-symbols-outlined">${r[1]}</span><span class="lb">${r[2]}</span></div>`:'<hr>').join('')}
+ side.onclick=e=>{const r=e.target.closest('[data-r]');if(!r)return;const v=r.dataset.r;
+  st.root=v==='dl'?'store':v;st.path=v==='dl'?DUI_DL:v==='fs'?'/':DUI_ROOT;st.q='';st.search=false;st.sel.clear();draw()};
+ function toggleSel(k){if(o.picker&&VFS.nodes[k].t==='d')return;st.sel.has(k)?st.sel.delete(k):st.sel.add(k);drawTb();drawList()}
+ function tap(k){const n=VFS.nodes[k];if(!n)return;if(st.sel.size)return toggleSel(k);
+  if(n.t==='d'){if(virt())st.root='store';st.path=k;st.q='';st.search=false;return draw()}
+  if(o.picker)return o.multiple?toggleSel(k):o.onDone([k]);openFile(k,draw)}
+ function drawList(){
+  const L=items();main.innerHTML='';
+  if(!L.length){main.innerHTML='<div style="padding:40px;text-align:center;color:#9e9e9e">ファイルがありません</div>';return}
+  const g=st.view==='grid',w=el('div',g?'dui-grid':'');
+  L.forEach(([k,n])=>{
+   const dis=n.t==='f'&&o.picker&&!matchAccept(o.accept,k,n),d=el('div',(g?'dui-gc':'dui-it')+(st.sel.has(k)?' sel':'')+(dis?' dis':''));
+   const sub=(n.t==='f'?fmtSize(n.s):'')+(st.q||virt()?'  '+VFS.dir(k):'');
+   d.innerHTML=`<span class="material-symbols-outlined ic"${g?' style="font-size:40px"':''}>${n.t==='d'?'folder':n.mime.startsWith('image/')?'image':n.mime.startsWith('video/')?'movie':n.mime.startsWith('audio/')?'audiotrack':isText(n.mime)?'description':'insert_drive_file'}</span><div class="nm">${esc(VFS.base(k))}${sub.trim()&&!g?`<small>${esc(sub.trim())}</small>`:''}</div>`;
+   d.onclick=()=>{if(d._lp){d._lp=0;return}tap(k)};
+   if(!o.picker||o.multiple)longPress(d,()=>{d._lp=1;toggleSel(k)});
+   w.appendChild(d)});
+  main.appendChild(w);
+ }
+ function up(){st.path=VFS.dir(st.path);st.q='';st.search=false;st.sel.clear();draw()}
+ function menu(items){const old=D.querySelector('.pop');if(old)return old.remove();const p=el('div','pop');
+  items.forEach(([t,f])=>{const d=el('div');d.textContent=t;d.onclick=()=>{p.remove();f()};p.appendChild(d)});D.appendChild(p);
+  setTimeout(()=>{const h=()=>{p.remove();document.removeEventListener('click',h)};document.addEventListener('click',h)})}
+ const here=()=>virt()?DUI_DL:st.path;
+ function sortDlg(){const b=el('div');b.innerHTML=[['name','名前'],['date','更新日時'],['size','サイズ']].map(([v,t])=>`<label><input type="radio" name="s" value="${v}" ${st.sort===v?'checked':''}>${t}</label>`).join('')+`<label><input type="checkbox" id="as" ${st.asc?'checked':''}>昇順</label>`;
+  dlg('並べ替え',b,[['OK',()=>{st.sort=b.querySelector('[name=s]:checked').value;st.asc=b.querySelector('#as').checked;draw()}]])}
+ function ask(title,val,ok){const b=el('div');b.innerHTML=`<input type="text" value="${esc(val)}">`;const i=b.firstChild;
+  dlg(title,b,[['キャンセル'],['OK',()=>{const v=i.value.trim();if(!v||v.includes('/')){toast('名前が正しくありません');return false}return ok(v)}]]);setTimeout(()=>{i.focus();i.select()},50)}
+ function newFolder(){ask('新しいフォルダ','',v=>{const t=VFS.join(here(),v);if(VFS.nodes[t]){toast('同名のものが既にあります');return false}VFS.mkdir(t);if(virt()){st.root='store';st.path=DUI_DL}draw()})}
+ function upload(){const i=el('input');i.type='file';i.multiple=true;i.onchange=()=>{[...i.files].forEach(f=>VFS.write(VFS.uniq(here(),f.name),f,f.type||guess(f.name)));toast(i.files.length+' 件をアップロードしました');if(virt()){st.root='store';st.path=DUI_DL}draw()};i.click()}
+ function delSel(P){dlg('削除',`${P.length} 件を削除しますか？`,[['キャンセル'],['削除',()=>{P.forEach(p=>VFS.rm(p));st.sel.clear();draw();toast('削除しました')}]])}
+ function renSel(p){ask('名前の変更',VFS.base(p),v=>{const t=VFS.join(VFS.dir(p),v);if(t!==p&&VFS.nodes[t]){toast('同名のものが既にあります');return false}VFS.mv(p,t);st.sel.clear();draw()})}
+ async function mvcp(P,k){const dest=await chooseFolder(virt()?DUI_ROOT:st.path,k==='mv'?'移動先を選択':'コピー先を選択');if(!dest)return;let c=0;
+  for(const p of P){if(k==='mv'&&VFS.dir(p)===dest)continue;const t=VFS.uniq(dest,VFS.base(p));
+   if(VFS.nodes[p].t==='d'&&(t===p||t.startsWith(p+'/'))){toast('フォルダを自身の中には入れられません');continue}
+   k==='mv'?VFS.mv(p,t):await VFS.cp(p,t);c++}
+  st.sel.clear();draw();toast(c+' 件を'+(k==='mv'?'移動':'コピー')+'しました')}
+ tb.onclick=e=>{const a=e.target.closest('[data-a]');if(!a)return;const P=[...st.sel];
+  ({clr(){st.sel.clear();draw()},up,cancel(){o.onDone(null)},pick(){o.onDone(P)},sr(){st.search=true;drawTb()},sx(){st.q='';st.search=false;draw()},
+   view(){st.view=st.view==='list'?'grid':'list';draw()},sort:sortDlg,more(){menu([['新しいフォルダ',newFolder],['アップロード',upload],['更新',draw]])},
+   del(){delSel(P)},open(){openFile(P[0],draw)},ren(){renSel(P[0])},info(){infoDlg(P[0])},move(){mvcp(P,'mv')},copy(){mvcp(P,'cp')}})[a.dataset.a]?.()};
+ if(!o.picker)sysBackFn=()=>{if(st.sel.size){st.sel.clear();draw();return true}if(st.search||st.q){st.search=false;st.q='';draw();return true}if(canUp()){up();return true}return false};
+ draw();
+}
+function openDUI(sv){sv.style.cssText='display:flex';docsUI(sv,{picker:false})}
+
+
+/* ---------- dock editor ---------- */
+const dockIds=()=>[...(S.dockApps||SYS.filter(a=>a.dock).map(a=>a.id))].filter(find);
+const setDock=L=>{S.dockApps=L;renderApps();save()};
+function dockEditor(b){
+ const dk=b.querySelector('#dk');
+ const draw=()=>{dk.innerHTML='';const ids=dockIds();
+  ids.forEach((id,i)=>{const a=find(id),r=el('div','row');
+   r.innerHTML=`<span style="display:flex;align-items:center;gap:12px"><span class="ic" style="display:flex;--icon:32px">${ico(a)}</span>${esc(a.name)}</span><span style="display:flex;gap:12px">${['arrow_upward:u','arrow_downward:d','close:x'].map(x=>`<span class="material-symbols-outlined" style="cursor:pointer" data-m="${x.split(':')[1]}">${x.split(':')[0]}</span>`).join('')}</span>`;
+   r.querySelectorAll('[data-m]').forEach(s=>s.onclick=()=>{const L=dockIds(),m=s.dataset.m;
+    if(m==='x')L.splice(i,1);else{const j=m==='u'?i-1:i+1;if(j<0||j>=L.length)return;[L[i],L[j]]=[L[j],L[i]]}setDock(L);draw()});
+   dk.appendChild(r)});
+  const add=el('div','row');add.style.cursor='pointer';add.innerHTML=`<span style="color:var(--accent);font-weight:500">＋ アプリを追加（${ids.length}/8）</span>`;
+  add.onclick=()=>{if(ids.length>=8)return toast('ドックは最大8個です');
+   const body=el('div','dui-pk');const o=dlg('ドックに追加',body,[['閉じる']]);
+   allApps().filter(a=>!ids.includes(a.id)).forEach(a=>{const r=el('div','r');r.innerHTML=`<span class="ic" style="display:flex;--icon:32px">${ico(a)}</span>${esc(a.name)}`;r.onclick=()=>{setDock([...ids,a.id]);o.remove();draw()};body.appendChild(r)})};
+  dk.appendChild(add)};
+ draw();
+}
+
+/* ---------- init ---------- */
+async function init(){
+ await KV.init();const st=await KV.get('state');await VFS.load();
+ if(st){S={...DEF,...st.S};homeApps=st.homeApps||homeApps;custom=st.custom||[];exts=st.exts||exts;tilesOn=st.tilesOn||tilesOn;tileSt=st.tileSt||{};users=st.users||users;cu=st.cu||0;bright=st.bright??80;xpOn=st.xpOn!==false}
+ DEFEXT.forEach(d=>{if(!exts.some(e=>e.id===d.id))exts.push({...d})});
+ {const per=S.cols*S.rows;homeApps=homeApps.map((h,i)=>typeof h==='string'?{id:h,p:Math.floor(i/per),c:i%S.cols,r:Math.floor(i/S.cols)%S.rows}:h)}
+ apply();applyBright();clock();renderApps();
+ if(xpOn)exts.filter(x=>x.enabled).forEach(runExt);
+ recompute();renderQS();initFreeform();initPager();
+}
+function initFreeform(){
+ const bar=$('#ff-bar'),c=$('#app-frame-container');let d=null;
+ bar.onpointerdown=e=>{if(e.target.tagName==='SPAN')return;bar.setPointerCapture(e.pointerId);const r=c.getBoundingClientRect();d={x:e.clientX-r.left,y:e.clientY-r.top}};
+ bar.onpointermove=e=>{if(!d)return;c.style.left=Math.max(0,e.clientX-d.x)+'px';c.style.top=Math.max(24,e.clientY-d.y)+'px'};
+ bar.onpointerup=()=>d=null;
+}
+window.onload=init;
+</script>
+</body>
+</html>
